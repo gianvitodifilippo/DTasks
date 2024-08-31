@@ -131,7 +131,7 @@ public abstract class DTask<TResult> : DTask
     [EditorBrowsable(EditorBrowsableState.Never)]
     public new Awaiter GetAwaiter() => new Awaiter(this);
 
-    [EditorBrowsable(EditorBrowsableState.Advanced)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public new DAwaiter GetDAwaiter() => new DAwaiter(this);
 
     public new readonly struct Awaiter : ICriticalNotifyCompletion, IDTaskAwaiter
