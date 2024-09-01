@@ -1,4 +1,4 @@
-﻿using DTasks.Host;
+﻿using DTasks.Hosting;
 
 namespace DTasks;
 
@@ -16,8 +16,8 @@ public class DAsyncMethodTests
         // Act
         DTask sut = Method();
         DTaskStatus status = sut.Status;
-        DTask.DAwaiter dAwaiter = sut.GetDAwaiter();
-        bool isCompleted = await dAwaiter.IsCompletedAsync();
+        var awaiter = sut.GetDAwaiter();
+        bool isCompleted = await awaiter.IsCompletedAsync();
 
         // Assert
         isCompleted.Should().BeTrue();
@@ -37,8 +37,8 @@ public class DAsyncMethodTests
         // Act
         DTask sut = Method();
         DTaskStatus status = sut.Status;
-        DTask.DAwaiter dAwaiter = sut.GetDAwaiter();
-        bool isCompleted = await dAwaiter.IsCompletedAsync();
+        var awaiter = sut.GetDAwaiter();
+        bool isCompleted = await awaiter.IsCompletedAsync();
 
         // Assert
         isCompleted.Should().BeTrue();
@@ -59,8 +59,8 @@ public class DAsyncMethodTests
         // Act
         DTask sut = Method();
         DTaskStatus status = sut.Status;
-        DTask.DAwaiter dAwaiter = sut.GetDAwaiter();
-        bool isCompleted = await dAwaiter.IsCompletedAsync();
+        var awaiter = sut.GetDAwaiter();
+        bool isCompleted = await awaiter.IsCompletedAsync();
 
         // Assert
         isCompleted.Should().BeFalse();
@@ -82,18 +82,18 @@ public class DAsyncMethodTests
             await DTask.Yield();
         }
 
-        var handler = Substitute.For<ISuspensionHandler>();
+        var handler = Substitute.For<IStateHandler>();
 
         // Act
         DTask sut = Parent();
-        DTask.DAwaiter dAwaiter = sut.GetDAwaiter();
-        await dAwaiter.IsCompletedAsync();
-        await dAwaiter.OnSuspendedAsync(ref handler);
+        var awaiter = sut.GetDAwaiter();
+        await awaiter.IsCompletedAsync();
+        awaiter.SaveState(ref handler);
 
         // Assert
-        // handler.ReceivedWithAnyArgs(2).SaveStateMachine(ref Arg.Any<Arg.AnyType>(), Arg.Any<ISuspensionInfo>()); // https://github.com/nsubstitute/NSubstitute/issues/787
+        // handler.ReceivedWithAnyArgs(2).SaveStateMachine(ref Arg.Any<Arg.AnyType>(), Arg.Any<ISuspensionInfo>()); https://github.com/nsubstitute/NSubstitute/issues/787
         handler.ReceivedCalls()
-            .Where(call => call.GetMethodInfo().Name == nameof(ISuspensionHandler.SaveStateMachine))
+            .Where(call => call.GetMethodInfo().Name == nameof(IStateHandler.SaveStateMachine))
             .Should()
             .HaveCount(2);
     }
@@ -113,18 +113,14 @@ public class DAsyncMethodTests
             return new();
         }
 
-        DTask<TestResult>.Awaiter suspendedAwaiter = default;
-        DTask.Awaiter nonSuspendedAwaiter = default;
-
         // Act
         DTask sut = Parent();
-        DTask.DAwaiter dAwaiter = sut.GetDAwaiter();
-        await dAwaiter.IsCompletedAsync();
+        var awaiter = sut.GetDAwaiter();
+        await awaiter.IsCompletedAsync();
 
         // Assert
-        sut.As<ISuspensionInfo>().IsSuspended(ref suspendedAwaiter).Should().BeTrue();
-        sut.As<ISuspensionInfo>().IsSuspended(ref nonSuspendedAwaiter).Should().BeFalse();
+        sut.As<IStateMachineInfo>().SuspendedAwaiterType.Should().Be<DTask<TestResult>.Awaiter>();
     }
 
-    private sealed class TestResult { }
+    private sealed class TestResult;
 }

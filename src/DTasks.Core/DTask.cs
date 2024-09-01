@@ -1,6 +1,8 @@
-﻿using DTasks.Host;
+﻿using DTasks.CompilerServices;
+using DTasks.Hosting;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace DTasks;
@@ -8,15 +10,13 @@ namespace DTasks;
 [AsyncMethodBuilder(typeof(AsyncDTaskMethodBuilder))]
 public abstract class DTask
 {
-    private protected abstract Task<bool> UnderlyingTask { get; }
+    internal abstract Task<bool> UnderlyingTask { get; }
 
-    internal virtual Type AwaiterType => typeof(Awaiter);
+    internal abstract DTaskStatus Status { get; }
 
-    public abstract DTaskStatus Status { get; }
+    internal bool IsCompleted => Status is DTaskStatus.RanToCompletion; // TODO: or faulted or canceled
 
-    public bool IsCompleted => Status is DTaskStatus.RanToCompletion; // TODO: or faulted or canceled
-
-    public bool IsSuspended => Status is DTaskStatus.Suspended;
+    internal bool IsSuspended => Status is DTaskStatus.Suspended;
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     public Awaiter GetAwaiter() => new Awaiter(this);
@@ -24,8 +24,20 @@ public abstract class DTask
     [EditorBrowsable(EditorBrowsableState.Never)]
     public DAwaiter GetDAwaiter() => new DAwaiter(this);
 
-    internal abstract Task OnSuspendedAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
+    internal virtual void SaveState<THandler>(ref THandler handler)
+        where THandler : IStateHandler
+    {
+    }
+
+    internal abstract Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
         where THandler : ISuspensionHandler;
+
+    internal virtual Task CompleteAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
+        where THandler : ICompletionHandler
+    {
+        VerifyStatus(expectedStatus: DTaskStatus.RanToCompletion);
+        return handler.OnCompletedAsync(cancellationToken);
+    }
 
     public static DTask CompletedTask { get; } = new CompletedDTask<VoidDTaskResult>(default);
 
@@ -61,6 +73,13 @@ public abstract class DTask
         Debug.Fail($"The DTask was not '{expectedStatus}'.");
     }
 
+    [ExcludeFromCodeCoverage]
+    [DoesNotReturn]
+    private protected static void InvalidAwait()
+    {
+        throw new InvalidOperationException("DTasks may be awaited in d-async methods only.");
+    }
+
     public readonly struct Awaiter : ICriticalNotifyCompletion, IDTaskAwaiter
     {
         private readonly DTask _task;
@@ -72,18 +91,16 @@ public abstract class DTask
 
         DTask IDTaskAwaiter.Task => _task;
 
-        private TaskAwaiter<bool> UnderlyingTaskAwaiter => _task.UnderlyingTask.GetAwaiter();
-
-        public bool IsCompleted => _task.IsCompleted;
+        public bool IsCompleted => false;
 
         public void GetResult()
         {
             _task.EnsureCompleted();
         }
 
-        public void OnCompleted(Action continuation) => UnderlyingTaskAwaiter.OnCompleted(continuation);
+        public void OnCompleted(Action continuation) => InvalidAwait();
 
-        public void UnsafeOnCompleted(Action continuation) => UnderlyingTaskAwaiter.UnsafeOnCompleted(continuation);
+        public void UnsafeOnCompleted(Action continuation) => InvalidAwait();
     }
 
     public readonly struct DAwaiter
@@ -105,18 +122,24 @@ public abstract class DTask
             _task.EnsureCompleted();
         }
 
-        public Task OnCompletedAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
-            where THandler : ICompletionHandler
+        public void SaveState<THandler>(ref THandler handler)
+            where THandler : IStateHandler
         {
-            _task.EnsureCompleted();
-            return handler.OnCompletedAsync(cancellationToken);
+            _task.SaveState(ref handler);
         }
 
-        public Task OnSuspendedAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
+        public Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
             where THandler : ISuspensionHandler
         {
             _task.EnsureSuspended();
-            return _task.OnSuspendedAsync(ref handler, cancellationToken);
+            return _task.SuspendAsync(ref handler, cancellationToken);
+        }
+
+        public Task CompleteAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
+            where THandler : ICompletionHandler
+        {
+            _task.EnsureCompleted();
+            return _task.CompleteAsync(ref handler, cancellationToken);
         }
     }
 }
@@ -126,7 +149,15 @@ public abstract class DTask<TResult> : DTask
 {
     internal abstract TResult Result { get; }
 
-    internal sealed override Type AwaiterType => typeof(Awaiter);
+    internal override Task CompleteAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
+    {
+        VerifyStatus(expectedStatus: DTaskStatus.RanToCompletion);
+
+        if (typeof(TResult) == typeof(VoidDTaskResult))
+            return handler.OnCompletedAsync(cancellationToken);
+
+        return handler.OnCompletedAsync(Result, cancellationToken);
+    }
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     public new Awaiter GetAwaiter() => new Awaiter(this);
@@ -143,11 +174,9 @@ public abstract class DTask<TResult> : DTask
             _task = task;
         }
 
-        public bool IsCompleted => _task.IsCompleted;
+        public bool IsCompleted => false;
 
         DTask IDTaskAwaiter.Task => _task;
-
-        private TaskAwaiter<bool> UnderlyingTaskAwaiter => _task.UnderlyingTask.GetAwaiter();
 
         public TResult GetResult()
         {
@@ -155,9 +184,9 @@ public abstract class DTask<TResult> : DTask
             return _task.Result;
         }
 
-        public void OnCompleted(Action continuation) => UnderlyingTaskAwaiter.OnCompleted(continuation);
+        public void OnCompleted(Action continuation) => InvalidAwait();
 
-        public void UnsafeOnCompleted(Action continuation) => UnderlyingTaskAwaiter.UnsafeOnCompleted(continuation);
+        public void UnsafeOnCompleted(Action continuation) => InvalidAwait();
     }
 
     public new readonly struct DAwaiter
@@ -180,18 +209,24 @@ public abstract class DTask<TResult> : DTask
             return _task.Result;
         }
 
-        public Task OnCompletedAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
-            where THandler : ICompletionHandler
+        public void SaveState<THandler>(ref THandler handler)
+            where THandler : IStateHandler
         {
-            _task.EnsureCompleted();
-            return handler.OnCompletedAsync(_task.Result, cancellationToken);
+            _task.SaveState(ref handler);
         }
 
-        public Task OnSuspendedAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
+        public Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
             where THandler : ISuspensionHandler
         {
             _task.EnsureSuspended();
-            return _task.OnSuspendedAsync(ref handler, cancellationToken);
+            return _task.SuspendAsync(ref handler, cancellationToken);
+        }
+
+        public Task CompleteAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
+            where THandler : ICompletionHandler
+        {
+            _task.EnsureCompleted();
+            return _task.CompleteAsync(ref handler, cancellationToken);
         }
     }
 }

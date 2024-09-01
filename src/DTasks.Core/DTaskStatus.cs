@@ -1,6 +1,6 @@
 ﻿namespace DTasks;
 
-public enum DTaskStatus
+internal enum DTaskStatus
 {
     Running,
     Suspended,

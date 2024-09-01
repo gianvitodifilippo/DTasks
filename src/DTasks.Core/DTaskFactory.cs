@@ -1,4 +1,4 @@
-﻿using DTasks.Host;
+﻿using DTasks.Hosting;
 
 namespace DTasks;
 
@@ -18,20 +18,20 @@ public sealed class DTaskFactory
 
     private sealed class DelegateSuspendedDTask<TResult>(SuspensionCallback callback) : DTask<TResult>, ISuspensionCallback
     {
-        public override DTaskStatus Status => DTaskStatus.Suspended;
+        internal override DTaskStatus Status => DTaskStatus.Suspended;
 
         internal override TResult Result
         {
             get
             {
-                InvalidStatus(DTaskStatus.RanToCompletion);
+                InvalidStatus(expectedStatus: DTaskStatus.RanToCompletion);
                 return default!;
             }
         }
 
-        private protected override Task<bool> UnderlyingTask => Task.FromResult(false);
+        internal override Task<bool> UnderlyingTask => Task.FromResult(false);
 
-        internal override Task OnSuspendedAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
+        internal override Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
         {
             return handler.OnSuspendedAsync(this, cancellationToken);
         }

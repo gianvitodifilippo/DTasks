@@ -1,7 +1,7 @@
-﻿using DTasks;
-using System.Diagnostics;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
-namespace System.Runtime.CompilerServices;
+namespace DTasks.CompilerServices;
 
 public struct AsyncDTaskMethodBuilder
 {
@@ -62,7 +62,7 @@ public struct AsyncDTaskMethodBuilder
     {
         Debug.Assert(builderField is null, $"'{nameof(Start)}' must be invoked once.");
 
-        // Unlike the runtime implementation, here we allocate a boxed state machine right from the start.
+        // Unlike AsyncTaskMethodBuilder, here we allocate a boxed state machine right from the start.
         // We do not have the same strict performance requirements, therefore we trade the possibility
         // of avoiding the allocation of the state machine box if the method completes synchronously for
         // a clearer and more manageable code.
