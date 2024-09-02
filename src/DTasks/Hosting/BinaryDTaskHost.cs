@@ -1,11 +1,10 @@
 ﻿using DTasks.Serialization;
 using DTasks.Storage;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 namespace DTasks.Hosting;
 
-public abstract class BinaryDTaskHost<TFlowId, TStack, THeap>
+public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowId>
     where TFlowId : notnull
     where TStack : notnull, IFlowStack
     where THeap : notnull, IFlowHeap
@@ -29,28 +28,16 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap>
 
     protected abstract Task OnCompletedAsync<TResult>(TFlowId flowId, TResult result, CancellationToken cancellationToken);
 
-    public Task SuspendAsync(TFlowId flowId, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken = default)
+    protected sealed override Task SuspendCoreAsync(TFlowId flowId, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken = default)
     {
         FlowHandler handler = new(flowId, this);
         return handler.SuspendAsync(scope, awaiter, cancellationToken);
     }
 
-    public Task SuspendAsync<TResult>(TFlowId flowId, IDTaskScope scope, DTask<TResult>.DAwaiter awaiter, CancellationToken cancellationToken = default)
+    protected sealed override Task ResumeCoreAsync(TFlowId flowId, DTask resultTask, IDTaskScope scope, CancellationToken cancellationToken = default)
     {
         FlowHandler handler = new(flowId, this);
-        return handler.SuspendAsync(scope, Unsafe.As<DTask<TResult>.DAwaiter, DTask.DAwaiter>(ref awaiter), cancellationToken);
-    }
-
-    public Task ResumeAsync(TFlowId flowId, IDTaskScope scope, CancellationToken cancellationToken = default)
-    {
-        FlowHandler handler = new(flowId, this);
-        return handler.ResumeAsync(scope, cancellationToken);
-    }
-
-    public Task ResumeAsync<TResult>(TFlowId flowId, TResult result, IDTaskScope scope, CancellationToken cancellationToken = default)
-    {
-        FlowHandler handler = new(flowId, this);
-        return handler.ResumeAsync(result, scope, cancellationToken);
+        return handler.ResumeAsync(resultTask, scope, cancellationToken);
     }
 
     private struct FlowHandler(TFlowId flowId, BinaryDTaskHost<TFlowId, TStack, THeap> host) : IStateHandler, ISuspensionHandler, ICompletionHandler
@@ -80,17 +67,7 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap>
             await awaiter.SuspendAsync(ref this, cancellationToken);
         }
 
-        public Task ResumeAsync(IDTaskScope scope, CancellationToken cancellationToken)
-        {
-            return ResumeCoreAsync(DTask.CompletedTask, scope, cancellationToken);
-        }
-
-        public Task ResumeAsync<TResult>(TResult result, IDTaskScope scope, CancellationToken cancellationToken)
-        {
-            return ResumeCoreAsync(DTask.FromResult(result), scope, cancellationToken);
-        }
-
-        private async Task ResumeCoreAsync(DTask resultTask, IDTaskScope scope, CancellationToken cancellationToken)
+        public async Task ResumeAsync(DTask resultTask, IDTaskScope scope, CancellationToken cancellationToken)
         {
             AssertUninitialized();
 
@@ -120,6 +97,8 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap>
 
         void IStateHandler.SaveStateMachine<TStateMachine>(ref TStateMachine stateMachine, IStateMachineInfo info)
         {
+            AssertInitialized();
+
             ReadOnlyMemory<byte> bytes = host._converter.SerializeStateMachine(ref _heap, ref stateMachine, info);
             _stack.PushStateMachine(bytes);
         }
@@ -147,6 +126,12 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap>
         readonly Task ICompletionHandler.OnCompletedAsync<TResult>(TResult result, CancellationToken cancellationToken)
         {
             return host.OnCompletedAsync(flowId, result, cancellationToken);
+        }
+
+        [Conditional("DEBUG")]
+        private readonly void AssertInitialized()
+        {
+            Debug.Assert(_stack is not null && _heap is not null, "The handler was not initialized.");
         }
 
         [Conditional("DEBUG")]
