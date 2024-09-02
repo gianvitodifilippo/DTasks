@@ -14,6 +14,8 @@ public abstract class DTask
 
     internal abstract DTaskStatus Status { get; }
 
+    internal bool IsRunning => Status is DTaskStatus.Running;
+
     internal bool IsCompleted => Status is DTaskStatus.RanToCompletion; // TODO: or faulted or canceled
 
     internal bool IsSuspended => Status is DTaskStatus.Suspended;
@@ -53,6 +55,12 @@ public abstract class DTask
     {
         if (!IsCompleted)
             throw new InvalidOperationException("The DTask was not completed.");
+    }
+
+    private protected void EnsureNotRunning()
+    {
+        if (IsRunning)
+            throw new InvalidOperationException("The DTask was still running.");
     }
 
     private protected void EnsureSuspended()
@@ -125,6 +133,7 @@ public abstract class DTask
         public void SaveState<THandler>(ref THandler handler)
             where THandler : IStateHandler
         {
+            _task.EnsureNotRunning();
             _task.SaveState(ref handler);
         }
 
@@ -212,6 +221,7 @@ public abstract class DTask<TResult> : DTask
         public void SaveState<THandler>(ref THandler handler)
             where THandler : IStateHandler
         {
+            _task.EnsureNotRunning();
             _task.SaveState(ref handler);
         }
 

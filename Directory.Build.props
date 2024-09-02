@@ -1,4 +1,5 @@
 <Project>
+    
     <PropertyGroup>
         <LangVersion>latest</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
@@ -10,4 +11,5 @@
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseForTests|AnyCPU'">
         <Optimize>True</Optimize>
     </PropertyGroup>
+    
 </Project>

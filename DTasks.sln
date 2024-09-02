@@ -11,9 +11,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DTasks.Tests", "test\DTasks
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CD317A5A-1FC8-4DEB-93CB-467CE1BFE3D0}"
 	ProjectSection(SolutionItems) = preProject
-		.editorconfig = .editorconfig
 		Directory.Build.props = Directory.Build.props
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks", "src\DTasks\DTasks.csproj", "{D545C9BB-09FC-4762-8824-1AB2EBC08707}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,6 +35,12 @@ Global
 		{517F57DA-7A7D-45B0-904F-F9DC3DB23863}.Release|Any CPU.Build.0 = Release|Any CPU
 		{517F57DA-7A7D-45B0-904F-F9DC3DB23863}.ReleaseForTests|Any CPU.ActiveCfg = ReleaseForTests|Any CPU
 		{517F57DA-7A7D-45B0-904F-F9DC3DB23863}.ReleaseForTests|Any CPU.Build.0 = ReleaseForTests|Any CPU
+		{D545C9BB-09FC-4762-8824-1AB2EBC08707}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D545C9BB-09FC-4762-8824-1AB2EBC08707}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D545C9BB-09FC-4762-8824-1AB2EBC08707}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D545C9BB-09FC-4762-8824-1AB2EBC08707}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D545C9BB-09FC-4762-8824-1AB2EBC08707}.ReleaseForTests|Any CPU.ActiveCfg = ReleaseForTests|Any CPU
+		{D545C9BB-09FC-4762-8824-1AB2EBC08707}.ReleaseForTests|Any CPU.Build.0 = ReleaseForTests|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

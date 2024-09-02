@@ -2,6 +2,6 @@
 
 public interface IStateHandler
 {
-    void SaveStateMachine<TStateMachine>(ref TStateMachine stateMachine, IStateMachineInfo suspensionInfo)
+    void SaveStateMachine<TStateMachine>(ref TStateMachine stateMachine, IStateMachineInfo info)
         where TStateMachine : notnull;
 }
