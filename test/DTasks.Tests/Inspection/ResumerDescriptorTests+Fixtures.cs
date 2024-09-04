@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-
-namespace DTasks.Inspection;
+﻿namespace DTasks.Inspection;
 
 public partial class ResumerDescriptorTests
 {
@@ -24,20 +22,6 @@ public partial class ResumerDescriptorTests
 
     public delegate DTask ResumerWithoutHandleAwaiter(DTask resultTask, ConstructorWithoutHandleAwaiter constructor);
 
-
-    private static MethodInfo GetRequiredMethod<T>(string methodName)
-    {
-        MethodInfo? method = typeof(T).GetMethod(methodName);
-        Assert.NotNull(method);
-        return method;
-    }
-
-    private static MethodInfo GetRequiredMethod<T>(string methodName, Type[] parameterTypes)
-    {
-        MethodInfo? method = typeof(T).GetMethod(methodName, parameterTypes);
-        Assert.NotNull(method);
-        return method;
-    }
 
     public class ConstructorWithoutHandleField
     {

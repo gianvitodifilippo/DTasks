@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using static DTasks.Inspection.InspectionConstants;
 
 namespace DTasks.Inspection;
 
@@ -31,8 +32,8 @@ internal sealed class SuspenderDescriptor : ISuspenderDescriptor
         if (stateMachineType.GetGenericParameterConstraints() is not [])
             return False(out descriptor);
 
-        MethodInfo? invokeMethod = suspenderType.GetMethod("Invoke");
-        Debug.Assert(invokeMethod is not null);
+        MethodInfo? invokeMethod = suspenderType.GetMethod(MethodNames.Invoke);
+        Debug.Assert(invokeMethod is not null, "A delegate should have the 'Invoke' method.");
 
         if (invokeMethod.ReturnType != typeof(void))
             return False(out descriptor);

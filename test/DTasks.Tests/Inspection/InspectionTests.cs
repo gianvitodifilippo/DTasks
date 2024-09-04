@@ -78,17 +78,18 @@ public class InspectionTests
         MyType myType = new();
         DTask task = new AsyncMethodContainer().Method(myType);
 
-        FieldInfo? stateMachineField = task.GetType().GetField("_stateMachine", BindingFlags.NonPublic | BindingFlags.Instance);
-        Assert.NotNull(stateMachineField);
+        FieldInfo stateMachineField = task.GetType().GetRequiredField(
+            name: "_stateMachine",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance);
 
-        var stateMachine = stateMachineField.GetValue(task);
-        Assert.NotNull(stateMachine);
+        object? stateMachine = stateMachineField.GetValue(task);
 
-        MethodInfo? implementationMethod = typeof(InspectionTests).GetMethod(nameof(Suspender_ShouldInvokeExpectedDeconstructorMethods_Impl), BindingFlags.NonPublic | BindingFlags.Instance);
-        Assert.NotNull(implementationMethod);
+        MethodInfo implementationMethod = typeof(InspectionTests).GetRequiredMethod(
+            name: nameof(Suspender_ShouldInvokeExpectedDeconstructorMethods_Impl),
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
+            parameterTypes: [Type.MakeGenericMethodParameter(0), typeof(MyType)]);
 
         implementationMethod = implementationMethod.MakeGenericMethod(StateMachineType);
-
         implementationMethod.Invoke(this, [stateMachine, myType]);
     }
 

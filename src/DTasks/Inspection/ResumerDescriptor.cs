@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using static DTasks.Inspection.InspectionConstants;
 
 namespace DTasks.Inspection;
 
@@ -24,8 +25,8 @@ internal sealed class ResumerDescriptor : IResumerDescriptor
         if (!typeof(Delegate).IsAssignableFrom(suspenderType) || suspenderType.IsGenericTypeDefinition)
             return False(out descriptor);
 
-        MethodInfo? invokeMethod = suspenderType.GetMethod("Invoke");
-        Debug.Assert(invokeMethod is not null);
+        MethodInfo? invokeMethod = suspenderType.GetMethod(MethodNames.Invoke);
+        Debug.Assert(invokeMethod is not null, "A delegate should have the 'Invoke' method.");
 
         if (invokeMethod.ReturnType != typeof(DTask))
             return False(out descriptor);

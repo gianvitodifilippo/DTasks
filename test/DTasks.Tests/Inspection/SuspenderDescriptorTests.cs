@@ -44,9 +44,14 @@ public partial class SuspenderDescriptorTests
     {
         // Arrange
         Type deconstructorType = typeof(ClassDeconstructor);
-        MethodInfo handleFieldMethodOfInt = GetRequiredMethod<ClassDeconstructor>(MethodNames.HandleField).MakeGenericMethod(typeof(int));
-        MethodInfo handleAwaiterMethod = GetRequiredMethod<ClassDeconstructor>(MethodNames.HandleAwaiter);
-        MethodInfo handleFieldMethodOfString = GetRequiredMethod<ClassDeconstructor>(MethodNames.HandleField).MakeGenericMethod(typeof(string));
+        MethodInfo handleFieldMethod = deconstructorType.GetRequiredMethod(
+            name: MethodNames.HandleField,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [typeof(string), Type.MakeGenericMethodParameter(0)]);
+        MethodInfo handleAwaiterMethod = deconstructorType.GetRequiredMethod(
+            name: MethodNames.HandleAwaiter,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [typeof(string)]);
 
         // Act
         bool result = DeconstructorDescriptor.TryCreate(deconstructorType, out DeconstructorDescriptor? sut);
@@ -55,9 +60,9 @@ public partial class SuspenderDescriptorTests
         result.Should().BeTrue();
         sut.Should().NotBeNull();
         sut!.Type.Should().Be(deconstructorType);
-        sut.HandleStateMethod.Should().BeSameAs(handleFieldMethodOfInt);
+        sut.HandleStateMethod.Should().BeSameAs(handleFieldMethod.MakeGenericMethod(typeof(int)));
         sut.HandleAwaiterMethod.Should().BeSameAs(handleAwaiterMethod);
-        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethodOfString);
+        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethod.MakeGenericMethod(typeof(string)));
     }
 
     [Fact]
@@ -65,9 +70,18 @@ public partial class SuspenderDescriptorTests
     {
         // Arrange
         Type deconstructorType = typeof(DeconstructorWithHandleStateMethod);
-        MethodInfo handleStateMethod = GetRequiredMethod<DeconstructorWithHandleStateMethod>(MethodNames.HandleState);
-        MethodInfo handleAwaiterMethod = GetRequiredMethod<DeconstructorWithHandleStateMethod>(MethodNames.HandleAwaiter);
-        MethodInfo handleFieldMethodOfString = GetRequiredMethod<DeconstructorWithHandleStateMethod>(MethodNames.HandleField).MakeGenericMethod(typeof(string));
+        MethodInfo handleStateMethod = deconstructorType.GetRequiredMethod(
+            name: MethodNames.HandleState,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [typeof(string), typeof(int)]);
+        MethodInfo handleAwaiterMethod = deconstructorType.GetRequiredMethod(
+            name: MethodNames.HandleAwaiter,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [typeof(string)]);
+        MethodInfo handleFieldMethod = deconstructorType.GetRequiredMethod(
+            name: MethodNames.HandleField,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [typeof(string), Type.MakeGenericMethodParameter(0)]);
 
         // Act
         bool result = DeconstructorDescriptor.TryCreate(deconstructorType, out DeconstructorDescriptor? sut);
@@ -78,7 +92,7 @@ public partial class SuspenderDescriptorTests
         sut!.Type.Should().Be(deconstructorType);
         sut.HandleStateMethod.Should().BeSameAs(handleStateMethod);
         sut.HandleAwaiterMethod.Should().BeSameAs(handleAwaiterMethod);
-        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethodOfString);
+        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethod.MakeGenericMethod(typeof(string)));
     }
 
     [Fact]
@@ -86,10 +100,18 @@ public partial class SuspenderDescriptorTests
     {
         // Arrange
         Type deconstructorType = typeof(DeconstructorWithSpecializedMethod);
-        MethodInfo handleIntFieldMethod = GetRequiredMethod<DeconstructorWithSpecializedMethod>(MethodNames.HandleField, [typeof(string), typeof(int)]);
-        MethodInfo handleAwaiterMethod = GetRequiredMethod<DeconstructorWithSpecializedMethod>(MethodNames.HandleAwaiter);
-        MethodInfo handleFieldMethodOfString = GetRequiredMethod<DeconstructorWithSpecializedMethod>(MethodNames.HandleField, [typeof(string), Type.MakeGenericMethodParameter(0)]).MakeGenericMethod(typeof(string));
-        MethodInfo handleFieldMethodOfInt = GetRequiredMethod<DeconstructorWithSpecializedMethod>(MethodNames.HandleField, [typeof(string), typeof(int)]);
+        MethodInfo handleIntFieldMethod = deconstructorType.GetRequiredMethod(
+            name: MethodNames.HandleField,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [typeof(string), typeof(int)]);
+        MethodInfo handleAwaiterMethod = deconstructorType.GetRequiredMethod(
+            name: MethodNames.HandleAwaiter,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [typeof(string)]);
+        MethodInfo handleFieldMethod = deconstructorType.GetRequiredMethod(
+            name: MethodNames.HandleField,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [typeof(string), Type.MakeGenericMethodParameter(0)]);
 
         // Act
         bool result = DeconstructorDescriptor.TryCreate(deconstructorType, out DeconstructorDescriptor? sut);
@@ -100,8 +122,8 @@ public partial class SuspenderDescriptorTests
         sut!.Type.Should().Be(deconstructorType);
         sut.HandleStateMethod.Should().BeSameAs(handleIntFieldMethod);
         sut.HandleAwaiterMethod.Should().BeSameAs(handleAwaiterMethod);
-        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethodOfString);
-        sut.GetHandleFieldMethod(typeof(int)).Should().BeSameAs(handleFieldMethodOfInt);
+        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethod.MakeGenericMethod(typeof(string)));
+        sut.GetHandleFieldMethod(typeof(int)).Should().BeSameAs(handleIntFieldMethod);
     }
 
     [Fact]
@@ -109,10 +131,22 @@ public partial class SuspenderDescriptorTests
     {
         // Arrange
         Type deconstructorType = typeof(DeconstructorWithSpecializedMethodAndHandleStateMethod);
-        MethodInfo handleStateMethod = GetRequiredMethod<DeconstructorWithSpecializedMethodAndHandleStateMethod>(MethodNames.HandleState);
-        MethodInfo handleAwaiterMethod = GetRequiredMethod<DeconstructorWithSpecializedMethodAndHandleStateMethod>(MethodNames.HandleAwaiter);
-        MethodInfo handleFieldMethodOfString = GetRequiredMethod<DeconstructorWithSpecializedMethodAndHandleStateMethod>(MethodNames.HandleField, [typeof(string), Type.MakeGenericMethodParameter(0)]).MakeGenericMethod(typeof(string));
-        MethodInfo handleIntFieldMethod = GetRequiredMethod<DeconstructorWithSpecializedMethodAndHandleStateMethod>(MethodNames.HandleField, [typeof(string), typeof(int)]);
+        MethodInfo handleStateMethod = deconstructorType.GetRequiredMethod(
+            name: MethodNames.HandleState,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [typeof(string), typeof(int)]);
+        MethodInfo handleAwaiterMethod = deconstructorType.GetRequiredMethod(
+            name: MethodNames.HandleAwaiter,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [typeof(string)]);
+        MethodInfo handleFieldMethod = deconstructorType.GetRequiredMethod(
+            name: MethodNames.HandleField,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [typeof(string), Type.MakeGenericMethodParameter(0)]);
+        MethodInfo handleIntFieldMethod = deconstructorType.GetRequiredMethod(
+            name: MethodNames.HandleField,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [typeof(string), typeof(int)]);
 
         // Act
         bool result = DeconstructorDescriptor.TryCreate(deconstructorType, out DeconstructorDescriptor? sut);
@@ -123,7 +157,7 @@ public partial class SuspenderDescriptorTests
         sut!.Type.Should().Be(deconstructorType);
         sut.HandleStateMethod.Should().BeSameAs(handleStateMethod);
         sut.HandleAwaiterMethod.Should().BeSameAs(handleAwaiterMethod);
-        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethodOfString);
+        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethod.MakeGenericMethod(typeof(string)));
         sut.GetHandleFieldMethod(typeof(int)).Should().BeSameAs(handleIntFieldMethod);
     }
 

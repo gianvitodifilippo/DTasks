@@ -1,5 +1,4 @@
 ﻿using DTasks.Hosting;
-using System.Reflection;
 
 namespace DTasks.Inspection;
 
@@ -34,20 +33,6 @@ public partial class SuspenderDescriptorTests
     public delegate void SuspenderWithoutHandleAwaiter<TStateMachine>(ref TStateMachine stateMachine, IStateMachineInfo info, DeconstructorWithoutHandleAwaiter deconstructor)
         where TStateMachine : notnull;
 
-
-    private static MethodInfo GetRequiredMethod<T>(string methodName)
-    {
-        MethodInfo? method = typeof(T).GetMethod(methodName);
-        Assert.NotNull(method);
-        return method;
-    }
-
-    private static MethodInfo GetRequiredMethod<T>(string methodName, Type[] parameterTypes)
-    {
-        MethodInfo? method = typeof(T).GetMethod(methodName, parameterTypes);
-        Assert.NotNull(method);
-        return method;
-    }
 
     public class DeconstructorWithoutHandleField
     {

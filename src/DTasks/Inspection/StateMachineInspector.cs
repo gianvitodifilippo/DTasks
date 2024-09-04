@@ -68,6 +68,7 @@ public sealed class StateMachineInspector : IStateMachineInspector
         }
 
         FieldInfo stateField = stateMachineDescriptor.StateField;
+
         // deconstructor.HandleState("<>1__state", stateMachine.<>1__state);
         il.LoadDeconstructor();                                         // Stack: deconstructor
         il.LoadString(stateField.Name);                                 // Stack: deconstructor, "<>1__state"
@@ -95,8 +96,8 @@ public sealed class StateMachineInspector : IStateMachineInspector
             il.BranchIfFalse(ifFalseLabel);                   // Stack: -
 
             // deconstructor.HandleAwaiter($awaiterField.Name);
-            il.LoadDeconstructor();                                       // Stack: deconstructor
-            il.LoadString(awaiterField.Name);                             // Stack: deconstructor, $awaiterField.Name
+            il.LoadDeconstructor();                                           // Stack: deconstructor
+            il.LoadString(awaiterField.Name);                                 // Stack: deconstructor, $awaiterField.Name
             il.CallHandleMethod(deconstructorDescriptor.HandleAwaiterMethod); // Stack: -
         }
 
@@ -128,6 +129,8 @@ public sealed class StateMachineInspector : IStateMachineInspector
         il.CreateStateMachine(); // Stack: -
 
         FieldInfo builderField = stateMachineDescriptor.BuilderField;
+
+        // stateMachine.<>t__builder = AsyncTaskMethodBuilder<>.Create()
         il.LoadStateMachineLocal();                          // Stack: stateMachine
         il.CreateAsyncMethodBuilder(builderField.FieldType); // Stack: stateMachine, @result[AsyncDTaskMethodBuilder<>.Create]
         il.StoreField(builderField);                         // Stack: -
@@ -137,22 +140,23 @@ public sealed class StateMachineInspector : IStateMachineInspector
             MethodInfo handleFieldMethod = constructorDescriptor.GetHandleFieldMethod(userField.FieldType);
 
             // _ = constructor.HandleXXX($userField.Name, ref stateMachine.$userField);
-            il.LoadConstructor();               // Stack: constructor
-            il.LoadString(userField.Name);      // Stack: constructor, $userField.Name
-            il.LoadStateMachineLocal();         // Stack: constructor, $userField.Name, stateMachine
-            il.LoadFieldAddress(userField);     // Stack: constructor, $userField.Name, &stateMachine.$userField
+            il.LoadConstructor();                   // Stack: constructor
+            il.LoadString(userField.Name);          // Stack: constructor, $userField.Name
+            il.LoadStateMachineLocal();             // Stack: constructor, $userField.Name, stateMachine
+            il.LoadFieldAddress(userField);         // Stack: constructor, $userField.Name, &stateMachine.$userField
             il.CallHandleMethod(handleFieldMethod); // Stack: @result[HandleXXX]
-            il.Pop();                           // Stack: -
+            il.Pop();                               // Stack: -
         }
 
         FieldInfo stateField = stateMachineDescriptor.StateField;
+
         // _ = constructor.HandleState("<>1__state", ref stateMachine.<>1__state);
-        il.LoadConstructor();                                     // constructor
-        il.LoadString(stateField.Name);                           // constructor, "<>1__state"
-        il.LoadStateMachineLocal();                               // constructor, "<>1__state", stateMachine
-        il.LoadFieldAddress(stateField);                          // constructor, "<>1__state", &stateMachine.$stateField
+        il.LoadConstructor();                                         // constructor
+        il.LoadString(stateField.Name);                               // constructor, "<>1__state"
+        il.LoadStateMachineLocal();                                   // constructor, "<>1__state", stateMachine
+        il.LoadFieldAddress(stateField);                              // constructor, "<>1__state", &stateMachine.$stateField
         il.CallHandleMethod(constructorDescriptor.HandleStateMethod); // @result[HandleState]
-        il.Pop();                                                 // -
+        il.Pop();                                                     // -
 
         Label ifFalseLabel = default;
         bool wasLabelDefined = false;
@@ -167,10 +171,10 @@ public sealed class StateMachineInspector : IStateMachineInspector
             wasLabelDefined = true;
 
             // if (constructor.HandleAwaiter($awaiterField.Name))
-            il.LoadConstructor();                                       // Stack: constructor
-            il.LoadString(awaiterField.Name);                           // Stack: constructor, $awaiterField.Name
+            il.LoadConstructor();                                           // Stack: constructor
+            il.LoadString(awaiterField.Name);                               // Stack: constructor, $awaiterField.Name
             il.CallHandleMethod(constructorDescriptor.HandleAwaiterMethod); // Stack: @result[HandleAwaiter]
-            il.BranchIfFalse(ifFalseLabel);                             // Stack: -
+            il.BranchIfFalse(ifFalseLabel);                                 // Stack: -
 
             // The following relies on DTaskAwaiter/DTaskAwaiter<T> having the same layout
             // stateMachine.$awaiterField = resultTask.GetAwaiter()
@@ -195,8 +199,7 @@ public sealed class StateMachineInspector : IStateMachineInspector
         il.LoadStateMachineLocal();                // Stack: stateMachine
         il.LoadFieldAddress(builderField);         // Stack: stateMachine.<>t__builder
         il.CallTaskGetter(builderField.FieldType); // Stack: stateMachine.<>t__builder.Task
-
-        il.Return(); // Stack: -
+        il.Return();                               // Stack: -
 
         return method.CreateDelegate(_resumerDescriptor.DelegateType);
     }

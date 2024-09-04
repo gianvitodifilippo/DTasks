@@ -12,13 +12,15 @@ internal readonly ref struct InspectorILGenerator(
     bool loadCallbackIndirectly,
     OpCode callOpCode)
 {
-    private static readonly MethodInfo _isSuspendedGenericMethod = typeof(InspectorILGenerator).GetMethod(
+    private static readonly MethodInfo _isSuspendedGenericMethod = typeof(InspectorILGenerator).GetRequiredMethod(
         name: nameof(IsSuspended),
-        bindingAttr: BindingFlags.Static | BindingFlags.NonPublic)!;
+        bindingAttr: BindingFlags.Static | BindingFlags.NonPublic,
+        parameterTypes: [typeof(IStateMachineInfo)]);
 
-    private static readonly MethodInfo _getAwaiterMethod = typeof(DTask).GetMethod(
+    private static readonly MethodInfo _getAwaiterMethod = typeof(DTask).GetRequiredMethod(
         name: nameof(DTask.GetAwaiter),
-        bindingAttr: BindingFlags.Instance | BindingFlags.Public)!;
+        bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+        parameterTypes: []);
 
     private Type StateMachineType => stateMachineDescriptor.Type;
 
@@ -154,19 +156,32 @@ internal readonly ref struct InspectorILGenerator(
 
     public void CreateAsyncMethodBuilder(Type builderType)
     {
-        MethodInfo createMethod = builderType.GetMethod(nameof(AsyncDTaskMethodBuilder.Create))!;
+        MethodInfo createMethod = builderType.GetRequiredMethod(
+            name: nameof(AsyncDTaskMethodBuilder.Create),
+            bindingAttr: BindingFlags.Static | BindingFlags.Public,
+            parameterTypes: []);
+
         il.Emit(OpCodes.Call, createMethod);
     }
 
     public void CallStartMethod(Type builderType)
     {
-        MethodInfo startMethod = builderType.GetMethod(nameof(AsyncDTaskMethodBuilder.Start))!.MakeGenericMethod(StateMachineType);
+        MethodInfo startGenericMethod = builderType.GetRequiredMethod(
+            name: nameof(AsyncDTaskMethodBuilder.Start),
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [Type.MakeGenericMethodParameter(0).MakeByRefType()]);
+
+        MethodInfo startMethod = startGenericMethod.MakeGenericMethod(StateMachineType);
         il.Emit(OpCodes.Call, startMethod);
     }
 
     public void CallTaskGetter(Type builderType)
     {
-        MethodInfo taskGetter = builderType.GetMethod($"get_{nameof(AsyncDTaskMethodBuilder.Task)}")!;
+        MethodInfo taskGetter = builderType.GetRequiredMethod(
+            name: $"get_{nameof(AsyncDTaskMethodBuilder.Task)}",
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: []);
+
         il.Emit(OpCodes.Call, taskGetter);
     }
 
