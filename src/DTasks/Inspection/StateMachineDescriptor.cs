@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace DTasks.Inspection;
 
@@ -7,24 +6,16 @@ internal readonly struct StateMachineDescriptor
 {
     private readonly IEnumerable<FieldInfo> _fields;
 
-    private StateMachineDescriptor(Type type, IEnumerable<FieldInfo> fields)
+    private StateMachineDescriptor(Type type, ConstructorInfo constructor, IEnumerable<FieldInfo> fields)
     {
         Type = type;
+        Constructor = constructor;
         _fields = fields;
     }
 
     public Type Type { get; }
 
-    public ConstructorInfo Constructor
-    {
-        get
-        {
-            var constructor = Type.GetConstructor([]);
-            Debug.Assert(constructor is not null, "No parameterless constructor for provided state machine.");
-
-            return constructor;
-        }
-    }
+    public ConstructorInfo Constructor { get; }
 
     public IEnumerable<FieldInfo> UserFields => _fields.Where(IsUserField);
 
@@ -52,8 +43,12 @@ internal readonly struct StateMachineDescriptor
 
     public static StateMachineDescriptor Create(Type stateMachineType)
     {
+        ConstructorInfo? constructor = stateMachineType.GetConstructor([]);
+        if (constructor is null)
+            throw new ArgumentException("The state machine type should have a parameterless constructor.", nameof(stateMachineType));
+
         FieldInfo[] fields = stateMachineType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
-        return new StateMachineDescriptor(stateMachineType, fields);
+        return new StateMachineDescriptor(stateMachineType, constructor, fields);
     }
 }
