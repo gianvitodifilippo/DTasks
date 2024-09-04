@@ -26,6 +26,6 @@ public abstract class DTaskHost<TFlowId>
     }
 
     protected abstract Task SuspendCoreAsync(TFlowId flowId, ISuspensionScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken);
-    
+
     protected abstract Task ResumeCoreAsync(TFlowId flowId, IResumptionScope scope, DTask resultTask, CancellationToken cancellationToken);
 }

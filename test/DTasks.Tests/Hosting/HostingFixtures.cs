@@ -44,7 +44,7 @@ public static class HostingFixtures
     {
         private readonly T[] _array = array;
 
-        public bool Equals(TestReadOnlySpan<T>? other) => other is not null &&  _array.SequenceEqual(other._array);
+        public bool Equals(TestReadOnlySpan<T>? other) => other is not null && _array.SequenceEqual(other._array);
 
         public override bool Equals(object? obj) => obj is TestReadOnlySpan<T> other && Equals(other);
 
@@ -84,9 +84,9 @@ public static class HostingFixtures
     public abstract class TestDTaskStorage : IDTaskStorage<TestFlowStack>
     {
         public abstract TestFlowStack CreateStack();
-        
+
         public abstract Task<TestFlowStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken) where TFlowId : notnull;
-        
+
         public abstract Task SaveStackAsync<TFlowId>(TFlowId flowId, ref TestFlowStack stack, CancellationToken cancellationToken) where TFlowId : notnull;
     }
 
@@ -99,7 +99,7 @@ public static class HostingFixtures
         public abstract DTask DeserializeStateMachine(ref TestFlowHeap heap, TestReadOnlySpan<byte> bytes, DTask resultTask);
 
         public abstract TestReadOnlySpan<byte> SerializeHeap(ref TestFlowHeap heap);
-        
+
         public abstract TestReadOnlySpan<byte> SerializeStateMachine<TStateMachine>(ref TestFlowHeap heap, ref TStateMachine stateMachine, IStateMachineInfo info)
             where TStateMachine : notnull;
 

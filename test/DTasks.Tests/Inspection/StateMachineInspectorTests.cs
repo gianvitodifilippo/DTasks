@@ -399,7 +399,7 @@ public partial class StateMachineInspectorTests
 #endif
             _il.Emit(OpCodes.Ldfld, Arg.Is(StateMachineField("<>1__state")));
             _il.Emit(OpCodes.Callvirt, Arg.Is(Methods.HandleStateMethod));
-            
+
             _il.Emit(OpCodes.Ldarg_1);
             _il.Emit(OpCodes.Call, Arg.Is(IsSuspendedMethod()));
             _il.Emit(OpCodes.Brfalse_S, Arg.Any<Label>());
