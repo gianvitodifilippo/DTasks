@@ -57,7 +57,7 @@ public partial class SuspenderDescriptorTests
         sut!.Type.Should().Be(deconstructorType);
         sut.HandleStateMethod.Should().BeSameAs(handleFieldMethodOfInt);
         sut.HandleAwaiterMethod.Should().BeSameAs(handleAwaiterMethod);
-        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethodOfString));
+        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethodOfString);
     }
 
     [Fact]

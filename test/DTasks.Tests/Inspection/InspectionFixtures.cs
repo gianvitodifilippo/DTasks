@@ -38,6 +38,7 @@ public static class InspectionFixtures
         // https://sharplab.io/#v2:D4AQTAjAsAUCAMACEECsBuWtyIIIGcBPAOwGMBZAUwBcALAewBMBhe46gQwEtjKAnWAG9YiRD2qIA+gDMulADaNMMEcgAcyAGwAecQD5EVOkwAU5QgBVCAB0qIOfAOYBKVcJijRIAJxaAdACacoomzsqeyBBI8vSkHPKIALz2Tn4W9ADK1Hw8jqEAhOGePv4AIgochCZR8PBhqqLiiHyU+ACu8hLJJcy0XIpGDIyhyg3IAOzNrR0SANRSsgqMiPMxcfJ+ADKUxI50RQC+WB5auuwGvf2Mg6bOSQZ0fPQA7oi8rwBy9NQAkgC21nklD+O2olEYAFEAB6kSjWahcNgjWBHFRwMCGSw2OyCRCooA===
         public async DTask<int> Method(MyType arg)
         {
+            Thread.Sleep(10_000);
             await DTask.Yield();
             string local = arg.ToString()!;
             await Task.Delay(10000);
