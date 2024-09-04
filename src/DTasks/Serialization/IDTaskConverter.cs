@@ -16,4 +16,3 @@ public interface IDTaskConverter<THeap>
 
     DTask DeserializeStateMachine(ref THeap heap, ReadOnlySpan<byte> bytes, DTask resultTask);
 }
-

@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    
+
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
 
@@ -33,7 +33,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\src\DTasks\DTasks.csproj" />
+        <ProjectReference Include="..\..\src\DTasks\DTasks.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -41,5 +41,5 @@
         <Using Include="FluentAssertions" />
         <Using Include="NSubstitute" />
     </ItemGroup>
-    
+
 </Project>
