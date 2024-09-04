@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using static DTasks.Inspection.InspectionConstants;
 
 namespace DTasks.Inspection;
 
@@ -43,60 +44,63 @@ public partial class ResumerDescriptorTests
     public void Create_ShouldCreateDescriptor_ForMinimalConstructor()
     {
         // Arrange
-        MethodInfo handleIntFieldMethod = GetRequiredMethod<ClassConstructor>("HandleField").MakeGenericMethod(typeof(int));
-        MethodInfo handleAwaiterMethod = GetRequiredMethod<ClassConstructor>("HandleAwaiter");
-        MethodInfo handleStringFieldMethod = GetRequiredMethod<ClassConstructor>("HandleField").MakeGenericMethod(typeof(string));
+        Type constructorType = typeof(ClassConstructor);
+        MethodInfo handleFieldMethodOfInt = GetRequiredMethod<ClassConstructor>(MethodNames.HandleField).MakeGenericMethod(typeof(int));
+        MethodInfo handleAwaiterMethod = GetRequiredMethod<ClassConstructor>(MethodNames.HandleAwaiter);
+        MethodInfo handleFieldMethodOfString = GetRequiredMethod<ClassConstructor>(MethodNames.HandleField).MakeGenericMethod(typeof(string));
 
         // Act
-        bool result = ConstructorDescriptor.TryCreate(typeof(ClassConstructor), out ConstructorDescriptor? sut);
+        bool result = ConstructorDescriptor.TryCreate(constructorType, out ConstructorDescriptor? sut);
 
         // Assert
         result.Should().BeTrue();
         sut.Should().NotBeNull();
-        sut!.Type.Should().Be(typeof(ClassConstructor));
-        sut.HandleStateMethod.Should().BeSameAs(handleIntFieldMethod);
+        sut!.Type.Should().Be(constructorType);
+        sut.HandleStateMethod.Should().BeSameAs(handleFieldMethodOfInt);
         sut.HandleAwaiterMethod.Should().BeSameAs(handleAwaiterMethod);
-        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleStringFieldMethod);
+        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethodOfString);
     }
 
     [Fact]
     public void Create_ShouldCreateDescriptor_ForConstructorWithHandleStateMethod()
     {
         // Arrange
-        MethodInfo handleStateMethod = GetRequiredMethod<ConstructorWithHandleStateMethod>("HandleState");
-        MethodInfo handleAwaiterMethod = GetRequiredMethod<ConstructorWithHandleStateMethod>("HandleAwaiter");
-        MethodInfo handleStringFieldMethod = GetRequiredMethod<ConstructorWithHandleStateMethod>("HandleField").MakeGenericMethod(typeof(string));
+        Type constructorType = typeof(ConstructorWithHandleStateMethod);
+        MethodInfo handleStateMethod = GetRequiredMethod<ConstructorWithHandleStateMethod>(MethodNames.HandleState);
+        MethodInfo handleAwaiterMethod = GetRequiredMethod<ConstructorWithHandleStateMethod>(MethodNames.HandleAwaiter);
+        MethodInfo handleFieldMethodOfString = GetRequiredMethod<ConstructorWithHandleStateMethod>(MethodNames.HandleField).MakeGenericMethod(typeof(string));
 
         // Act
-        bool result = ConstructorDescriptor.TryCreate(typeof(ConstructorWithHandleStateMethod), out ConstructorDescriptor? sut);
+        bool result = ConstructorDescriptor.TryCreate(constructorType, out ConstructorDescriptor? sut);
 
         // Assert
         result.Should().BeTrue();
         sut.Should().NotBeNull();
-        sut!.Type.Should().Be(typeof(ConstructorWithHandleStateMethod));
+        sut!.Type.Should().Be(constructorType);
         sut.HandleStateMethod.Should().BeSameAs(handleStateMethod);
         sut.HandleAwaiterMethod.Should().BeSameAs(handleAwaiterMethod);
-        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleStringFieldMethod);
+        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethodOfString);
     }
 
     [Fact]
     public void Create_ShouldCreateDescriptor_ForConstructorWithSpecializedMethod()
     {
         // Arrange
-        MethodInfo handleIntFieldMethod = GetRequiredMethod<ConstructorWithSpecializedMethod>("HandleField", [typeof(string), typeof(int).MakeByRefType()]);
-        MethodInfo handleAwaiterMethod = GetRequiredMethod<ConstructorWithSpecializedMethod>("HandleAwaiter");
-        MethodInfo handleStringFieldMethod = GetRequiredMethod<ConstructorWithSpecializedMethod>("HandleField", [typeof(string), Type.MakeGenericMethodParameter(0).MakeByRefType()]).MakeGenericMethod(typeof(string));
+        Type constructorType = typeof(ConstructorWithSpecializedMethod);
+        MethodInfo handleIntFieldMethod = GetRequiredMethod<ConstructorWithSpecializedMethod>(MethodNames.HandleField, [typeof(string), typeof(int).MakeByRefType()]);
+        MethodInfo handleAwaiterMethod = GetRequiredMethod<ConstructorWithSpecializedMethod>(MethodNames.HandleAwaiter);
+        MethodInfo handleFieldMethodOfString = GetRequiredMethod<ConstructorWithSpecializedMethod>(MethodNames.HandleField, [typeof(string), Type.MakeGenericMethodParameter(0).MakeByRefType()]).MakeGenericMethod(typeof(string));
 
         // Act
-        bool result = ConstructorDescriptor.TryCreate(typeof(ConstructorWithSpecializedMethod), out ConstructorDescriptor? sut);
+        bool result = ConstructorDescriptor.TryCreate(constructorType, out ConstructorDescriptor? sut);
 
         // Assert
         result.Should().BeTrue();
         sut.Should().NotBeNull();
-        sut!.Type.Should().Be(typeof(ConstructorWithSpecializedMethod));
+        sut!.Type.Should().Be(constructorType);
         sut.HandleStateMethod.Should().BeSameAs(handleIntFieldMethod);
         sut.HandleAwaiterMethod.Should().BeSameAs(handleAwaiterMethod);
-        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleStringFieldMethod);
+        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethodOfString);
         sut.GetHandleFieldMethod(typeof(int)).Should().BeSameAs(handleIntFieldMethod);
     }
 
@@ -104,21 +108,22 @@ public partial class ResumerDescriptorTests
     public void Create_ShouldCreateDescriptor_ForConstructorWithSpecializedMethodAndHandleStateMethod()
     {
         // Arrange
-        MethodInfo handleStateMethod = GetRequiredMethod<ConstructorWithSpecializedMethodAndHandleStateMethod>("HandleState");
-        MethodInfo handleAwaiterMethod = GetRequiredMethod<ConstructorWithSpecializedMethodAndHandleStateMethod>("HandleAwaiter");
-        MethodInfo handleStringFieldMethod = GetRequiredMethod<ConstructorWithSpecializedMethodAndHandleStateMethod>("HandleField", [typeof(string), Type.MakeGenericMethodParameter(0).MakeByRefType()]).MakeGenericMethod(typeof(string));
-        MethodInfo handleIntFieldMethod = GetRequiredMethod<ConstructorWithSpecializedMethodAndHandleStateMethod>("HandleField", [typeof(string), typeof(int).MakeByRefType()]);
+        Type constructorType = typeof(ConstructorWithSpecializedMethodAndHandleStateMethod);
+        MethodInfo handleStateMethod = GetRequiredMethod<ConstructorWithSpecializedMethodAndHandleStateMethod>(MethodNames.HandleState);
+        MethodInfo handleAwaiterMethod = GetRequiredMethod<ConstructorWithSpecializedMethodAndHandleStateMethod>(MethodNames.HandleAwaiter);
+        MethodInfo handleFieldMethodOfString = GetRequiredMethod<ConstructorWithSpecializedMethodAndHandleStateMethod>(MethodNames.HandleField, [typeof(string), Type.MakeGenericMethodParameter(0).MakeByRefType()]).MakeGenericMethod(typeof(string));
+        MethodInfo handleIntFieldMethod = GetRequiredMethod<ConstructorWithSpecializedMethodAndHandleStateMethod>(MethodNames.HandleField, [typeof(string), typeof(int).MakeByRefType()]);
 
         // Act
-        bool result = ConstructorDescriptor.TryCreate(typeof(ConstructorWithSpecializedMethodAndHandleStateMethod), out ConstructorDescriptor? sut);
+        bool result = ConstructorDescriptor.TryCreate(constructorType, out ConstructorDescriptor? sut);
 
         // Assert
         result.Should().BeTrue();
         sut.Should().NotBeNull();
-        sut!.Type.Should().Be(typeof(ConstructorWithSpecializedMethodAndHandleStateMethod));
+        sut!.Type.Should().Be(constructorType);
         sut.HandleStateMethod.Should().BeSameAs(handleStateMethod);
         sut.HandleAwaiterMethod.Should().BeSameAs(handleAwaiterMethod);
-        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleStringFieldMethod);
+        sut.GetHandleFieldMethod(typeof(string)).Should().BeSameAs(handleFieldMethodOfString);
         sut.GetHandleFieldMethod(typeof(int)).Should().BeSameAs(handleIntFieldMethod);
     }
 
@@ -126,9 +131,10 @@ public partial class ResumerDescriptorTests
     public void Create_ShouldNotCreateDescriptor_ForConstructorWithoutHandleField()
     {
         // Arrange
+        Type constructorType = typeof(ConstructorWithoutHandleField);
 
         // Act
-        bool result = ConstructorDescriptor.TryCreate(typeof(ConstructorWithoutHandleField), out ConstructorDescriptor? sut);
+        bool result = ConstructorDescriptor.TryCreate(constructorType, out ConstructorDescriptor? sut);
 
         // Assert
         result.Should().BeFalse();
@@ -139,9 +145,10 @@ public partial class ResumerDescriptorTests
     public void Create_ShouldNotCreateDescriptor_ForConstructorWithoutHandleAwaiter()
     {
         // Arrange
+        Type constructorType = typeof(ConstructorWithoutHandleAwaiter);
 
         // Act
-        bool result = ConstructorDescriptor.TryCreate(typeof(ConstructorWithoutHandleAwaiter), out ConstructorDescriptor? sut);
+        bool result = ConstructorDescriptor.TryCreate(constructorType, out ConstructorDescriptor? sut);
 
         // Assert
         result.Should().BeFalse();

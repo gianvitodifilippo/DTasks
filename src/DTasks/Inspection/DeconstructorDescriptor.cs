@@ -1,6 +1,7 @@
 ﻿using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using static DTasks.Inspection.InspectionConstants;
 
 namespace DTasks.Inspection;
 
@@ -40,7 +41,7 @@ internal sealed class DeconstructorDescriptor : IDeconstructorDescriptor
     public static bool TryCreate(Type deconstructorType, [NotNullWhen(true)] out DeconstructorDescriptor? descriptor)
     {
         MethodInfo? handleFieldMethod = deconstructorType.GetMethod(
-            name: "HandleField",
+            name: MethodNames.HandleField,
             genericParameterCount: 1,
             types: [typeof(string), Type.MakeGenericMethodParameter(0)]);
 
@@ -48,7 +49,7 @@ internal sealed class DeconstructorDescriptor : IDeconstructorDescriptor
             return False(out descriptor);
 
         MethodInfo? handleAwaiterMethod = deconstructorType.GetMethod(
-            name: "HandleAwaiter",
+            name: MethodNames.HandleAwaiter,
             genericParameterCount: 0,
             types: [typeof(string)]);
 
@@ -59,7 +60,7 @@ internal sealed class DeconstructorDescriptor : IDeconstructorDescriptor
 
         foreach (MethodInfo method in deconstructorType.GetMethods())
         {
-            if (method.Name != "HandleField")
+            if (method.Name != MethodNames.HandleField)
                 continue;
 
             if (method == handleFieldMethod)
@@ -81,7 +82,7 @@ internal sealed class DeconstructorDescriptor : IDeconstructorDescriptor
         }
 
         MethodInfo? handleStateMethod = deconstructorType.GetMethod(
-            name: "HandleState",
+            name: MethodNames.HandleState,
             genericParameterCount: 0,
             types: [typeof(string), typeof(int)]);
 
