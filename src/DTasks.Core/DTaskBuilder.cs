@@ -23,7 +23,7 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
     {
         get
         {
-            VerifyStatus(DTaskStatus.RanToCompletion);
+            VerifyStatus(expectedStatus: DTaskStatus.RanToCompletion);
             return _result!;
         }
     }
@@ -124,6 +124,7 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
         public override void AwaitOnCompleted<TAwaiter>(ref TAwaiter awaiter)
         {
             DAsyncStateMachineBox<TStateMachine> box = this;
+
             if (awaiter is IDTaskAwaiter)
             {
                 _childTask = ((IDTaskAwaiter)awaiter).Task;
@@ -143,6 +144,7 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
         public override void AwaitUnsafeOnCompleted<TAwaiter>(ref TAwaiter awaiter)
         {
             DAsyncStateMachineBox<TStateMachine> box = this;
+
             if (awaiter is IDTaskAwaiter)
             {
                 _childTask = ((IDTaskAwaiter)awaiter).Task;
@@ -197,6 +199,9 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
         [ExcludeFromCodeCoverage]
         void IAsyncStateMachine.SetStateMachine(IAsyncStateMachine stateMachine)
         {
+            if (stateMachine is null)
+                throw new ArgumentNullException(nameof(stateMachine));
+
             Debug.Fail("SetStateMachine should not be used.");
         }
 

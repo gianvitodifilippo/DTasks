@@ -50,7 +50,7 @@ public sealed class StateMachineInspector : IStateMachineInspector
 
         var method = new DynamicMethod($"Suspend{stateMachineType.Name}", typeof(void), parameterTypes);
         method.DefineParameter(1, ParameterAttributes.None, "stateMachine");
-        method.DefineParameter(2, ParameterAttributes.None, "suspensionInfo");
+        method.DefineParameter(2, ParameterAttributes.None, "info");
         method.DefineParameter(3, deconstructorParameter.Attributes, "deconstructor");
 
         var il = InspectorILGenerator.Create(method, stateMachineDescriptor, deconstructorDescriptor.Type, deconstructorParameter.ParameterType);
@@ -97,7 +97,7 @@ public sealed class StateMachineInspector : IStateMachineInspector
             // deconstructor.HandleAwaiter($awaiterField.Name);
             il.LoadDeconstructor();                                       // Stack: deconstructor
             il.LoadString(awaiterField.Name);                             // Stack: deconstructor, $awaiterField.Name
-            il.CallHandleMethod(deconstructorDescriptor.OnAwaiterMethod); // Stack: -
+            il.CallHandleMethod(deconstructorDescriptor.HandleAwaiterMethod); // Stack: -
         }
 
         if (wasLabelDefined) // check in case there are no awaiters
@@ -128,19 +128,20 @@ public sealed class StateMachineInspector : IStateMachineInspector
         il.CreateStateMachine(); // Stack: -
 
         FieldInfo builderField = stateMachineDescriptor.BuilderField;
-        il.CreateAsyncMethodBuilder(builderField.FieldType); // Stack: @result[AsyncDTaskMethodBuilder<>.Create]
+        il.LoadStateMachineLocal();                          // Stack: stateMachine
+        il.CreateAsyncMethodBuilder(builderField.FieldType); // Stack: stateMachine, @result[AsyncDTaskMethodBuilder<>.Create]
         il.StoreField(builderField);                         // Stack: -
 
         foreach (FieldInfo userField in stateMachineDescriptor.UserFields)
         {
-            MethodInfo onFieldMethod = constructorDescriptor.GetOnFieldMethod(userField.FieldType);
+            MethodInfo handleFieldMethod = constructorDescriptor.GetHandleFieldMethod(userField.FieldType);
 
             // _ = constructor.HandleXXX($userField.Name, ref stateMachine.$userField);
             il.LoadConstructor();               // Stack: constructor
             il.LoadString(userField.Name);      // Stack: constructor, $userField.Name
             il.LoadStateMachineLocal();         // Stack: constructor, $userField.Name, stateMachine
             il.LoadFieldAddress(userField);     // Stack: constructor, $userField.Name, &stateMachine.$userField
-            il.CallHandleMethod(onFieldMethod); // Stack: @result[HandleXXX]
+            il.CallHandleMethod(handleFieldMethod); // Stack: @result[HandleXXX]
             il.Pop();                           // Stack: -
         }
 
@@ -150,7 +151,7 @@ public sealed class StateMachineInspector : IStateMachineInspector
         il.LoadString(stateField.Name);                           // constructor, "<>1__state"
         il.LoadStateMachineLocal();                               // constructor, "<>1__state", stateMachine
         il.LoadFieldAddress(stateField);                          // constructor, "<>1__state", &stateMachine.$stateField
-        il.CallHandleMethod(constructorDescriptor.OnStateMethod); // @result[HandleState]
+        il.CallHandleMethod(constructorDescriptor.HandleStateMethod); // @result[HandleState]
         il.Pop();                                                 // -
 
         Label ifFalseLabel = default;
@@ -168,7 +169,7 @@ public sealed class StateMachineInspector : IStateMachineInspector
             // if (constructor.HandleAwaiter($awaiterField.Name))
             il.LoadConstructor();                                       // Stack: constructor
             il.LoadString(awaiterField.Name);                           // Stack: constructor, $awaiterField.Name
-            il.CallHandleMethod(constructorDescriptor.OnAwaiterMethod); // Stack: @result[HandleAwaiter]
+            il.CallHandleMethod(constructorDescriptor.HandleAwaiterMethod); // Stack: @result[HandleAwaiter]
             il.BranchIfFalse(ifFalseLabel);                             // Stack: -
 
             // The following relies on DTaskAwaiter/DTaskAwaiter<T> having the same layout

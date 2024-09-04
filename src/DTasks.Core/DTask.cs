@@ -51,6 +51,7 @@ public abstract class DTask
 
     public static DTask Delay(TimeSpan delay) => new DelayDTask(delay);
 
+    // TODO: Create a dedicated exception type
     private protected void EnsureCompleted()
     {
         if (!IsCompleted)
@@ -81,7 +82,6 @@ public abstract class DTask
         Debug.Fail($"The DTask was not '{expectedStatus}'.");
     }
 
-    [ExcludeFromCodeCoverage]
     [DoesNotReturn]
     private protected static void InvalidAwait()
     {

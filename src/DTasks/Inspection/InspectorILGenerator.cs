@@ -149,7 +149,7 @@ internal readonly ref struct InspectorILGenerator(
     public void CallIsSuspendedMethod(Type awaiterType)
     {
         MethodInfo isSuspendedMethod = _isSuspendedGenericMethod.MakeGenericMethod(awaiterType);
-        il.Emit(OpCodes.Callvirt, isSuspendedMethod);
+        il.Emit(OpCodes.Call, isSuspendedMethod);
     }
 
     public void CreateAsyncMethodBuilder(Type builderType)

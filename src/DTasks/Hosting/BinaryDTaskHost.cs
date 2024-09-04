@@ -6,8 +6,8 @@ namespace DTasks.Hosting;
 
 public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowId>
     where TFlowId : notnull
-    where TStack : notnull, IFlowStack
-    where THeap : notnull, IFlowHeap
+    where TStack : IFlowStack
+    where THeap : IFlowHeap
 {
     private readonly IDTaskStorage<TStack> _storage;
     private readonly IDTaskConverter<THeap> _converter;
@@ -28,16 +28,16 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowI
 
     protected abstract Task OnCompletedAsync<TResult>(TFlowId flowId, TResult result, CancellationToken cancellationToken);
 
-    protected sealed override Task SuspendCoreAsync(TFlowId flowId, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken = default)
+    protected sealed override Task SuspendCoreAsync(TFlowId flowId, ISuspensionScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken = default)
     {
         FlowHandler handler = new(flowId, this);
         return handler.SuspendAsync(scope, awaiter, cancellationToken);
     }
 
-    protected sealed override Task ResumeCoreAsync(TFlowId flowId, DTask resultTask, IDTaskScope scope, CancellationToken cancellationToken = default)
+    protected sealed override Task ResumeCoreAsync(TFlowId flowId, IResumptionScope scope, DTask resultTask, CancellationToken cancellationToken = default)
     {
         FlowHandler handler = new(flowId, this);
-        return handler.ResumeAsync(resultTask, scope, cancellationToken);
+        return handler.ResumeAsync(scope, resultTask, cancellationToken);
     }
 
     private struct FlowHandler(TFlowId flowId, BinaryDTaskHost<TFlowId, TStack, THeap> host) : IStateHandler, ISuspensionHandler, ICompletionHandler
@@ -45,41 +45,36 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowI
         private TStack _stack;
         private THeap _heap;
 
-        public Task SuspendAsync(IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
+        public async Task SuspendAsync(ISuspensionScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
         {
             AssertUninitialized();
 
             _stack = host._storage.CreateStack();
-            _heap = host._converter.CreateHeap(scope);
+            _heap = host._converter.CreateHeap();
+            scope.InitializeHeap(ref _heap);
 
             awaiter.SaveState(ref this);
 
-            ReadOnlyMemory<byte> bytes = host._converter.SerializeHeap(ref _heap);
+            ReadOnlySpan<byte> bytes = host._converter.SerializeHeap(ref _heap);
             _stack.PushHeap(bytes);
 
-            host._converter.DisposeHeap(ref _heap);
-            return SaveAndSuspendAsync(awaiter, cancellationToken);
-        }
-
-        private async Task SaveAndSuspendAsync(DTask.DAwaiter awaiter, CancellationToken cancellationToken)
-        {
-            await host._storage.SaveStackAsync(flowId, in _stack, cancellationToken);
+            await host._storage.SaveStackAsync(flowId, ref _stack, cancellationToken);
             await awaiter.SuspendAsync(ref this, cancellationToken);
         }
 
-        public async Task ResumeAsync(DTask resultTask, IDTaskScope scope, CancellationToken cancellationToken)
+        public async Task ResumeAsync(IResumptionScope scope, DTask resultTask, CancellationToken cancellationToken)
         {
             AssertUninitialized();
 
             _stack = await host._storage.LoadStackAsync(flowId, cancellationToken);
-            ReadOnlyMemory<byte> heapBytes = _stack.PopHeap();
+            ReadOnlySpan<byte> heapBytes = _stack.PopHeap();
             _heap = host._converter.DeserializeHeap(scope, heapBytes);
 
             DTask.DAwaiter awaiter;
             bool hasNext;
             do
             {
-                ReadOnlyMemory<byte> stateMachineBytes = _stack.PopStateMachine(out hasNext);
+                ReadOnlySpan<byte> stateMachineBytes = _stack.PopStateMachine(out hasNext);
                 resultTask = host._converter.DeserializeStateMachine(ref _heap, stateMachineBytes, resultTask); // TODO: CancellationToken
                 awaiter = resultTask.GetDAwaiter();
 
@@ -99,7 +94,7 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowI
         {
             AssertInitialized();
 
-            ReadOnlyMemory<byte> bytes = host._converter.SerializeStateMachine(ref _heap, ref stateMachine, info);
+            ReadOnlySpan<byte> bytes = host._converter.SerializeStateMachine(ref _heap, ref stateMachine, info);
             _stack.PushStateMachine(bytes);
         }
 

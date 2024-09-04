@@ -33,7 +33,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\DTasks.Core\DTasks.Core.csproj" />
+      <ProjectReference Include="..\..\src\DTasks\DTasks.csproj" />
     </ItemGroup>
 
     <ItemGroup>

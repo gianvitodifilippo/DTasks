@@ -8,7 +8,7 @@ internal interface IDeconstructorDescriptor
 
     MethodInfo HandleStateMethod { get; }
 
-    MethodInfo OnAwaiterMethod { get; }
+    MethodInfo HandleAwaiterMethod { get; }
 
     MethodInfo GetHandleFieldMethod(Type fieldType);
 }

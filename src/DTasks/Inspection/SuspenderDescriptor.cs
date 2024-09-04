@@ -37,13 +37,13 @@ internal sealed class SuspenderDescriptor : ISuspenderDescriptor
         if (invokeMethod.ReturnType != typeof(void))
             return False(out descriptor);
 
-        if (invokeMethod.GetParameters() is not [ParameterInfo stateMachineParameter, ParameterInfo suspensionInfoParameter, ParameterInfo deconstructorParameter])
+        if (invokeMethod.GetParameters() is not [ParameterInfo stateMachineParameter, ParameterInfo infoParameter, ParameterInfo deconstructorParameter])
             return False(out descriptor);
 
         if (!stateMachineParameter.ParameterType.IsByRef || stateMachineParameter.ParameterType.GetElementType() != stateMachineType)
             return False(out descriptor);
 
-        if (suspensionInfoParameter.ParameterType != typeof(IStateMachineInfo))
+        if (infoParameter.ParameterType != typeof(IStateMachineInfo))
             return False(out descriptor);
 
         Type deconstructorType = deconstructorParameter.ParameterType;

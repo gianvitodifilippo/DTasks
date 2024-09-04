@@ -91,7 +91,7 @@ public class DAsyncMethodTests
         awaiter.SaveState(ref handler);
 
         // Assert
-        // handler.ReceivedWithAnyArgs(2).SaveStateMachine(ref Arg.Any<Arg.AnyType>(), Arg.Any<ISuspensionInfo>()); https://github.com/nsubstitute/NSubstitute/issues/787
+        // handler.ReceivedWithAnyArgs(2).SaveStateMachine(ref Arg.Any<Arg.AnyType>(), Arg.Any<IStateMachineInfo>()); https://github.com/nsubstitute/NSubstitute/issues/787
         handler.ReceivedCalls()
             .Where(call => call.GetMethodInfo().Name == nameof(IStateHandler.SaveStateMachine))
             .Should()

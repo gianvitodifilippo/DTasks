@@ -6,9 +6,9 @@ internal interface IConstructorDescriptor
 {
     Type Type { get; }
 
-    MethodInfo OnStateMethod { get; }
+    MethodInfo HandleStateMethod { get; }
 
-    MethodInfo OnAwaiterMethod { get; }
+    MethodInfo HandleAwaiterMethod { get; }
 
-    MethodInfo GetOnFieldMethod(Type fieldType);
+    MethodInfo GetHandleFieldMethod(Type fieldType);
 }
