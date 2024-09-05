@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 using Microsoft.CodeAnalysis.Text;
+using System.Collections.Immutable;
 using System.Text;
 
 namespace DTask.Tests.Interceptors.Emit;
@@ -16,17 +17,18 @@ public class EmitInterceptorGenerator : IIncrementalGenerator
             .Where(static info => info != default)
             .Collect();
 
-        context.RegisterImplementationSourceOutput(values, (context, locations) =>
-        {
-            if (locations.IsEmpty)
-                return;
+        context.RegisterImplementationSourceOutput(values, GenerateInterceptorSource);
+    }
 
-            var stringBuilder = new StringBuilder();
-            var renderer = new ILGeneratorInterceptorsRenderer(stringBuilder);
-            renderer.Render(locations);
+    private static void GenerateInterceptorSource(SourceProductionContext context, ImmutableArray<InterceptionLocationInfo> locations)
+    {
+        if (locations.IsEmpty)
+            return;
 
-            context.AddSource("ILGeneratorInterceptors", stringBuilder.ToString());
-        });
+        var source = new StringBuilder();
+        ILGeneratorInterceptorsRenderer.Render(source, locations);
+
+        context.AddSource("ILGeneratorInterceptors", source.ToString());
     }
 
     private static bool OfGetILGeneratorInvocation(SyntaxNode node, CancellationToken cancellationToken) => node is InvocationExpressionSyntax
@@ -45,7 +47,12 @@ public class EmitInterceptorGenerator : IIncrementalGenerator
         if (operation is not IInvocationOperation { Instance.Type.Name: "DynamicMethod", Arguments.Length: 0 } invocation)
             return default;
 
-        LinePosition position = ((MemberAccessExpressionSyntax)node.Expression).Name.GetLocation().GetLineSpan().StartLinePosition;
+        LinePosition position = ((MemberAccessExpressionSyntax)node.Expression)
+            .Name
+            .GetLocation()
+            .GetLineSpan()
+            .StartLinePosition;
+
         return new InterceptionLocationInfo(node.SyntaxTree.FilePath, position.Line + 1, position.Character + 1);
     }
 }
