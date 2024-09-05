@@ -1,4 +1,4 @@
-﻿using DTasks.Host;
+﻿using DTasks.Hosting;
 
 namespace DTasks;
 
@@ -28,7 +28,7 @@ public class DTaskTests
         DTask sut = DTask.Delay(delay);
 
         // Act
-        await sut.OnSuspendedAsync(ref handler, CancellationToken.None);
+        await sut.SuspendAsync(ref handler, CancellationToken.None);
 
         // Assert
         await handler.Received().OnDelayAsync(delay, CancellationToken.None);
@@ -44,7 +44,7 @@ public class DTaskTests
         DTask sut = DTask.Factory.Suspend(callback);
 
         // Act
-        await sut.OnSuspendedAsync(ref handler, CancellationToken.None);
+        await sut.SuspendAsync(ref handler, CancellationToken.None);
 
         // Assert
         await handler.Received().OnSuspendedAsync(callback, CancellationToken.None);
@@ -60,7 +60,7 @@ public class DTaskTests
         DTask<int> sut = DTask.Factory.Suspend<int>(callback);
 
         // Act
-        await sut.OnSuspendedAsync(ref handler, CancellationToken.None);
+        await sut.SuspendAsync(ref handler, CancellationToken.None);
 
         // Assert
         await handler.Received().OnSuspendedAsync(callback, CancellationToken.None);
@@ -80,7 +80,7 @@ public class DTaskTests
         DTask sut = DTask.Factory.Suspend(callback);
 
         // Act
-        await sut.OnSuspendedAsync(ref handler, CancellationToken.None);
+        await sut.SuspendAsync(ref handler, CancellationToken.None);
 
         // Assert
         await callback.Received().Invoke(flowId, CancellationToken.None);
@@ -100,7 +100,7 @@ public class DTaskTests
         DTask<int> sut = DTask.Factory.Suspend<int>(callback);
 
         // Act
-        await sut.OnSuspendedAsync(ref handler, CancellationToken.None);
+        await sut.SuspendAsync(ref handler, CancellationToken.None);
 
         // Assert
         await callback.Received().Invoke(flowId, CancellationToken.None);
@@ -115,7 +115,7 @@ public class DTaskTests
         DTask sut = DTask.Yield();
 
         // Act
-        await sut.OnSuspendedAsync(ref handler, CancellationToken.None);
+        await sut.SuspendAsync(ref handler, CancellationToken.None);
 
         // Assert
         await handler.Received().OnYieldAsync(CancellationToken.None);

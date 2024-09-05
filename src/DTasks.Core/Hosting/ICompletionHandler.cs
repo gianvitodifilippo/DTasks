@@ -1,4 +1,4 @@
-﻿namespace DTasks.Host;
+﻿namespace DTasks.Hosting;
 
 public interface ICompletionHandler
 {

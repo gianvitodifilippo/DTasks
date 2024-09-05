@@ -6,11 +6,11 @@ internal sealed class YieldDTask : DTask
 
     private YieldDTask() { }
 
-    public override DTaskStatus Status => DTaskStatus.Suspended;
+    internal override DTaskStatus Status => DTaskStatus.Suspended;
 
-    private protected override Task<bool> UnderlyingTask => Task.FromResult(false);
+    internal override Task<bool> UnderlyingTask => Task.FromResult(false);
 
-    internal override Task OnSuspendedAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
+    internal override Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
     {
         return handler.OnYieldAsync(cancellationToken);
     }

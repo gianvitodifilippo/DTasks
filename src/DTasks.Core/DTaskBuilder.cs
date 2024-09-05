@@ -1,4 +1,4 @@
-﻿using DTasks.Host;
+﻿using DTasks.Hosting;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -17,18 +17,18 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
         _status = DTaskStatus.Running;
     }
 
-    public sealed override DTaskStatus Status => _status;
+    internal sealed override DTaskStatus Status => _status;
 
     internal sealed override TResult Result
     {
         get
         {
-            VerifyStatus(DTaskStatus.RanToCompletion);
+            VerifyStatus(expectedStatus: DTaskStatus.RanToCompletion);
             return _result!;
         }
     }
 
-    private protected sealed override Task<bool> UnderlyingTask => _underlyingTaskBuilder.Task;
+    internal sealed override Task<bool> UnderlyingTask => _underlyingTaskBuilder.Task;
 
     // The native AsyncTaskMethodBuilder implementation is not bound to a particular state
     // machine type, nor does it check whether their methods are passed the same state machine
@@ -63,7 +63,7 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
         throw new NotImplementedException();
     }
 
-    private void Suspend()
+    private void SetSuspended()
     {
         _status = DTaskStatus.Suspended;
 
@@ -72,16 +72,17 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
     }
 
     public static DTaskBuilder<TResult> Create<TStateMachine>(ref TStateMachine stateMachine)
-      where TStateMachine : IAsyncStateMachine
+        where TStateMachine : IAsyncStateMachine
     {
         return new DAsyncStateMachineBox<TStateMachine>(ref stateMachine);
     }
 
-    private sealed class DAsyncStateMachineBox<TStateMachine> : DTaskBuilder<TResult>, ISuspensionInfo, IAsyncStateMachine
+    private sealed class DAsyncStateMachineBox<TStateMachine> : DTaskBuilder<TResult>, IStateMachineInfo, IAsyncStateMachine
         where TStateMachine : IAsyncStateMachine
     {
         private TStateMachine _stateMachine;
         private DTask? _childTask;
+        private Type? _suspendedAwaiterType;
 
         public DAsyncStateMachineBox(ref TStateMachine stateMachine)
         {
@@ -99,12 +100,19 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
             _stateMachine.SetStateMachine(this);
         }
 
-        internal override Task OnSuspendedAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
+        internal override void SaveState<THandler>(ref THandler handler)
         {
             Debug.Assert(_childTask is not null, "The d-async method was not suspended.");
 
             handler.SaveStateMachine(ref _stateMachine, this);
-            return _childTask.OnSuspendedAsync(ref handler, cancellationToken);
+            _childTask.SaveState(ref handler);
+        }
+
+        internal override Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
+        {
+            Debug.Assert(_childTask is not null, "The d-async method was not suspended.");
+
+            return _childTask.SuspendAsync(ref handler, cancellationToken);
         }
 
         public override void Start()
@@ -115,25 +123,43 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
 
         public override void AwaitOnCompleted<TAwaiter>(ref TAwaiter awaiter)
         {
-            HandleOnCompleted(ref awaiter);
-
             DAsyncStateMachineBox<TStateMachine> box = this;
-            _underlyingTaskBuilder.AwaitOnCompleted(ref awaiter, ref box);
+
+            if (awaiter is IDTaskAwaiter)
+            {
+                _childTask = ((IDTaskAwaiter)awaiter).Task;
+                _suspendedAwaiterType = typeof(TAwaiter);
+
+                TaskAwaiter<bool> underlyingTaskAwaiter = _childTask.UnderlyingTask.GetAwaiter();
+                _underlyingTaskBuilder.AwaitOnCompleted(ref underlyingTaskAwaiter, ref box);
+            }
+            else
+            {
+                _childTask = null;
+                _suspendedAwaiterType = null;
+                _underlyingTaskBuilder.AwaitOnCompleted(ref awaiter, ref box);
+            }
         }
 
         public override void AwaitUnsafeOnCompleted<TAwaiter>(ref TAwaiter awaiter)
         {
-            HandleOnCompleted(ref awaiter);
-
             DAsyncStateMachineBox<TStateMachine> box = this;
-            _underlyingTaskBuilder.AwaitUnsafeOnCompleted(ref awaiter, ref box);
-        }
 
-        private void HandleOnCompleted<TAwaiter>(ref TAwaiter awaiter)
-        {
-            _childTask = awaiter is IDTaskAwaiter
-              ? ((IDTaskAwaiter)awaiter).Task
-              : null;
+            if (awaiter is IDTaskAwaiter)
+            {
+                _childTask = ((IDTaskAwaiter)awaiter).Task;
+                _suspendedAwaiterType = typeof(TAwaiter);
+
+                TaskAwaiter<bool> underlyingTaskAwaiter = _childTask.UnderlyingTask.GetAwaiter();
+                _underlyingTaskBuilder.AwaitUnsafeOnCompleted(ref underlyingTaskAwaiter, ref box);
+            }
+            else
+            {
+                _childTask = null;
+                _suspendedAwaiterType = null;
+
+                _underlyingTaskBuilder.AwaitUnsafeOnCompleted(ref awaiter, ref box);
+            }
         }
 
         public override void EnsureSameStateMachine(IAsyncStateMachine stateMachine)
@@ -141,18 +167,15 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
             Debug.Assert(ReferenceEquals(stateMachine, _stateMachine), "All methods of the AsyncDTaskMethodBuilder must be passed the same state machine.");
         }
 
-        #region ISuspensionInfo implementation
+        #region IStateMachineInfo implementation
 
-        bool ISuspensionInfo.IsSuspended<TAwaiter>(ref TAwaiter awaiter)
+        Type IStateMachineInfo.SuspendedAwaiterType
         {
-            Debug.Assert(_childTask is not null, "The d-async method was not suspended.");
-
-            // Compiler-generated state machines use the same slots for different awaiters of the same type;
-            // this is an implementation detail, but it is unlikely to be changed. Based on this fact,
-            // we can determine which awaiter caused the suspension by looking at its type.
-            // We could avoid taking the awaiter reference as an argument but leaking an implementation detail
-            // through a public interface felt wrong.
-            return typeof(TAwaiter) == _childTask.AwaiterType;
+            get
+            {
+                Debug.Assert(_suspendedAwaiterType is not null, "The d-async method was not suspended.");
+                return _suspendedAwaiterType;
+            }
         }
 
         #endregion
@@ -164,7 +187,7 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
             if (_childTask is not null && _childTask.IsSuspended)
             {
                 // If the child awaitable is a d-awaitable and it is suspended, we must suspend our execution as well
-                Suspend();
+                SetSuspended();
             }
             else
             {
@@ -176,6 +199,9 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
         [ExcludeFromCodeCoverage]
         void IAsyncStateMachine.SetStateMachine(IAsyncStateMachine stateMachine)
         {
+            if (stateMachine is null)
+                throw new ArgumentNullException(nameof(stateMachine));
+
             Debug.Fail("SetStateMachine should not be used.");
         }
 
