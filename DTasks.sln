@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DTasks.Core", "src\DTasks.C
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{CF0C47EC-6DB3-4ED6-B6D9-0435E3DB3D48}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DTasks.Tests", "test\DTasks.Tests\DTasks.Tests.csproj", "{517F57DA-7A7D-45B0-904F-F9DC3DB23863}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DTasks.Tests", "tests\DTasks.Tests\DTasks.Tests.csproj", "{517F57DA-7A7D-45B0-904F-F9DC3DB23863}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CD317A5A-1FC8-4DEB-93CB-467CE1BFE3D0}"
 	ProjectSection(SolutionItems) = preProject
@@ -16,7 +16,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DTasks", "src\DTasks\DTasks.csproj", "{D545C9BB-09FC-4762-8824-1AB2EBC08707}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTask.Tests.Interceptors", "test\DTask.Tests.Interceptors\DTask.Tests.Interceptors.csproj", "{3FFB493C-8C2E-4931-A60B-F66C4577D04D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTask.Tests.Interceptors", "tests\DTask.Tests.Interceptors\DTask.Tests.Interceptors.csproj", "{3FFB493C-8C2E-4931-A60B-F66C4577D04D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

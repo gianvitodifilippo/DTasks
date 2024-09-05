@@ -61,7 +61,7 @@ internal readonly ref struct InspectorILGenerator(
     public void LoadStateMachineArg()
     {
         il.Emit(OpCodes.Ldarg_0);
-        if (!StateMachineType.IsValueType)
+        if (!stateMachineDescriptor.IsValueType)
         {
             il.Emit(OpCodes.Ldind_Ref);
         }
@@ -69,7 +69,7 @@ internal readonly ref struct InspectorILGenerator(
 
     public void CreateStateMachine()
     {
-        if (StateMachineType.IsValueType)
+        if (stateMachineDescriptor.IsValueType)
         {
             il.Emit(OpCodes.Ldloca_S, 0);
             il.Emit(OpCodes.Initobj, StateMachineType);
@@ -83,7 +83,7 @@ internal readonly ref struct InspectorILGenerator(
 
     public void LoadStateMachineLocal()
     {
-        if (StateMachineType.IsValueType)
+        if (stateMachineDescriptor.IsValueType)
         {
             il.Emit(OpCodes.Ldloca_S, 0);
         }

@@ -14,7 +14,10 @@ public static class InspectionFixtures
 #endif
 
     public static readonly Type StateMachineType;
+
+#if DEBUG
     public static readonly ConstructorInfo StateMachineConstructor;
+#endif
 
     static InspectionFixtures()
     {
@@ -28,9 +31,11 @@ public static class InspectionFixtures
 
         StateMachineType = attribute.StateMachineType;
 
+#if DEBUG
         StateMachineConstructor = StateMachineType.GetRequiredConstructor(
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: []);
+#endif
     }
 
     public class AsyncMethodContainer
