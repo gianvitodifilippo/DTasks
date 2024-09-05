@@ -12,12 +12,12 @@ internal readonly ref struct InspectorILGenerator(
     bool loadCallbackIndirectly,
     OpCode callOpCode)
 {
-    private static readonly MethodInfo _isSuspendedGenericMethod = typeof(InspectorILGenerator).GetRequiredMethod(
+    private static readonly MethodInfo s_isSuspendedGenericMethod = typeof(InspectorILGenerator).GetRequiredMethod(
         name: nameof(IsSuspended),
         bindingAttr: BindingFlags.Static | BindingFlags.NonPublic,
         parameterTypes: [typeof(IStateMachineInfo)]);
 
-    private static readonly MethodInfo _getAwaiterMethod = typeof(DTask).GetRequiredMethod(
+    private static readonly MethodInfo s_getAwaiterMethod = typeof(DTask).GetRequiredMethod(
         name: nameof(DTask.GetAwaiter),
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: []);
@@ -150,7 +150,7 @@ internal readonly ref struct InspectorILGenerator(
 
     public void CallIsSuspendedMethod(Type awaiterType)
     {
-        MethodInfo isSuspendedMethod = _isSuspendedGenericMethod.MakeGenericMethod(awaiterType);
+        MethodInfo isSuspendedMethod = s_isSuspendedGenericMethod.MakeGenericMethod(awaiterType);
         il.Emit(OpCodes.Call, isSuspendedMethod);
     }
 
@@ -187,7 +187,7 @@ internal readonly ref struct InspectorILGenerator(
 
     public void CallGetAwaiterMethod()
     {
-        il.Emit(OpCodes.Callvirt, _getAwaiterMethod);
+        il.Emit(OpCodes.Callvirt, s_getAwaiterMethod);
     }
 
     public void LoadString(string str)
@@ -209,7 +209,7 @@ internal readonly ref struct InspectorILGenerator(
     {
         // callback: constructor or deconstructor
         return new(
-            method.GetILGenerator(),
+            il: method.GetILGenerator(),
             stateMachineDescriptor: stateMachineDescriptor,
             loadCallbackByAddress: callbackType.IsValueType && !callbackParameterType.IsByRef,
             loadCallbackIndirectly: !callbackType.IsValueType && callbackParameterType.IsByRef,

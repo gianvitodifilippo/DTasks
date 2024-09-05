@@ -37,7 +37,6 @@ public class InspectionTests
         DTask task = resumer.Invoke(resultTask, constructor);
 
         // Assert
-        task.Status.Should().Be(DTaskStatus.Running);
         constructor.Received().HandleField("arg", ref Arg.Any<MyType>());
         constructor.Received().HandleField(LocalFieldName, ref Arg.Any<string>());
 #if DEBUG

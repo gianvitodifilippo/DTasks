@@ -37,9 +37,9 @@ internal readonly struct StateMachineDescriptor
 
     private static bool IsBuilderField(FieldInfo field) => field.Name == "<>t__builder";
 
-    private static bool IsDTaskAwaiterType(Type awaiterType)
-        => awaiterType == typeof(DTask.Awaiter)
-        || awaiterType.IsGenericType && awaiterType.GetGenericTypeDefinition() == typeof(DTask<>.Awaiter);
+    private static bool IsDTaskAwaiterType(Type awaiterType) =>
+        awaiterType == typeof(DTask.Awaiter) ||
+        awaiterType.IsGenericType && awaiterType.GetGenericTypeDefinition() == typeof(DTask<>.Awaiter);
 
     public static StateMachineDescriptor Create(Type stateMachineType)
     {

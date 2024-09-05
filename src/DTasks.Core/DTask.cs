@@ -120,7 +120,7 @@ public abstract class DTask
             _task = task;
         }
 
-        public Task<bool> IsCompletedAsync()
+        public Task<bool> IsCompletedAsync() // TODO: We might split this into a method which completes the underlying task and a property (IsCompleted) which checks whether the task is completed
         {
             return _task.UnderlyingTask;
         }
