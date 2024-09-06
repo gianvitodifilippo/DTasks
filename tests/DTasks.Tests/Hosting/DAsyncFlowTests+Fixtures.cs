@@ -8,19 +8,19 @@ public partial class DAsyncFlowTests
 {
     public class FakeFlowStack : TestFlowStack
     {
-        private readonly Stack<TestReadOnlySpan<byte>> _stack = [];
+        private readonly Stack<EquatableArray<byte>> _stack = [];
 
-        public override TestReadOnlySpan<byte> PopHeap() => Array.Empty<byte>();
+        public override EquatableArray<byte> PopHeap() => Array.Empty<byte>();
 
-        public override void PushHeap(TestReadOnlySpan<byte> bytes) { }
+        public override void PushHeap(EquatableArray<byte> bytes) { }
 
-        public override TestReadOnlySpan<byte> PopStateMachine(out bool hasNext)
+        public override EquatableArray<byte> PopStateMachine(out bool hasNext)
         {
             hasNext = _stack.Count > 1;
             return _stack.Pop();
         }
 
-        public override void PushStateMachine(TestReadOnlySpan<byte> bytes)
+        public override void PushStateMachine(EquatableArray<byte> bytes)
         {
             _stack.Push(bytes);
         }
@@ -55,17 +55,17 @@ public partial class DAsyncFlowTests
         private readonly Dictionary<int, Dictionary<string, object?>> _stateMachines = [];
         private int _counter = 0;
 
-        public override TestFlowHeap CreateHeap()
+        public override TestFlowHeap CreateHeap(IDTaskScope scope)
         {
             return Substitute.For<TestFlowHeap>();
         }
 
-        public override TestFlowHeap DeserializeHeap(IResumptionScope scope, TestReadOnlySpan<byte> bytes)
+        public override TestFlowHeap DeserializeHeap(IDTaskScope scope, EquatableArray<byte> bytes)
         {
             return Substitute.For<TestFlowHeap>();
         }
 
-        public override DTask DeserializeStateMachine(ref TestFlowHeap heap, TestReadOnlySpan<byte> bytes, DTask resultTask)
+        public override DTask DeserializeStateMachine(ref TestFlowHeap heap, EquatableArray<byte> bytes, DTask resultTask)
         {
             int id = MemoryMarshal.Read<int>(bytes);
             if (!_stateMachines.Remove(id, out Dictionary<string, object?>? stateMachineDictionary))
@@ -78,12 +78,12 @@ public partial class DAsyncFlowTests
             return resumer(resultTask, constructor);
         }
 
-        public override TestReadOnlySpan<byte> SerializeHeap(ref TestFlowHeap heap)
+        public override EquatableArray<byte> SerializeHeap(ref TestFlowHeap heap)
         {
             return Array.Empty<byte>();
         }
 
-        public override TestReadOnlySpan<byte> SerializeStateMachine<TStateMachine>(ref TestFlowHeap heap, ref TStateMachine stateMachine, IStateMachineInfo info)
+        public override EquatableArray<byte> SerializeStateMachine<TStateMachine>(ref TestFlowHeap heap, ref TStateMachine stateMachine, IStateMachineInfo info)
         {
             var stateMachineDictionary = new Dictionary<string, object?>() { ["$type"] = typeof(TStateMachine) };
             var deconstructor = new StateMachineDeconstructor(stateMachineDictionary);

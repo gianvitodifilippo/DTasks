@@ -5,14 +5,14 @@ namespace DTasks.Serialization;
 public interface IDTaskConverter<THeap>
     where THeap : IFlowHeap
 {
-    THeap CreateHeap();
+    THeap CreateHeap(IDTaskScope scope);
 
-    THeap DeserializeHeap(IResumptionScope scope, ReadOnlySpan<byte> bytes);
-
-    ReadOnlySpan<byte> SerializeHeap(ref THeap heap);
-
-    ReadOnlySpan<byte> SerializeStateMachine<TStateMachine>(ref THeap heap, ref TStateMachine stateMachine, IStateMachineInfo info)
-        where TStateMachine : notnull;
+    THeap DeserializeHeap(IDTaskScope scope, ReadOnlySpan<byte> bytes);
 
     DTask DeserializeStateMachine(ref THeap heap, ReadOnlySpan<byte> bytes, DTask resultTask);
+
+    ReadOnlyMemory<byte> SerializeHeap(ref THeap heap);
+
+    ReadOnlyMemory<byte> SerializeStateMachine<TStateMachine>(ref THeap heap, ref TStateMachine stateMachine, IStateMachineInfo info)
+        where TStateMachine : notnull;
 }

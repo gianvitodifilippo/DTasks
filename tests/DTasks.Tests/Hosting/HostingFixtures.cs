@@ -40,46 +40,47 @@ public static class HostingFixtures
     // The following classes allow configuring substitutes when methods accepts or returns ReadOnlySpan.
     // Some of them do not contain such methods, but they are included for consistency.
 
-    public class TestReadOnlySpan<T>(T[] array) : IEquatable<TestReadOnlySpan<T>>
+    public class EquatableArray<T>(T[] array) : IEquatable<EquatableArray<T>>
     {
         private readonly T[] _array = array;
 
-        public bool Equals(TestReadOnlySpan<T>? other) => other is not null && _array.SequenceEqual(other._array);
+        public bool Equals(EquatableArray<T>? other) => other is not null && _array.SequenceEqual(other._array);
 
-        public override bool Equals(object? obj) => obj is TestReadOnlySpan<T> other && Equals(other);
+        public override bool Equals(object? obj) => obj is EquatableArray<T> other && Equals(other);
 
         public override int GetHashCode() => _array.Length;
 
-        public static implicit operator TestReadOnlySpan<T>(ReadOnlySpan<T> span) => new(span.ToArray());
+        public static implicit operator EquatableArray<T>(ReadOnlySpan<T> span) => new(span.ToArray());
 
-        public static implicit operator TestReadOnlySpan<T>(T[] array) => new(array);
+        public static implicit operator EquatableArray<T>(ReadOnlyMemory<T> memory) => new(memory.ToArray());
 
-        public static implicit operator ReadOnlySpan<T>(TestReadOnlySpan<T> instance) => instance._array;
+        public static implicit operator EquatableArray<T>(T[] array) => new(array);
+
+        public static implicit operator ReadOnlySpan<T>(EquatableArray<T> instance) => instance._array;
+
+        public static implicit operator ReadOnlyMemory<T>(EquatableArray<T> instance) => instance._array;
     }
 
     public abstract class TestFlowStack : IFlowStack
     {
-        public abstract TestReadOnlySpan<byte> PopHeap();
+        public abstract EquatableArray<byte> PopHeap();
 
-        public abstract TestReadOnlySpan<byte> PopStateMachine(out bool hasNext);
+        public abstract EquatableArray<byte> PopStateMachine(out bool hasNext);
 
-        public abstract void PushHeap(TestReadOnlySpan<byte> bytes);
+        public abstract void PushHeap(EquatableArray<byte> bytes);
 
-        public abstract void PushStateMachine(TestReadOnlySpan<byte> bytes);
+        public abstract void PushStateMachine(EquatableArray<byte> bytes);
 
         ReadOnlySpan<byte> IFlowStack.PopHeap() => PopHeap();
 
         ReadOnlySpan<byte> IFlowStack.PopStateMachine(out bool hasNext) => PopStateMachine(out hasNext);
 
-        void IFlowStack.PushHeap(ReadOnlySpan<byte> bytes) => PushHeap(bytes);
+        void IFlowStack.PushHeap(ReadOnlyMemory<byte> bytes) => PushHeap(bytes);
 
-        void IFlowStack.PushStateMachine(ReadOnlySpan<byte> bytes) => PushStateMachine(bytes);
+        void IFlowStack.PushStateMachine(ReadOnlyMemory<byte> bytes) => PushStateMachine(bytes);
     }
 
-    public abstract class TestFlowHeap : IFlowHeap
-    {
-        public abstract void AddHostReference<TToken>(object reference, TToken token);
-    }
+    public abstract class TestFlowHeap : IFlowHeap;
 
     public abstract class TestDTaskStorage : IDTaskStorage<TestFlowStack>
     {
@@ -92,27 +93,27 @@ public static class HostingFixtures
 
     public abstract class TestDTaskConverter : IDTaskConverter<TestFlowHeap>
     {
-        public abstract TestFlowHeap CreateHeap();
+        public abstract TestFlowHeap CreateHeap(IDTaskScope scope);
 
-        public abstract TestFlowHeap DeserializeHeap(IResumptionScope scope, TestReadOnlySpan<byte> bytes);
+        public abstract TestFlowHeap DeserializeHeap(IDTaskScope scope, EquatableArray<byte> bytes);
 
-        public abstract DTask DeserializeStateMachine(ref TestFlowHeap heap, TestReadOnlySpan<byte> bytes, DTask resultTask);
+        public abstract DTask DeserializeStateMachine(ref TestFlowHeap heap, EquatableArray<byte> bytes, DTask resultTask);
 
-        public abstract TestReadOnlySpan<byte> SerializeHeap(ref TestFlowHeap heap);
+        public abstract EquatableArray<byte> SerializeHeap(ref TestFlowHeap heap);
 
-        public abstract TestReadOnlySpan<byte> SerializeStateMachine<TStateMachine>(ref TestFlowHeap heap, ref TStateMachine stateMachine, IStateMachineInfo info)
+        public abstract EquatableArray<byte> SerializeStateMachine<TStateMachine>(ref TestFlowHeap heap, ref TStateMachine stateMachine, IStateMachineInfo info)
             where TStateMachine : notnull;
 
-        TestFlowHeap IDTaskConverter<TestFlowHeap>.DeserializeHeap(IResumptionScope scope, ReadOnlySpan<byte> bytes)
+        TestFlowHeap IDTaskConverter<TestFlowHeap>.DeserializeHeap(IDTaskScope scope, ReadOnlySpan<byte> bytes)
             => DeserializeHeap(scope, bytes);
 
         DTask IDTaskConverter<TestFlowHeap>.DeserializeStateMachine(ref TestFlowHeap heap, ReadOnlySpan<byte> bytes, DTask resultTask)
             => DeserializeStateMachine(ref heap, bytes, resultTask);
 
-        ReadOnlySpan<byte> IDTaskConverter<TestFlowHeap>.SerializeHeap(ref TestFlowHeap heap)
+        ReadOnlyMemory<byte> IDTaskConverter<TestFlowHeap>.SerializeHeap(ref TestFlowHeap heap)
             => SerializeHeap(ref heap);
 
-        ReadOnlySpan<byte> IDTaskConverter<TestFlowHeap>.SerializeStateMachine<TStateMachine>(ref TestFlowHeap heap, ref TStateMachine stateMachine, IStateMachineInfo info)
+        ReadOnlyMemory<byte> IDTaskConverter<TestFlowHeap>.SerializeStateMachine<TStateMachine>(ref TestFlowHeap heap, ref TStateMachine stateMachine, IStateMachineInfo info)
             => SerializeStateMachine(ref heap, ref stateMachine, info);
     }
 }

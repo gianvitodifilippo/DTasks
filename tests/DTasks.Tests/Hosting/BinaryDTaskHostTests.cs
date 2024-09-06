@@ -7,7 +7,7 @@ public class BinaryDTaskHostTests
 {
     private TestFlowStack _stack;
     private TestFlowHeap _heap;
-    private readonly TestReadOnlySpan<byte> _heapBytes;
+    private readonly EquatableArray<byte> _heapBytes;
     private readonly TestDTaskStorage _storage;
     private readonly TestDTaskConverter _converter;
     private readonly TestBinaryDTaskHost _sut;
@@ -21,11 +21,11 @@ public class BinaryDTaskHostTests
         _converter = Substitute.For<TestDTaskConverter>();
 
         _converter
-            .CreateHeap()
+            .CreateHeap(Arg.Any<IDTaskScope>())
             .Returns(_heap);
 
         _converter
-            .DeserializeHeap(Arg.Any<IResumptionScope>(), _heapBytes)
+            .DeserializeHeap(Arg.Any<IDTaskScope>(), _heapBytes)
             .Returns(_heap);
 
         _storage
@@ -44,24 +44,19 @@ public class BinaryDTaskHostTests
     {
         // Arrange
         Guid flowId = Guid.NewGuid();
-        var scope = Substitute.For<ISuspensionScope>();
+        var scope = Substitute.For<IDTaskScope>();
         var suspendedTask = Substitute.For<TestSuspendedDTask>();
-        var initializedHeap = Substitute.For<TestFlowHeap>();
 
         _converter
-            .SerializeHeap(ref initializedHeap)
+            .SerializeHeap(ref _heap)
             .Returns(_heapBytes);
-
-        scope
-            .When(scope => scope.InitializeHeap(ref _heap))
-            .Do(call => call[0] = initializedHeap);
 
         // Act
         await _sut.SuspendAsync(flowId, scope, suspendedTask.GetDAwaiter());
 
         // Assert
-        _converter.Received(1).CreateHeap();
-        _converter.Received(1).SerializeHeap(ref initializedHeap);
+        _converter.Received(1).CreateHeap(scope);
+        _converter.Received(1).SerializeHeap(ref _heap);
         _storage.Received(1).CreateStack();
         _stack.Received(1).PushHeap(_heapBytes);
         await _storage.Received(1).SaveStackAsync(flowId, ref _stack, Arg.Any<CancellationToken>());
@@ -78,7 +73,7 @@ public class BinaryDTaskHostTests
         // Arrange
         Guid flowId = Guid.NewGuid();
         var suspendedTask = Substitute.For<TestSuspendedDTask>();
-        var scope = Substitute.For<IResumptionScope>();
+        var scope = Substitute.For<IDTaskScope>();
         var stateMachineBytes = new byte[] { 4, 5, 6 };
 
         _converter
@@ -113,7 +108,7 @@ public class BinaryDTaskHostTests
         // Arrange
         Guid flowId = Guid.NewGuid();
         var completedTask = Substitute.For<TestCompletedDTask>();
-        var scope = Substitute.For<IResumptionScope>();
+        var scope = Substitute.For<IDTaskScope>();
         var stateMachineBytes = new byte[] { 4, 5, 6 };
 
         _converter
@@ -145,7 +140,7 @@ public class BinaryDTaskHostTests
         // Arrange
         Guid flowId = Guid.NewGuid();
         var completedTask = Substitute.For<TestCompletedDTask>();
-        var scope = Substitute.For<IResumptionScope>();
+        var scope = Substitute.For<IDTaskScope>();
         var stateMachine1Bytes = new byte[] { 4, 5, 6 };
         var stateMachine2Bytes = new byte[] { 7, 8, 9 };
 
