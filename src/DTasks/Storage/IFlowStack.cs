@@ -2,9 +2,9 @@
 
 public interface IFlowStack
 {
-    void PushHeap(ReadOnlySpan<byte> bytes);
+    void PushHeap(ReadOnlyMemory<byte> bytes);
 
-    void PushStateMachine(ReadOnlySpan<byte> bytes);
+    void PushStateMachine(ReadOnlyMemory<byte> bytes);
 
     ReadOnlySpan<byte> PopHeap();
 

@@ -40,10 +40,9 @@ public static class InspectionFixtures
 
     public class AsyncMethodContainer
     {
-        private int _field;
+        private int _field = 0;
 
-        // Generated state machine reference
-        // https://sharplab.io/#v2:D4AQTAjAsAUCAMACEECsBuWtyIIIGcBPAOwGMBZAUwBcALAewBMBhe46gQwEtjKAnWAG9YiRD2qIA+gDMulADaNMMEcgAcyAGwAecQD5EVOkwAU5QgBVCAB0qIOfAOYBKVcJijRIAJxaAdACacoomzsqeyBBI8vSkHPKIALz2Tn4W9ADK1Hw8jqEAhOGePv4AIgochCZR8PBhqqLiiHyU+ACu8hLJJcy0XIpGDIyhyg3IAOzNrR0SANRSsgqMiPMxcfJ+ADKUxI50RQC+WB5auuwGvf2Mg6bOSQZ0fPQA7oi8rwBy9NQAkgC21nklD+O2olEYAFEAB6kSjWahcNgjWBHFRwMCGSw2OyCRCooA===
+        // Generated state machine reference: https://sharplab.io/#v2:D4AQTAjAsAUCAMACEECsBuWtyIIIGcBPAOwGMBZAUwBcALAewBMBhe46gQwEtjKAnWAG9YiRAAc+XAG4dqlRD2qIA+gDMulADaNEAXkTxMMEcgDMyABzIAbAB5FAPkRU6TABTlCAFUJj5HPgBzAEoTYRhRURAAThsAOgBNDW03YKNI5AgkTXpSDk09RADAuK96AGVqSWJA1IBCdMiY+IARLQ5CNyz4eDSTUUVEPkp8AFdNJX1m5loubRcGRlSjfuQAdiGR8aUAahV1LR09nLzNOIAZShq6RoBfLAjxSRk5G3t2Jxm5xgX3YL0nHQ+PQAO6IXhggBy9GoAEkALZiTSUeFXOSMACiAA9SJQxNQuGxlrB7sY4GBnN5fJQjEA===
         public async DTask<int> Method(MyType arg)
         {
             await DTask.Yield();
@@ -54,7 +53,7 @@ public static class InspectionFixtures
             return result + _field + local.Length;
         }
 
-        public DTask<int> ChildMethod() => throw new NotImplementedException();
+        private DTask<int> ChildMethod() => throw new NotImplementedException();
     }
 
     public class MyType;

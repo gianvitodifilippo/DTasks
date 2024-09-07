@@ -57,8 +57,8 @@ public partial class DAsyncFlowTests
             return DTask.Factory.Suspend<DateTime>((id, ct) => Task.CompletedTask);
         }
 
-        var suspensionScope = Substitute.For<ISuspensionScope>();
-        var resumptionScope = Substitute.For<IResumptionScope>();
+        var suspensionScope = Substitute.For<IDTaskScope>();
+        var resumptionScope = Substitute.For<IDTaskScope>();
         Guid flowId = Guid.NewGuid();
         DateTime date = DateTime.Now;
         DTask task = ProcessFileDAsync("http://dtasks.com");

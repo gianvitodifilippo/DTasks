@@ -33,7 +33,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\DTasks\DTasks.csproj" />
+        <ProjectReference Include="..\..\src\DTasks.Serialization.Json\DTasks.Serialization.Json.csproj" />
     </ItemGroup>
 
     <ItemGroup>
