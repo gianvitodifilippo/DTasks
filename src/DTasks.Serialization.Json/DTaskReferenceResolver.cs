@@ -73,37 +73,19 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
 
             reader.ExpectType(JsonTokenType.StartObject);
 
-            bool isToken;
-            string? referenceId = null;
             reader.MoveNext();
             reader.ExpectType(JsonTokenType.PropertyName);
-            if (isToken = reader.ValueTextEquals(IdKeyUtf8))
+            if (reader.ValueTextEquals(IdKeyUtf8))
             {
                 reader.MoveNext();
-                referenceId = reader.GetString();
+                string referenceId = reader.GetString() ?? throw InvalidJsonHeap();
 
                 reader.MoveNext();
                 reader.ExpectType(JsonTokenType.PropertyName);
-            }
 
-            if (!reader.ValueTextEquals(TypeKeyUtf8))
-                throw InvalidJsonHeap();
+                Type type = ReadType(ref reader);
+                MoveToValue(ref reader);
 
-            reader.MoveNext();
-            string? typeId = reader.GetString();
-            if (typeId is null)
-                throw InvalidJsonHeap();
-
-            Type type = Type.GetType(typeId, throwOnError: true)!;
-
-            reader.MoveNext();
-            reader.ExpectType(JsonTokenType.PropertyName);
-            if (!reader.ValueTextEquals(ValueKeyUtf8))
-                throw InvalidJsonHeap();
-
-            reader.MoveNext();
-            if (isToken)
-            {
                 object token = JsonSerializer.Deserialize(ref reader, type, rootOptions) ?? throw InvalidJsonHeap();
                 if (!scope.TryGetReference(token, out object? reference))
                     throw InvalidJsonHeap();
@@ -113,6 +95,9 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
             }
             else
             {
+                Type type = ReadType(ref reader);
+                MoveToValue(ref reader);
+
                 _ = JsonSerializer.Deserialize(ref reader, type, options) ?? throw InvalidJsonHeap();
             }
 
@@ -121,6 +106,29 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
         }
 
         reader.ExpectEnd();
+
+        static Type ReadType(ref Utf8JsonReader reader)
+        {
+            if (!reader.ValueTextEquals(TypeKeyUtf8))
+                throw InvalidJsonHeap();
+
+            reader.MoveNext();
+            string? typeId = reader.GetString();
+            if (typeId is null)
+                throw InvalidJsonHeap();
+
+            return Type.GetType(typeId, throwOnError: true)!;
+        }
+
+        static void MoveToValue(ref Utf8JsonReader reader)
+        {
+            reader.MoveNext();
+            reader.ExpectType(JsonTokenType.PropertyName);
+            if (!reader.ValueTextEquals(ValueKeyUtf8))
+                throw InvalidJsonHeap();
+
+            reader.MoveNext();
+        }
     }
 
     public string GetReference(object value)
