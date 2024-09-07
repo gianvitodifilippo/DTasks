@@ -16,7 +16,7 @@ public sealed class JsonDTaskConverter(
 
     public ReadOnlyMemory<byte> SerializeHeap(ref JsonFlowHeap heap)
     {
-        heap.ReferenceResolver.WriteTo(heap.Writer, heap.Options);
+        heap.ReferenceResolver.Serialize(heap.Writer, heap.Options);
 
         return heap.GetWrittenMemoryAndAdvance();
     }
@@ -26,7 +26,7 @@ public sealed class JsonDTaskConverter(
         JsonFlowHeap heap = JsonFlowHeap.Create(scope, options);
 
         Utf8JsonReader reader = new(bytes);
-        heap.ReferenceResolver.ReadFrom(ref reader, heap.Options);
+        heap.ReferenceResolver.Deserialize(ref reader, heap.Options);
 
         return heap;
     }
@@ -56,9 +56,11 @@ public sealed class JsonDTaskConverter(
 
         constructor.StartReading();
 
+        constructor.MoveNext();
         object typeId = constructor.ReadTypeId();
         Type stateMachineType = typeResolver.GetType(typeId);
 
+        constructor.MoveNext();
         var resume = (DTaskResumer)inspector.GetResumer(stateMachineType);
         DTask task = resume(resultTask, ref constructor);
         

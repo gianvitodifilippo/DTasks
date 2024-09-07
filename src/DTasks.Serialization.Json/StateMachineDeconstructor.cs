@@ -77,11 +77,11 @@ internal readonly ref struct StateMachineDeconstructor(ref readonly JsonFlowHeap
         }
     }
 
-    public void OnField<TField>(string fieldName, TField? value)
+    public void HandleField<TField>(string fieldName, TField? value)
     {
         if (!typeof(TField).IsValueType)
         {
-            WriteReference(fieldName, value);
+            HandleReference(fieldName, value);
             return;
         }
 
@@ -89,97 +89,105 @@ internal readonly ref struct StateMachineDeconstructor(ref readonly JsonFlowHeap
         JsonSerializer.Serialize(Writer, value, Options);
     }
 
-    public void OnAwaiter(string fieldName)
+    public void HandleAwaiter(string fieldName)
     {
         Writer.WriteString(fieldName, Constants.AwaiterValueUtf8);
     }
 
-    public void OnField(string fieldName, byte value)
+    public void HandleField(string fieldName, string? value)
+    {
+        if (value is null) // This can be made configurable
+            return;
+
+        Writer.WriteString(fieldName, value);
+    }
+
+    public void HandleField(string fieldName, byte value)
     {
         Writer.WriteNumber(fieldName, value);
     }
 
-    public void OnField(string fieldName, sbyte value)
+    public void HandleField(string fieldName, sbyte value)
     {
         Writer.WriteNumber(fieldName, value);
     }
 
-    public void OnField(string fieldName, bool value)
+    public void HandleField(string fieldName, bool value)
     {
         Writer.WriteBoolean(fieldName, value);
     }
 
-    public void OnField(string fieldName, char value)
+    public void HandleField(string fieldName, char value)
     {
         Writer.WriteString(fieldName, value.ToString());
     }
 
-    public void OnField(string fieldName, short value)
+    public void HandleField(string fieldName, short value)
     {
         Writer.WriteNumber(fieldName, value);
     }
 
-    public void OnField(string fieldName, int value)
+    public void HandleField(string fieldName, int value)
     {
         Writer.WriteNumber(fieldName, value);
     }
 
-    public void OnField(string fieldName, long value)
+    public void HandleField(string fieldName, long value)
     {
         Writer.WriteNumber(fieldName, value);
     }
 
-    public void OnField(string fieldName, ushort value)
+    public void HandleField(string fieldName, ushort value)
     {
         Writer.WriteNumber(fieldName, value);
     }
 
-    public void OnField(string fieldName, uint value)
+    public void HandleField(string fieldName, uint value)
     {
         Writer.WriteNumber(fieldName, value);
     }
 
-    public void OnField(string fieldName, ulong value)
+    public void HandleField(string fieldName, ulong value)
     {
         Writer.WriteNumber(fieldName, value);
     }
 
-    public void OnField(string fieldName, float value)
+    public void HandleField(string fieldName, float value)
     {
         Writer.WriteNumber(fieldName, value);
     }
 
-    public void OnField(string fieldName, double value)
+    public void HandleField(string fieldName, double value)
     {
         Writer.WriteNumber(fieldName, value);
     }
 
-    public void OnField(string fieldName, decimal value)
+    public void HandleField(string fieldName, decimal value)
     {
         Writer.WriteNumber(fieldName, value);
     }
 
-    public void OnField(string fieldName, DateTime value)
+    public void HandleField(string fieldName, DateTime value)
     {
         Writer.WriteString(fieldName, value);
     }
 
-    public void OnField(string fieldName, DateTimeOffset value)
+    public void HandleField(string fieldName, DateTimeOffset value)
     {
         Writer.WriteString(fieldName, value);
     }
 
-    public void OnField(string fieldName, Guid value)
+    public void HandleField(string fieldName, Guid value)
     {
         Writer.WriteString(fieldName, value);
     }
 
-    public void OnField(string fieldName, ReadOnlyMemory<byte> value)
+    public void HandleField(string fieldName, ReadOnlyMemory<byte> value)
     {
         throw new NotImplementedException();
     }
 
-    private void WriteReference(string fieldName, object? value)
+    private void HandleReference(string fieldName, object? value)
     {
         if (value is null) // This can be made configurable
             return;

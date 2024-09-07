@@ -31,6 +31,7 @@ public struct JsonFlowHeap : IFlowHeap
     internal ReadOnlyMemory<byte> GetWrittenMemoryAndAdvance()
     {
         Writer.Flush();
+        Writer.Reset();
 
         int startIndex = _startIndex;
         _startIndex = _buffer.WrittenCount;
@@ -44,7 +45,7 @@ public struct JsonFlowHeap : IFlowHeap
         Utf8JsonWriter writer = new(buffer, new JsonWriterOptions
         {
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            Indented = false
+            Indented = rootOptions.WriteIndented
         });
         DTaskReferenceResolver referenceResolver = new(scope, rootOptions);
         JsonSerializerOptions options = new(rootOptions)

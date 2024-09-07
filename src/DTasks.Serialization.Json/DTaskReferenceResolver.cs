@@ -14,27 +14,41 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
 
     public ReferenceHandler CreateHandler() => new DTaskReferenceHandler(this);
 
-    public void WriteTo(Utf8JsonWriter writer, JsonSerializerOptions options)
+    public void Serialize(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
         _isSerializing = true;
-
         try
         {
-            writer.WriteStartObject();
+            writer.WriteStartArray();
 
             foreach ((object reference, string id) in _referencesToIds)
             {
-                // If the reference is provided by the host, we should have stored the token
-                // it is associated with inside _idsToReferences.
-                object value = _idsToReferences.TryGetValue(id, out object? referenceOrToken)
-                    ? referenceOrToken
-                    : reference;
+                if (!_idsToReferences.TryGetValue(id, out object? referenceOrToken))
+                    continue; // We already wrote this reference, don't write it again.
 
-                writer.WritePropertyName(id);
-                JsonSerializer.Serialize(writer, value, options);
+                writer.WriteStartObject();
+
+                if (ReferenceEquals(reference, referenceOrToken))
+                {
+                    // This is the first time we encounter this reference. Write it.
+                    writer.WriteString("type"u8, reference.GetType().AssemblyQualifiedName);
+                    writer.WritePropertyName("value"u8);
+                    JsonSerializer.Serialize(writer, reference, options);
+                }
+                else
+                {
+                    // This is a token.
+                    object token = referenceOrToken;
+                    writer.WriteString("id"u8, id);
+                    writer.WriteString("type"u8, token.GetType().AssemblyQualifiedName);
+                    writer.WritePropertyName("value"u8);
+                    JsonSerializer.Serialize(writer, token, rootOptions);
+                }
+
+                writer.WriteEndObject();
             }
 
-            writer.WriteEndObject();
+            writer.WriteEndArray();
         }
         finally
         {
@@ -42,34 +56,80 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
         }
     }
 
-    public void ReadFrom(ref Utf8JsonReader reader, JsonSerializerOptions options)
+    public void Deserialize(ref Utf8JsonReader reader, JsonSerializerOptions options)
     {
-        reader.ExpectType(JsonTokenType.StartObject);
+        reader.MoveNext();
+        reader.ExpectType(JsonTokenType.StartArray);
 
-        while (reader.Read())
+        while (true)
         {
-            if (reader.TokenType == JsonTokenType.EndObject)
-                return;
+            reader.MoveNext();
+            if (reader.TokenType == JsonTokenType.EndArray)
+                break;
 
+            reader.ExpectType(JsonTokenType.StartObject);
+
+            bool isToken;
+            string? id = null;
+            reader.MoveNext();
             reader.ExpectType(JsonTokenType.PropertyName);
-            string referenceId = reader.GetString()!;
+            if (isToken = reader.ValueTextEquals("id"u8))
+            {
+                reader.MoveNext();
+                id = reader.GetString();
 
-            reader.Read();
-            object? value = JsonSerializer.Deserialize(ref reader, typeof(object), options);
-            if (value is null)
-                throw new JsonException($"Null reference while deserializing reference id '{referenceId}'.");
+                reader.MoveNext();
+                reader.ExpectType(JsonTokenType.PropertyName);
+            }
 
-            AddReference(referenceId, value);
+            if (!reader.ValueTextEquals("type"u8))
+                throw new JsonException("Invalid heap json.");
+
+            reader.MoveNext();
+            string? typeId = reader.GetString();
+            if (typeId is null)
+                throw new JsonException("Invalid heap json.");
+
+            Type type = Type.GetType(typeId, throwOnError: true)!;
+
+            reader.MoveNext();
+            reader.ExpectType(JsonTokenType.PropertyName);
+            if (!reader.ValueTextEquals("value"u8))
+                throw new JsonException("Invalid heap json.");
+
+            reader.MoveNext();
+            if (isToken)
+            {
+                object token = JsonSerializer.Deserialize(ref reader, type, rootOptions) ?? throw new JsonException("Invalid heap json.");
+                if (!scope.TryGetReference(token, out object? reference))
+                    throw new JsonException("Invalid json heap.");
+
+                _idsToReferences[id!] = token;
+                _referencesToIds[reference] = id!;
+            }
+            else
+            {
+                _ = JsonSerializer.Deserialize(ref reader, type, options) ?? throw new JsonException("Invalid heap json.");
+            }
+
+            reader.MoveNext();
+            reader.ExpectType(JsonTokenType.EndObject);
         }
+
+        reader.ExpectEnd();
     }
 
     public override string GetReference(object value, out bool alreadyExists)
     {
+        Debug.Assert(value is not string, "Strings should be serialized as values.");
+
         if (_referencesToIds.TryGetValue(value, out string? referenceId))
         {
-            alreadyExists = true;
+            alreadyExists = !_isSerializing || !_idsToReferences.Remove(referenceId);
             return referenceId;
         }
+
+        Debug.Assert(!_isSerializing, "We should have scanned all references before serializing the heap.");
 
         referenceId = _referencesToIds.Count.ToString();
         _referencesToIds.Add(value, referenceId);
@@ -97,7 +157,7 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
 
         if (_idsToReferences.TryGetValue(referenceId, out object? referenceOrToken))
         {
-            // This value was previously deserialized
+            // This value was previously encountered
             if (ReferenceEquals(referenceOrToken, value))
             {
                 // Not a token. Trasverse the graph.
@@ -118,24 +178,20 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
             }
             else
             {
-                // Not a token. Trasverse the graph.
+                // Not a token. Add the reference to the dictionary and trasverse the graph.
+                _idsToReferences[referenceId] = value;
                 TrasverseGraph(value);
             }
         }
 
-        alreadyExists = !_isSerializing;
+        alreadyExists = true;
         return referenceId;
     }
 
     public override void AddReference(string referenceId, object value)
     {
         _idsToReferences[referenceId] = value;
-
-        object referenceKey = scope.TryGetReference(value, out object? reference)
-            ? reference
-            : value;
-
-        _referencesToIds[referenceKey] = referenceId;
+        _referencesToIds[value] = referenceId;
     }
 
     public override object ResolveReference(string referenceId)
@@ -150,16 +206,24 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
             : referenceOrToken;
     }
 
+    //private bool IsProvidedByHost(string id, object reference, [NotNullWhen(true)] out object? token)
+    //{
+    //     If the reference is provided by the host, we should have stored the token
+    //     it is associated with inside _idsToReferences.
+
+    //    return
+    //        _idsToReferences.TryGetValue(id, out token) &&
+    //        !ReferenceEquals(reference, token);
+    //}
+
     private void TrasverseGraph(object value)
     {
         Debug.Assert(!_isSerializing, "Graph trasversal should have happened before heap serialization.");
 
-        if (!rootOptions.TryGetTypeInfo(value.GetType(), out JsonTypeInfo? typeInfo))
-            return;
-
+        JsonTypeInfo typeInfo = rootOptions.GetTypeInfo(value.GetType());
         foreach (JsonPropertyInfo property in typeInfo.Properties)
         {
-            if (property.PropertyType.IsValueType)
+            if (property.PropertyType.IsValueType || property.PropertyType == typeof(string))
                 continue;
 
             if (property.Get is not Func<object, object?> getter)
