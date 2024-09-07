@@ -28,13 +28,13 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowI
 
     protected abstract Task OnCompletedAsync<TResult>(TFlowId flowId, TResult result, CancellationToken cancellationToken);
 
-    protected sealed override Task SuspendCoreAsync(TFlowId flowId, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken = default)
+    protected sealed override Task SuspendCoreAsync(TFlowId flowId, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
     {
         FlowHandler handler = new(flowId, this);
         return handler.SuspendAsync(scope, awaiter, cancellationToken);
     }
 
-    protected sealed override Task ResumeCoreAsync(TFlowId flowId, IDTaskScope scope, DTask resultTask, CancellationToken cancellationToken = default)
+    protected sealed override Task ResumeCoreAsync(TFlowId flowId, IDTaskScope scope, DTask resultTask, CancellationToken cancellationToken)
     {
         FlowHandler handler = new(flowId, this);
         return handler.ResumeAsync(scope, resultTask, cancellationToken);

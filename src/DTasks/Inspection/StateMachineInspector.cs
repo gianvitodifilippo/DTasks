@@ -151,12 +151,12 @@ public sealed class StateMachineInspector : IStateMachineInspector
         FieldInfo stateField = stateMachineDescriptor.StateField;
 
         // _ = constructor.HandleState("<>1__state", ref stateMachine.<>1__state);
-        il.LoadConstructor();                                         // constructor
-        il.LoadString(stateField.Name);                               // constructor, "<>1__state"
-        il.LoadStateMachineLocal();                                   // constructor, "<>1__state", stateMachine
-        il.LoadFieldAddress(stateField);                              // constructor, "<>1__state", &stateMachine.$stateField
-        il.CallHandleMethod(constructorDescriptor.HandleStateMethod); // @result[HandleState]
-        il.Pop();                                                     // -
+        il.LoadConstructor();                                         // Stack: constructor
+        il.LoadString(stateField.Name);                               // Stack: constructor, "<>1__state"
+        il.LoadStateMachineLocal();                                   // Stack: constructor, "<>1__state", stateMachine
+        il.LoadFieldAddress(stateField);                              // Stack: constructor, "<>1__state", &stateMachine.$stateField
+        il.CallHandleMethod(constructorDescriptor.HandleStateMethod); // Stack: @result[HandleState]
+        il.Pop();                                                     // Stack: -
 
         Label ifFalseLabel = default;
         bool wasLabelDefined = false;
