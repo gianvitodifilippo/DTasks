@@ -39,7 +39,7 @@ public sealed class JsonDTaskConverter(
 
         deconstructor.StartWriting();
         
-        object typeId = typeResolver.GetTypeId(stateMachineType);
+        object typeId = typeResolver.GetTypeId(stateMachineType) ?? throw new InvalidOperationException($"The type id for state machine of type '{typeof(TStateMachine)}' was null.");
         deconstructor.WriteTypeId(typeId);
         
         var suspend = (DTaskSuspender<TStateMachine>)inspector.GetSuspender(stateMachineType);
@@ -56,16 +56,13 @@ public sealed class JsonDTaskConverter(
 
         constructor.StartReading();
 
-        constructor.MoveNext();
         object typeId = constructor.ReadTypeId();
         Type stateMachineType = typeResolver.GetType(typeId);
 
-        constructor.MoveNext();
         var resume = (DTaskResumer)inspector.GetResumer(stateMachineType);
         DTask task = resume(resultTask, ref constructor);
         
         constructor.EndReading();
-
         return task;
     }
 

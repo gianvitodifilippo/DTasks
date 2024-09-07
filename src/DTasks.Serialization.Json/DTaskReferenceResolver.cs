@@ -8,6 +8,10 @@ namespace DTasks.Serialization.Json;
 
 internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOptions rootOptions) : ReferenceResolver
 {
+    private static ReadOnlySpan<byte> TypeKeyUtf8 => "type"u8;
+    private static ReadOnlySpan<byte> IdKeyUtf8 => "id"u8;
+    private static ReadOnlySpan<byte> ValueKeyUtf8 => "value"u8;
+
     private readonly Dictionary<string, object> _idsToReferences = [];
     private readonly Dictionary<object, string> _referencesToIds = [];
     private bool _isSerializing;
@@ -24,24 +28,24 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
             foreach ((object reference, string id) in _referencesToIds)
             {
                 if (!_idsToReferences.TryGetValue(id, out object? referenceOrToken))
-                    continue; // We already wrote this reference, don't write it again.
+                    continue; // We already wrote this reference, don't write it again
 
                 writer.WriteStartObject();
 
                 if (ReferenceEquals(reference, referenceOrToken))
                 {
-                    // This is the first time we encounter this reference. Write it.
-                    writer.WriteString("type"u8, reference.GetType().AssemblyQualifiedName);
-                    writer.WritePropertyName("value"u8);
+                    // This is the first time we encounter this reference
+                    writer.WriteString(TypeKeyUtf8, reference.GetType().AssemblyQualifiedName);
+                    writer.WritePropertyName(ValueKeyUtf8);
                     JsonSerializer.Serialize(writer, reference, options);
                 }
                 else
                 {
-                    // This is a token.
+                    // We have a token
                     object token = referenceOrToken;
-                    writer.WriteString("id"u8, id);
-                    writer.WriteString("type"u8, token.GetType().AssemblyQualifiedName);
-                    writer.WritePropertyName("value"u8);
+                    writer.WriteString(IdKeyUtf8, id);
+                    writer.WriteString(TypeKeyUtf8, token.GetType().AssemblyQualifiedName);
+                    writer.WritePropertyName(ValueKeyUtf8);
                     JsonSerializer.Serialize(writer, token, rootOptions);
                 }
 
@@ -70,46 +74,46 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
             reader.ExpectType(JsonTokenType.StartObject);
 
             bool isToken;
-            string? id = null;
+            string? referenceId = null;
             reader.MoveNext();
             reader.ExpectType(JsonTokenType.PropertyName);
-            if (isToken = reader.ValueTextEquals("id"u8))
+            if (isToken = reader.ValueTextEquals(IdKeyUtf8))
             {
                 reader.MoveNext();
-                id = reader.GetString();
+                referenceId = reader.GetString();
 
                 reader.MoveNext();
                 reader.ExpectType(JsonTokenType.PropertyName);
             }
 
-            if (!reader.ValueTextEquals("type"u8))
-                throw new JsonException("Invalid heap json.");
+            if (!reader.ValueTextEquals(TypeKeyUtf8))
+                throw InvalidJsonHeap();
 
             reader.MoveNext();
             string? typeId = reader.GetString();
             if (typeId is null)
-                throw new JsonException("Invalid heap json.");
+                throw InvalidJsonHeap();
 
             Type type = Type.GetType(typeId, throwOnError: true)!;
 
             reader.MoveNext();
             reader.ExpectType(JsonTokenType.PropertyName);
-            if (!reader.ValueTextEquals("value"u8))
-                throw new JsonException("Invalid heap json.");
+            if (!reader.ValueTextEquals(ValueKeyUtf8))
+                throw InvalidJsonHeap();
 
             reader.MoveNext();
             if (isToken)
             {
-                object token = JsonSerializer.Deserialize(ref reader, type, rootOptions) ?? throw new JsonException("Invalid heap json.");
+                object token = JsonSerializer.Deserialize(ref reader, type, rootOptions) ?? throw InvalidJsonHeap();
                 if (!scope.TryGetReference(token, out object? reference))
-                    throw new JsonException("Invalid json heap.");
+                    throw InvalidJsonHeap();
 
-                _idsToReferences[id!] = token;
-                _referencesToIds[reference] = id!;
+                _idsToReferences[referenceId!] = token;
+                _referencesToIds[reference] = referenceId!;
             }
             else
             {
-                _ = JsonSerializer.Deserialize(ref reader, type, options) ?? throw new JsonException("Invalid heap json.");
+                _ = JsonSerializer.Deserialize(ref reader, type, options) ?? throw InvalidJsonHeap();
             }
 
             reader.MoveNext();
@@ -119,12 +123,21 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
         reader.ExpectEnd();
     }
 
+    public string GetReference(object value)
+    {
+        string reference = GetReference(value, out bool alreadyExists);
+
+        Debug.Assert(alreadyExists, "All references should be stored on the heap."); // i.e., do not call this method during serialization
+        return reference;
+    }
+
     public override string GetReference(object value, out bool alreadyExists)
     {
         Debug.Assert(value is not string, "Strings should be serialized as values.");
 
         if (_referencesToIds.TryGetValue(value, out string? referenceId))
         {
+            // When serializing, remove the reference from the dictionary to indicate that it was already written
             alreadyExists = !_isSerializing || !_idsToReferences.Remove(referenceId);
             return referenceId;
         }
@@ -134,8 +147,7 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
         referenceId = _referencesToIds.Count.ToString();
         _referencesToIds.Add(value, referenceId);
 
-        // TODO: Verify if the following can actually work.
-        // When calling 'WriteReference', the JsonSerializer will need a reference resolver that
+        // When calling 'Serialize', the JsonSerializer will need a reference resolver that
         // preserves references, and there are two options:
         // 1. Use the current instance - the problem is that the serialization happens while iterating
         // over the _referencesToIds dictionary, therefore we can't modify it.
@@ -152,50 +164,37 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
         // the first time the d-async flow is suspended (DTaskHost.SuspendAsync), it will start empty and won't be
         // used for anything else. The rest of the time, either _idsToReferences already contains the token
         // associated with the reference (coming from deserialization) or we get it from the host and store into
-        // it ourselves. This way, we can use _idsToReferences within 'WriteReferences' to tell whether the value
+        // it ourselves. This way, we can use _idsToReferences within 'Serialize' to tell whether the value
         // is a token or not.
 
-        if (_idsToReferences.TryGetValue(referenceId, out object? referenceOrToken))
+        Debug.Assert(!_idsToReferences.ContainsKey(referenceId), $"'{nameof(_referencesToIds)}' and '{nameof(_idsToReferences)}' should be kept in sync.");
+
+        if (scope.TryGetReferenceToken(value, out object? token))
         {
-            // This value was previously encountered
-            if (ReferenceEquals(referenceOrToken, value))
-            {
-                // Not a token. Trasverse the graph.
-                TrasverseGraph(value);
-            }
-            else
-            {
-                // Token. We don't need to do anything.
-            }
+            _idsToReferences[referenceId] = token;
         }
         else
         {
-            // This value was created during last execution
-            if (scope.TryGetReferenceToken(value, out object? token))
-            {
-                // A new token. Map it to the current reference id.
-                _idsToReferences[referenceId] = token;
-            }
-            else
-            {
-                // Not a token. Add the reference to the dictionary and trasverse the graph.
-                _idsToReferences[referenceId] = value;
-                TrasverseGraph(value);
-            }
+            _idsToReferences[referenceId] = value;
+            TrasverseGraph(value);
         }
 
-        alreadyExists = true;
+        alreadyExists = !_isSerializing; // i.e., true
         return referenceId;
     }
 
     public override void AddReference(string referenceId, object value)
     {
+        Debug.Assert(!_isSerializing, $"'{nameof(AddReference)}' should not be called during serialization.");
+
         _idsToReferences[referenceId] = value;
         _referencesToIds[value] = referenceId;
     }
 
     public override object ResolveReference(string referenceId)
     {
+        Debug.Assert(!_isSerializing, $"'{nameof(ResolveReference)}' should not be called during serialization.");
+
         object referenceOrToken = _idsToReferences[referenceId];
 
         // We don't replace the reference with the token here: this would break
@@ -205,16 +204,6 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
             ? reference
             : referenceOrToken;
     }
-
-    //private bool IsProvidedByHost(string id, object reference, [NotNullWhen(true)] out object? token)
-    //{
-    //     If the reference is provided by the host, we should have stored the token
-    //     it is associated with inside _idsToReferences.
-
-    //    return
-    //        _idsToReferences.TryGetValue(id, out token) &&
-    //        !ReferenceEquals(reference, token);
-    //}
 
     private void TrasverseGraph(object value)
     {
@@ -232,9 +221,11 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
             if (getter(value) is not object propertyValue)
                 continue;
 
-            _ = GetReference(propertyValue, out _);
+            _ = GetReference(propertyValue);
         }
     }
+
+    private static JsonException InvalidJsonHeap() => new JsonException("Invalid json heap.");
 
     private sealed class DTaskReferenceHandler(DTaskReferenceResolver resolver) : ReferenceHandler
     {

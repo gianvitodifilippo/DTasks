@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace DTasks.Serialization.Json;
 
@@ -19,7 +18,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
         get => _heap.Options;
     }
 
-    private readonly ReferenceResolver ReferenceResolver
+    private readonly DTaskReferenceResolver ReferenceResolver
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _heap.ReferenceResolver;
@@ -28,7 +27,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 #else
 
     private readonly JsonSerializerOptions _options = heap.Options;
-    private readonly ReferenceResolver _referenceResolver = heap.ReferenceResolver;
+    private readonly DTaskReferenceResolver _referenceResolver = heap.ReferenceResolver;
 
     private readonly JsonSerializerOptions Options
     {
@@ -36,7 +35,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
         get => _options;
     }
 
-    private readonly ReferenceResolver ReferenceResolver
+    private readonly DTaskReferenceResolver ReferenceResolver
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _referenceResolver;
@@ -44,12 +43,11 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
 #endif
 
-    public void MoveNext() => _reader.MoveNext();
-
     public void StartReading()
     {
         _reader.MoveNext();
         _reader.ExpectType(JsonTokenType.StartObject);
+        _reader.MoveNext();
     }
 
     public void EndReading()
@@ -60,7 +58,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public object ReadTypeId()
     {
-        if (!_reader.IsProperty(Constants.TypeMetadataKeyUtf8))
+        if (!IsProperty(Constants.TypeMetadataKeyUtf8))
             throw new JsonException($"Expected property '{Constants.TypeMetadataKey}'.");
 
         _reader.MoveNext();
@@ -71,15 +69,16 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
             _ => throw new JsonException($"Unsupported identifier type '{_reader.TokenType}'.")
         };
 
+        _reader.MoveNext();
         return typeId;
     }
 
     public bool HandleField<TField>(string fieldName, ref TField? value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
-        if (!typeof(TField).IsValueType && typeof(TField) != typeof(string))
+        if (!typeof(TField).IsValueType)
             return HandleReference(ref value);
 
         _reader.MoveNext();
@@ -90,7 +89,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleAwaiter(string fieldName)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -101,9 +100,19 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
         return Next();
     }
 
+    public bool HandleField(string fieldName, ref string? value)
+    {
+        if (!IsProperty(fieldName))
+            return false;
+
+        _reader.MoveNext();
+        value = _reader.GetString();
+        return Next();
+    }
+
     public bool HandleField(string fieldName, ref byte value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -113,7 +122,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref sbyte value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -123,7 +132,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref bool value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -133,7 +142,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref char value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -147,7 +156,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref short value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -157,7 +166,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref int value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -167,7 +176,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref long value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -177,7 +186,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref ushort value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -187,7 +196,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref uint value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -197,7 +206,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref ulong value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -207,7 +216,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref float value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -217,7 +226,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref double value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -227,7 +236,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref decimal value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -237,7 +246,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref DateTime value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -247,7 +256,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref DateTimeOffset value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -257,7 +266,7 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     public bool HandleField(string fieldName, ref Guid value)
     {
-        if (!_reader.IsProperty(fieldName))
+        if (!IsProperty(fieldName))
             return false;
 
         _reader.MoveNext();
@@ -272,13 +281,13 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
 
     private bool HandleReference<TField>(ref TField? value)
     {
-        Debug.Assert(!typeof(TField).IsValueType, "Expected TField to be a reference type.");
+        Debug.Assert(!typeof(TField).IsValueType, $"Expected {nameof(TField)} to be a reference type.");
 
         _reader.MoveNext();
         _reader.ExpectType(JsonTokenType.StartObject);
 
         _reader.MoveNext();
-        if (!_reader.IsProperty(Constants.RefMetadataKeyUtf8))
+        if (!IsProperty(Constants.RefMetadataKeyUtf8))
             throw new JsonException($"Expected '{Constants.RefMetadataKey}' property.");
 
         _reader.MoveNext();
@@ -304,5 +313,15 @@ internal ref struct StateMachineConstructor(ReadOnlySpan<byte> bytes, ref readon
     {
         _reader.MoveNext();
         return true;
+    }
+
+    private readonly bool IsProperty(string propertyName)
+    {
+        return _reader.TokenType is JsonTokenType.PropertyName && _reader.ValueTextEquals(propertyName);
+    }
+
+    private readonly bool IsProperty(ReadOnlySpan<byte> propertyName)
+    {
+        return _reader.TokenType is JsonTokenType.PropertyName && _reader.ValueTextEquals(propertyName);
     }
 }

@@ -1,12 +1,12 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace DTasks.Serialization.Json;
 
 internal readonly ref struct StateMachineDeconstructor(ref readonly JsonFlowHeap heap)
 {
 #if NET8_0_OR_GREATER
+
     private readonly ref readonly JsonFlowHeap _heap = ref heap;
 
     private Utf8JsonWriter Writer
@@ -21,15 +21,17 @@ internal readonly ref struct StateMachineDeconstructor(ref readonly JsonFlowHeap
         get => _heap.Options;
     }
 
-    private readonly ReferenceResolver ReferenceResolver
+    private readonly DTaskReferenceResolver ReferenceResolver
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _heap.ReferenceResolver;
     }
+
 #else
+
     private readonly Utf8JsonWriter _writer = heap.Writer;
     private readonly JsonSerializerOptions _options = heap.Options;
-    private readonly ReferenceResolver _referenceResolver = heap.ReferenceResolver;
+    private readonly DTaskReferenceResolver _referenceResolver = heap.ReferenceResolver;
 
     private Utf8JsonWriter Writer
     {
@@ -43,11 +45,12 @@ internal readonly ref struct StateMachineDeconstructor(ref readonly JsonFlowHeap
         get => _options;
     }
 
-    private readonly ReferenceResolver ReferenceResolver
+    private readonly DTaskReferenceResolver ReferenceResolver
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _referenceResolver;
     }
+
 #endif
 
     public void StartWriting()
@@ -192,7 +195,7 @@ internal readonly ref struct StateMachineDeconstructor(ref readonly JsonFlowHeap
         if (value is null) // This can be made configurable
             return;
 
-        string referenceId = ReferenceResolver.GetReference(value, out _);
+        string referenceId = ReferenceResolver.GetReference(value);
 
         Writer.WritePropertyName(fieldName);
         Writer.WriteStartObject();
