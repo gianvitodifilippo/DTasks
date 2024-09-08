@@ -17,6 +17,12 @@ public class InspectionTests
     public void Resumer_ShouldInvokeExpectedConstructorMethods()
     {
         // Arrange
+        int expectedNumberOfCalls =
+#if DEBUG
+            7;
+#else
+            5;
+#endif
         var resultTask = Substitute.For<DTask>();
         var constructor = Substitute.For<IStateMachineConstructor>();
         var resumer = (TestResumer)_inspector.GetResumer(StateMachineType);
@@ -37,20 +43,31 @@ public class InspectionTests
         DTask task = resumer.Invoke(resultTask, constructor);
 
         // Assert
-        constructor.Received().HandleField("arg", ref Arg.Any<MyType>());
-        constructor.Received().HandleField(LocalFieldName, ref Arg.Any<string>());
+        constructor.ReceivedCalls().Should().HaveCount(expectedNumberOfCalls);
+        Received.InOrder(() =>
+        {
+            constructor.HandleField("arg", ref Arg.Any<MyType>());
+            constructor.HandleField(LocalFieldName, ref Arg.Any<string>());
 #if DEBUG
-        constructor.Received().HandleField("<result>5__2", ref Arg.Any<int>());
+            constructor.HandleField("<result>5__2", ref Arg.Any<int>());
+            constructor.HandleField("<>s__3", ref Arg.Any<int>());
 #endif
-        constructor.Received().HandleState("<>1__state", ref Arg.Any<int>());
-        constructor.Received().HandleAwaiter("<>u__1");
-        constructor.Received().HandleAwaiter("<>u__3");
+            constructor.HandleState("<>1__state", ref Arg.Any<int>());
+            constructor.HandleAwaiter("<>u__1");
+            constructor.HandleAwaiter("<>u__3");
+        });
     }
 
     private void Suspender_ShouldInvokeExpectedDeconstructorMethods_Impl<TStateMachine>(TStateMachine stateMachine, MyType arg)
         where TStateMachine : notnull
     {
         // Arrange
+        int expectedNumberOfCalls =
+#if DEBUG
+            6;
+#else
+            4;
+#endif
         var info = Substitute.For<IStateMachineInfo>();
         var deconstructor = Substitute.For<IStateMachineDeconstructor>();
         var suspender = (TestSuspender<TStateMachine>)_inspector.GetSuspender(StateMachineType);
@@ -61,14 +78,18 @@ public class InspectionTests
         suspender.Invoke(ref stateMachine, info, deconstructor);
 
         // Assert
-        deconstructor.Received().HandleField("arg", arg);
-        deconstructor.Received().HandleField(LocalFieldName, Arg.Any<string>());
+        deconstructor.ReceivedCalls().Should().HaveCount(expectedNumberOfCalls);
+        Received.InOrder(() =>
+        {
+            deconstructor.HandleField("arg", arg);
+            deconstructor.HandleField(LocalFieldName, Arg.Any<string>());
 #if DEBUG
-        deconstructor.Received().HandleField("<result>5__2", Arg.Any<int>());
+            deconstructor.HandleField("<result>5__2", Arg.Any<int>());
+            deconstructor.HandleField("<>s__3", Arg.Any<int>());
 #endif
-        deconstructor.Received().HandleState("<>1__state", Arg.Any<int>());
-        deconstructor.DidNotReceive().HandleAwaiter("<>u__1");
-        deconstructor.Received().HandleAwaiter("<>u__3");
+            deconstructor.HandleState("<>1__state", Arg.Any<int>());
+            deconstructor.HandleAwaiter("<>u__3");
+        });
     }
 
     [Fact]

@@ -35,6 +35,12 @@ public partial class StateMachineInspectorTests
     public void GetSuspender_ShouldBuildCorrectDelegate_WhenCallbackIsStructNotPassedByRef()
     {
         // Arrange
+        int expectedNumberOfCalls =
+#if DEBUG
+            48;
+#else
+            33;
+#endif
         Type delegateType = typeof(StructSuspender<>);
         Type callbackType = typeof(CallbackStruct);
         Type expectedType = delegateType.MakeGenericType(StateMachineType);
@@ -58,6 +64,7 @@ public partial class StateMachineInspectorTests
 
         // Assert
         suspender.Should().BeOfType(expectedType);
+        _il.ReceivedCalls().Should().HaveCount(expectedNumberOfCalls);
         _il.Received(2).DefineLabel();
         Received.InOrder(() =>
         {
@@ -132,6 +139,12 @@ public partial class StateMachineInspectorTests
     public void GetSuspender_ShouldBuildCorrectDelegate_WhenCallbackIsStructPassedByRef()
     {
         // Arrange
+        int expectedNumberOfCalls =
+#if DEBUG
+            48;
+#else
+            33;
+#endif
         Type delegateType = typeof(ByRefStructSuspender<>);
         Type callbackType = typeof(CallbackStruct);
         Type expectedType = delegateType.MakeGenericType(StateMachineType);
@@ -155,6 +168,7 @@ public partial class StateMachineInspectorTests
 
         // Assert
         suspender.Should().BeOfType(expectedType);
+        _il.ReceivedCalls().Should().HaveCount(expectedNumberOfCalls);
         _il.Received(2).DefineLabel();
         Received.InOrder(() =>
         {
@@ -229,6 +243,12 @@ public partial class StateMachineInspectorTests
     public void GetSuspender_ShouldBuildCorrectDelegate_WhenCallbackIsClassNotPassedByRef()
     {
         // Arrange
+        int expectedNumberOfCalls =
+#if DEBUG
+            48;
+#else
+            33;
+#endif
         Type delegateType = typeof(ClassSuspender<>);
         Type callbackType = typeof(CallbackClass);
         Type expectedType = delegateType.MakeGenericType(StateMachineType);
@@ -252,6 +272,7 @@ public partial class StateMachineInspectorTests
 
         // Assert
         suspender.Should().BeOfType(expectedType);
+        _il.ReceivedCalls().Should().HaveCount(expectedNumberOfCalls);
         _il.Received(2).DefineLabel();
         Received.InOrder(() =>
         {
@@ -326,6 +347,12 @@ public partial class StateMachineInspectorTests
     public void GetSuspender_ShouldBuildCorrectDelegate_WhenCallbackIsClassPassedByRef()
     {
         // Arrange
+        int expectedNumberOfCalls =
+#if DEBUG
+            55;
+#else
+            38;
+#endif
         Type delegateType = typeof(ByRefClassSuspender<>);
         Type callbackType = typeof(CallbackClass);
         Type expectedType = delegateType.MakeGenericType(StateMachineType);
@@ -349,6 +376,7 @@ public partial class StateMachineInspectorTests
 
         // Assert
         suspender.Should().BeOfType(expectedType);
+        _il.ReceivedCalls().Should().HaveCount(expectedNumberOfCalls);
         _il.Received(2).DefineLabel();
         Received.InOrder(() =>
         {
@@ -430,6 +458,12 @@ public partial class StateMachineInspectorTests
     public void GetResumer_ShouldBuildCorrectDelegate_WhenCallbackIsStructNotPassedByRef()
     {
         // Arrange
+        int expectedNumberOfCalls =
+#if DEBUG
+            64;
+#else
+            52;
+#endif
         Type delegateType = typeof(StructResumer);
         Type callbackType = typeof(CallbackStruct);
 
@@ -452,6 +486,7 @@ public partial class StateMachineInspectorTests
 
         // Assert
         resumer.Should().BeOfType(delegateType);
+        _il.ReceivedCalls().Should().HaveCount(expectedNumberOfCalls);
         _il.Received(1).DeclareLocal(StateMachineType);
         _il.Received(2).DefineLabel();
         Received.InOrder(() =>
@@ -577,6 +612,12 @@ public partial class StateMachineInspectorTests
     public void GetResumer_ShouldBuildCorrectDelegate_WhenCallbackIsStructPassedByRef()
     {
         // Arrange
+        int expectedNumberOfCalls =
+#if DEBUG
+            64;
+#else
+            52;
+#endif
         Type delegateType = typeof(ByRefStructResumer);
         Type callbackType = typeof(CallbackStruct);
 
@@ -599,6 +640,7 @@ public partial class StateMachineInspectorTests
 
         // Assert
         resumer.Should().BeOfType(delegateType);
+        _il.ReceivedCalls().Should().HaveCount(expectedNumberOfCalls);
         _il.Received(1).DeclareLocal(StateMachineType);
         _il.Received(2).DefineLabel();
         Received.InOrder(() =>
@@ -724,6 +766,12 @@ public partial class StateMachineInspectorTests
     public void GetResumer_ShouldBuildCorrectDelegate_WhenCallbackIsClassNotPassedByRef()
     {
         // Arrange
+        int expectedNumberOfCalls =
+#if DEBUG
+            64;
+#else
+            52;
+#endif
         Type delegateType = typeof(ClassResumer);
         Type callbackType = typeof(CallbackClass);
 
@@ -746,6 +794,7 @@ public partial class StateMachineInspectorTests
 
         // Assert
         resumer.Should().BeOfType(delegateType);
+        _il.ReceivedCalls().Should().HaveCount(expectedNumberOfCalls);
         _il.Received(1).DeclareLocal(StateMachineType);
         _il.Received(2).DefineLabel();
         Received.InOrder(() =>
@@ -871,6 +920,12 @@ public partial class StateMachineInspectorTests
     public void GetResumer_ShouldBuildCorrectDelegate_WhenCallbackIsClassPassedByRef()
     {
         // Arrange
+        int expectedNumberOfCalls =
+#if DEBUG
+            71;
+#else
+            57;
+#endif
         Type delegateType = typeof(ByRefClassResumer);
         Type callbackType = typeof(CallbackClass);
 
@@ -893,6 +948,7 @@ public partial class StateMachineInspectorTests
 
         // Assert
         resumer.Should().BeOfType(delegateType);
+        _il.ReceivedCalls().Should().HaveCount(expectedNumberOfCalls);
         _il.Received(1).DeclareLocal(StateMachineType);
         _il.Received(2).DefineLabel();
         Received.InOrder(() =>
