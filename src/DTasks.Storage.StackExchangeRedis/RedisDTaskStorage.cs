@@ -6,19 +6,22 @@ public sealed class RedisDTaskStorage(IDatabase database) : IDTaskStorage<RedisF
 {
     public RedisFlowStack CreateStack()
     {
-        return new RedisFlowStack([]);
+        return RedisFlowStack.Create();
     }
 
-    public async Task<RedisFlowStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken)
-      where TFlowId : notnull
+    public async Task<RedisFlowStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken = default)
+        where TFlowId : notnull
     {
         HashEntry[] entries = await database.HashGetAllAsync(new RedisKey(flowId.ToString()));
-        return new RedisFlowStack(new Stack<HashEntry>(entries));
+        return RedisFlowStack.Restore(flowId, entries);
     }
 
-    public Task SaveStackAsync<TFlowId>(TFlowId flowId, ref RedisFlowStack stack, CancellationToken cancellationToken)
-      where TFlowId : notnull
+    public Task SaveStackAsync<TFlowId>(TFlowId flowId, ref RedisFlowStack stack, CancellationToken cancellationToken = default)
+        where TFlowId : notnull
     {
-        return database.HashSetAsync(flowId.ToString(), stack.GetEntries());
+        RedisKey key = flowId.ToString();
+        HashEntry[] entries = stack.ToArrayAndDispose();
+
+        return database.HashSetAsync(key, entries);
     }
 }
