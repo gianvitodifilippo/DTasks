@@ -12,7 +12,9 @@ public sealed class RedisDTaskStorage(IDatabase database) : IDTaskStorage<RedisF
     public async Task<RedisFlowStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken = default)
         where TFlowId : notnull
     {
-        HashEntry[] entries = await database.HashGetAllAsync(new RedisKey(flowId.ToString()));
+        RedisKey key = flowId.ToString();
+        HashEntry[] entries = await database.HashGetAllAsync(key);
+
         return RedisFlowStack.Restore(flowId, entries);
     }
 

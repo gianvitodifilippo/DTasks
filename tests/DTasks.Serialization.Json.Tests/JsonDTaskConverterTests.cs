@@ -9,6 +9,8 @@ namespace DTasks.Serialization.Json;
 
 public partial class JsonDTaskConverterTests
 {
+    private static readonly string _flowId = "flowId";
+
     private readonly JsonDTaskConverterFixture _fixture;
     private readonly IStateMachineInspector _inspector;
     private readonly IStateMachineTypeResolver _typeResolver;
@@ -165,13 +167,13 @@ public partial class JsonDTaskConverterTests
             .Returns(resumer2);
 
         // Act
-        JsonFlowHeap heap = _sut.DeserializeHeap(_scope, heapBytes);
+        JsonFlowHeap heap = _sut.DeserializeHeap(_flowId, _scope, heapBytes);
 
         Dictionary<string, object> idsToReferences = GetIdsToReferences(heap.ReferenceResolver);
         Dictionary<object, string> referencesToIds = GetReferencesToIds(heap.ReferenceResolver);
 
-        _ = _sut.DeserializeStateMachine(ref heap, stateMachine2Bytes, Substitute.For<DTask>());
-        _ = _sut.DeserializeStateMachine(ref heap, stateMachine1Bytes, Substitute.For<DTask>());
+        _ = _sut.DeserializeStateMachine(_flowId, ref heap, stateMachine2Bytes, Substitute.For<DTask>());
+        _ = _sut.DeserializeStateMachine(_flowId, ref heap, stateMachine1Bytes, Substitute.For<DTask>());
 
         // Assert
         VerifyHeapState(idsToReferences, referencesToIds);
@@ -216,5 +218,18 @@ public partial class JsonDTaskConverterTests
         reference1.Should().BeSameAs(reference2.Reference);
         polymorphicReference.Should().BeSameAs(reference2.PolymorphicReference);
         reference2.PolymorphicReference.Should().BeSameAs(reference3.PolymorphicReference);
+    }
+
+    [Fact]
+    public void CreateInspector_ShouldCreateWorkingInspector()
+    {
+        // Act
+        StateMachineInspector inspector = JsonDTaskConverter.CreateInspector();
+        Delegate suspender = inspector.GetSuspender(_stateMachineType);
+        Delegate resumer = inspector.GetResumer(_stateMachineType);
+
+        // Assert
+        suspender.Should().BeOfType(typeof(DTaskSuspender<>).MakeGenericType(_stateMachineType));
+        resumer.Should().BeOfType<DTaskResumer>();
     }
 }

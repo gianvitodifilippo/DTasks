@@ -60,12 +60,12 @@ public partial class DAsyncFlowTests
             return Substitute.For<TestFlowHeap>();
         }
 
-        public override TestFlowHeap DeserializeHeap(IDTaskScope scope, EquatableArray<byte> bytes)
+        public override TestFlowHeap DeserializeHeap<TFlowId>(TFlowId flowId, IDTaskScope scope, EquatableArray<byte> bytes)
         {
             return Substitute.For<TestFlowHeap>();
         }
 
-        public override DTask DeserializeStateMachine(ref TestFlowHeap heap, EquatableArray<byte> bytes, DTask resultTask)
+        public override DTask DeserializeStateMachine<TFlowId>(TFlowId flowId, ref TestFlowHeap heap, EquatableArray<byte> bytes, DTask resultTask)
         {
             int id = MemoryMarshal.Read<int>(bytes);
             if (!_stateMachines.Remove(id, out Dictionary<string, object?>? stateMachineDictionary))

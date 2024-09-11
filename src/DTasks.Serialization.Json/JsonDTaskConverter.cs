@@ -21,12 +21,20 @@ public sealed class JsonDTaskConverter(
         return heap.GetWrittenMemoryAndAdvance();
     }
 
-    public JsonFlowHeap DeserializeHeap(IDTaskScope scope, ReadOnlySpan<byte> bytes)
+    public JsonFlowHeap DeserializeHeap<TFlowId>(TFlowId flowId, IDTaskScope scope, ReadOnlySpan<byte> bytes)
+        where TFlowId : notnull
     {
         JsonFlowHeap heap = JsonFlowHeap.Create(scope, options);
 
         Utf8JsonReader reader = new(bytes);
-        heap.ReferenceResolver.Deserialize(ref reader, heap.Options);
+        try
+        {
+            heap.ReferenceResolver.Deserialize(ref reader, heap.Options);
+        }
+        catch (JsonException ex)
+        {
+            throw new CorruptedDFlowException(flowId, ex);
+        }
 
         return heap;
     }
@@ -38,32 +46,41 @@ public sealed class JsonDTaskConverter(
         StateMachineDeconstructor deconstructor = new StateMachineDeconstructor(ref heap);
 
         deconstructor.StartWriting();
-        
+
         object typeId = typeResolver.GetTypeId(stateMachineType) ?? throw new InvalidOperationException($"The type id for state machine of type '{typeof(TStateMachine)}' was null.");
         deconstructor.WriteTypeId(typeId);
-        
+
         var suspend = (DTaskSuspender<TStateMachine>)inspector.GetSuspender(stateMachineType);
         suspend(ref stateMachine, info, ref deconstructor);
-        
+
         deconstructor.EndWriting();
 
         return heap.GetWrittenMemoryAndAdvance();
     }
 
-    public DTask DeserializeStateMachine(ref JsonFlowHeap heap, ReadOnlySpan<byte> bytes, DTask resultTask)
+    public DTask DeserializeStateMachine<TFlowId>(TFlowId flowId, ref JsonFlowHeap heap, ReadOnlySpan<byte> bytes, DTask resultTask)
+        where TFlowId : notnull
     {
         var constructor = new StateMachineConstructor(bytes, ref heap);
 
-        constructor.StartReading();
+        try
+        {
+            constructor.StartReading();
 
-        object typeId = constructor.ReadTypeId();
-        Type stateMachineType = typeResolver.GetType(typeId);
+            object typeId = constructor.ReadTypeId();
+            Type stateMachineType = typeResolver.GetType(typeId);
 
-        var resume = (DTaskResumer)inspector.GetResumer(stateMachineType);
-        DTask task = resume(resultTask, ref constructor);
-        
-        constructor.EndReading();
-        return task;
+            var resume = (DTaskResumer)inspector.GetResumer(stateMachineType);
+            DTask task = resume(resultTask, ref constructor);
+
+            constructor.EndReading();
+
+            return task;
+        }
+        catch (JsonException ex)
+        {
+            throw new CorruptedDFlowException(flowId, ex);
+        }
     }
 
     public static StateMachineInspector CreateInspector() => StateMachineInspector.Create(typeof(DTaskSuspender<>), typeof(DTaskResumer));

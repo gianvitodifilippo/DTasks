@@ -6,19 +6,19 @@ namespace DTasks.Hosting;
 public static class HostingFixtures
 {
     // The purpose of this class is to forward calls to public methods, which can be verified
-    public abstract class TestBinaryDTaskHost(TestDTaskStorage storage, TestDTaskConverter converter) : BinaryDTaskHost<Guid, TestFlowStack, TestFlowHeap>(storage, converter)
+    public abstract class TestBinaryDTaskHost(TestDTaskStorage storage, TestDTaskConverter converter) : BinaryDTaskHost<string, TestFlowStack, TestFlowHeap>(storage, converter)
     {
-        public abstract Task OnDelayAsync_Public(Guid flowId, TimeSpan delay, CancellationToken cancellationToken);
-        public abstract Task OnCompletedAsync_Public(Guid flowId, CancellationToken cancellationToken);
-        public abstract Task OnCompletedAsync_Public<TResult>(Guid flowId, TResult result, CancellationToken cancellationToken);
-        public abstract Task OnSuspendedAsync_Public(Guid flowId, ISuspensionCallback callback, CancellationToken cancellationToken);
-        public abstract Task OnYieldAsync_Public(Guid flowId, CancellationToken cancellationToken);
+        public abstract Task OnDelayAsync_Public(string flowId, TimeSpan delay, CancellationToken cancellationToken);
+        public abstract Task OnCompletedAsync_Public(string flowId, CancellationToken cancellationToken);
+        public abstract Task OnCompletedAsync_Public<TResult>(string flowId, TResult result, CancellationToken cancellationToken);
+        public abstract Task OnSuspendedAsync_Public(string flowId, ISuspensionCallback callback, CancellationToken cancellationToken);
+        public abstract Task OnYieldAsync_Public(string flowId, CancellationToken cancellationToken);
 
-        protected sealed override Task OnDelayAsync(Guid flowId, TimeSpan delay, CancellationToken cancellationToken) => OnDelayAsync_Public(flowId, delay, cancellationToken);
-        protected sealed override Task OnCompletedAsync(Guid flowId, CancellationToken cancellationToken) => OnCompletedAsync_Public(flowId, cancellationToken);
-        protected sealed override Task OnCompletedAsync<TResult>(Guid flowId, TResult result, CancellationToken cancellationToken) => OnCompletedAsync_Public(flowId, result, cancellationToken);
-        protected sealed override Task OnSuspendedAsync(Guid flowId, ISuspensionCallback callback, CancellationToken cancellationToken) => OnSuspendedAsync_Public(flowId, callback, cancellationToken);
-        protected sealed override Task OnYieldAsync(Guid flowId, CancellationToken cancellationToken) => OnYieldAsync_Public(flowId, cancellationToken);
+        protected sealed override Task OnDelayAsync(string flowId, TimeSpan delay, CancellationToken cancellationToken) => OnDelayAsync_Public(flowId, delay, cancellationToken);
+        protected sealed override Task OnCompletedAsync(string flowId, CancellationToken cancellationToken) => OnCompletedAsync_Public(flowId, cancellationToken);
+        protected sealed override Task OnCompletedAsync<TResult>(string flowId, TResult result, CancellationToken cancellationToken) => OnCompletedAsync_Public(flowId, result, cancellationToken);
+        protected sealed override Task OnSuspendedAsync(string flowId, ISuspensionCallback callback, CancellationToken cancellationToken) => OnSuspendedAsync_Public(flowId, callback, cancellationToken);
+        protected sealed override Task OnYieldAsync(string flowId, CancellationToken cancellationToken) => OnYieldAsync_Public(flowId, cancellationToken);
     }
 
     // The following classes are preconfigured for tests but also allow creating a substitute for to verify method calls.
@@ -86,29 +86,33 @@ public static class HostingFixtures
     {
         public abstract TestFlowStack CreateStack();
 
-        public abstract Task<TestFlowStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken) where TFlowId : notnull;
+        public abstract Task<TestFlowStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken)
+            where TFlowId : notnull;
 
-        public abstract Task SaveStackAsync<TFlowId>(TFlowId flowId, ref TestFlowStack stack, CancellationToken cancellationToken) where TFlowId : notnull;
+        public abstract Task SaveStackAsync<TFlowId>(TFlowId flowId, ref TestFlowStack stack, CancellationToken cancellationToken)
+            where TFlowId : notnull;
     }
 
     public abstract class TestDTaskConverter : IDTaskConverter<TestFlowHeap>
     {
         public abstract TestFlowHeap CreateHeap(IDTaskScope scope);
 
-        public abstract TestFlowHeap DeserializeHeap(IDTaskScope scope, EquatableArray<byte> bytes);
+        public abstract TestFlowHeap DeserializeHeap<TFlowId>(TFlowId flowId, IDTaskScope scope, EquatableArray<byte> bytes)
+            where TFlowId : notnull;
 
-        public abstract DTask DeserializeStateMachine(ref TestFlowHeap heap, EquatableArray<byte> bytes, DTask resultTask);
+        public abstract DTask DeserializeStateMachine<TFlowId>(TFlowId flowId, ref TestFlowHeap heap, EquatableArray<byte> bytes, DTask resultTask)
+            where TFlowId : notnull;
 
         public abstract EquatableArray<byte> SerializeHeap(ref TestFlowHeap heap);
 
         public abstract EquatableArray<byte> SerializeStateMachine<TStateMachine>(ref TestFlowHeap heap, ref TStateMachine stateMachine, IStateMachineInfo info)
             where TStateMachine : notnull;
 
-        TestFlowHeap IDTaskConverter<TestFlowHeap>.DeserializeHeap(IDTaskScope scope, ReadOnlySpan<byte> bytes)
-            => DeserializeHeap(scope, bytes);
+        TestFlowHeap IDTaskConverter<TestFlowHeap>.DeserializeHeap<TFlowId>(TFlowId flowId, IDTaskScope scope, ReadOnlySpan<byte> bytes)
+            => DeserializeHeap(flowId, scope, bytes);
 
-        DTask IDTaskConverter<TestFlowHeap>.DeserializeStateMachine(ref TestFlowHeap heap, ReadOnlySpan<byte> bytes, DTask resultTask)
-            => DeserializeStateMachine(ref heap, bytes, resultTask);
+        DTask IDTaskConverter<TestFlowHeap>.DeserializeStateMachine<TFlowId>(TFlowId flowId, ref TestFlowHeap heap, ReadOnlySpan<byte> bytes, DTask resultTask)
+            => DeserializeStateMachine(flowId, ref heap, bytes, resultTask);
 
         ReadOnlyMemory<byte> IDTaskConverter<TestFlowHeap>.SerializeHeap(ref TestFlowHeap heap)
             => SerializeHeap(ref heap);

@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace DTasks.Serialization.Json;
@@ -19,6 +21,30 @@ public partial class JsonDTaskConverterTests
 
         [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_referencesToIds")]
         static extern ref Dictionary<object, string> Impl(DTaskReferenceResolver resolver);
+    }
+
+    private static readonly Type _stateMachineType;
+
+    static JsonDTaskConverterTests()
+    {
+        MethodInfo method = typeof(AsyncMethodContainer).GetRequiredMethod(
+            name: nameof(AsyncMethodContainer.Method),
+            bindingAttr: BindingFlags.Static | BindingFlags.Public,
+            parameterTypes: [typeof(string)]);
+
+        StateMachineAttribute? attribute = method.GetCustomAttribute<StateMachineAttribute>();
+        Debug.Assert(attribute is not null);
+
+        _stateMachineType = attribute.StateMachineType;
+    }
+
+    public static class AsyncMethodContainer
+    {
+        public static async DTask<int> Method(string arg)
+        {
+            await DTask.Yield();
+            return arg.Length;
+        }
     }
 
 
@@ -83,7 +109,7 @@ public partial class JsonDTaskConverterTests
         public SerializableType2? local3;
         public int local4;
     }
-    
+
     internal sealed record JsonDTaskConverterFixture(
         Values Values,
         References References,

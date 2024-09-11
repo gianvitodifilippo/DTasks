@@ -14,9 +14,12 @@ internal static class ILGeneratorInterceptorsRenderer
 
             namespace System.Runtime.CompilerServices
             {
+                using System.Diagnostics.CodeAnalysis;
+
             #pragma warning disable CS9113 // Parameter is unread.
+                [ExcludeFromCodeCoverage]
                 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-                file sealed class InterceptsLocationAttribute(string filePath, int line, int character) : Attribute { }
+                file sealed class InterceptsLocationAttribute(string filePath, int line, int character) : Attribute;
             #pragma warning restore CS9113 // Parameter is unread.
             }
 
@@ -28,7 +31,8 @@ internal static class ILGeneratorInterceptorsRenderer
                 using System.Reflection.Emit;
                 using System.Runtime.CompilerServices;
                 using System.Runtime.InteropServices;
-
+            
+                [ExcludeFromCodeCoverage]
                 public static class ILGeneratorInterceptors
                 {
                     private static readonly ThreadLocal<ILGenerator?> _interceptorLocal = new();

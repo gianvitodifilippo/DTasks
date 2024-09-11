@@ -7,7 +7,7 @@ namespace DTasks.Storage.StackExchangeRedis;
 
 public struct RedisFlowStack : IFlowStack
 {
-    internal static readonly RedisValue _heapName = Encoding.UTF8.GetBytes("Heap").AsMemory();
+    private static readonly RedisValue _heapName = Encoding.UTF8.GetBytes("Heap").AsMemory();
 
     private readonly Stack<ReadOnlyMemory<byte>> _entries;
     private StackState _state;
@@ -105,21 +105,21 @@ public struct RedisFlowStack : IFlowStack
         where TFlowId : notnull
     {
         if (entries.Length < 2)
-            throw new CorruptedDFlowException(flowId);
+            throw new CorruptedDFlowException(flowId, "Hash did not contain enough entries.");
 
         Stack<ReadOnlyMemory<byte>> stack = new(entries.Length);
         for (int index = entries.Length - 1; index >= 1; index--)
         {
             HashEntry stateMachineEntry = entries[index];
             if (!IsStateMachineNameValid(index, in stateMachineEntry))
-                throw new CorruptedDFlowException(flowId);
+                throw new CorruptedDFlowException(flowId, "Invalid state machine name.");
 
             stack.Push(stateMachineEntry.Value);
         }
 
         HashEntry heapEntry = entries[0];
         if (!IsHeapNameValid(in heapEntry))
-            throw new CorruptedDFlowException(flowId);
+            throw new CorruptedDFlowException(flowId, "Invalid heap name.");
 
         stack.Push(heapEntry.Value);
 
@@ -143,7 +143,6 @@ public struct RedisFlowStack : IFlowStack
     {
         return entry.Name == _heapName;
     }
-
 
     private enum StackState : byte
     {

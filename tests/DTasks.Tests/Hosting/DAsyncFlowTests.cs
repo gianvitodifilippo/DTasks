@@ -59,7 +59,7 @@ public partial class DAsyncFlowTests
 
         var suspensionScope = Substitute.For<IDTaskScope>();
         var resumptionScope = Substitute.For<IDTaskScope>();
-        Guid flowId = Guid.NewGuid();
+        string flowId = "flowId";
         DateTime date = DateTime.Now;
         DTask task = ProcessFileDAsync("http://dtasks.com");
 
