@@ -13,7 +13,7 @@ internal class ServiceToken
     {
         Type keyType = key?.GetType() ?? typeof(object);
         Type tokenType = typeof(KeyedServiceToken<>).MakeGenericType(keyType);
-        ServiceToken token = (ServiceToken)Activator.CreateInstance(tokenType)!;
+        ServiceToken token = (ServiceToken)Activator.CreateInstance(tokenType, nonPublic: true)!;
 
         token.TypeId = typeId.ToString();
         ((IKeyedServiceToken)token).Key = key;

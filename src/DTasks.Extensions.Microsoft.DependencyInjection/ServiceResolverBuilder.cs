@@ -2,7 +2,7 @@
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection;
 
-internal sealed class ServiceResolverBuilder
+internal sealed class ServiceResolverBuilder : IServiceResolverBuilder
 {
     private readonly Dictionary<ServiceTypeId, Type> _serviceTypes = [];
     private bool _isBuilt;

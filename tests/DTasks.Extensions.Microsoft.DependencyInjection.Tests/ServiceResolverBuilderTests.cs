@@ -2,7 +2,12 @@
 
 public class ServiceResolverBuilderTests
 {
-    private readonly ServiceResolverBuilder _sut = new();
+    private readonly ServiceResolverBuilder _sut;
+
+    public ServiceResolverBuilderTests()
+    {
+        _sut = new ServiceResolverBuilder();
+    }
 
     [Fact]
     public void Resolver_ReturnsFalseForUnknownTypeId()

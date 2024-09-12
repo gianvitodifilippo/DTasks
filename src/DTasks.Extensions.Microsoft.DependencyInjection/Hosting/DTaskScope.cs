@@ -4,11 +4,20 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 
-internal sealed class DTaskScope(IServiceProvider services, ServiceResolver resolver, DTaskScope? parent) : IDTaskScope
+internal class DTaskScope : IDTaskScope, IServiceMapper
 {
-    private readonly Dictionary<object, ServiceToken> _tokens = [];
+    private readonly IServiceProvider _services;
+    private readonly ServiceResolver _resolver;
+    private readonly Dictionary<object, ServiceToken> _tokens;
 
-    public void MarkService(object service, ServiceToken token)
+    protected DTaskScope(IServiceProvider services, ServiceResolver resolver)
+    {
+        _services = services;
+        _resolver = resolver;
+        _tokens = [];
+    }
+
+    public void MapService(object service, ServiceToken token)
     {
         _tokens.Add(service, token);
     }
@@ -24,12 +33,12 @@ internal sealed class DTaskScope(IServiceProvider services, ServiceResolver reso
         if (!ServiceTypeId.TryParse(serviceToken.TypeId, out ServiceTypeId typeId))
             return False(out reference);
 
-        if (!resolver.Invoke(typeId, out Type? serviceType))
+        if (!_resolver.Invoke(typeId, out Type? serviceType))
             return False(out reference);
 
         reference = serviceToken is IKeyedServiceToken { Key: var serviceKey }
-            ? services.GetRequiredKeyedService(serviceType, serviceKey)
-            : services.GetRequiredService(serviceType);
+            ? _services.GetRequiredKeyedService(serviceType, serviceKey)
+            : _services.GetRequiredService(serviceType);
 
         return true;
 
@@ -40,23 +49,15 @@ internal sealed class DTaskScope(IServiceProvider services, ServiceResolver reso
         }
     }
 
-    public bool TryGetReferenceToken(object reference, [NotNullWhen(true)] out object? token)
+    public virtual bool TryGetReferenceToken(object reference, [NotNullWhen(true)] out object? token)
     {
         if (!_tokens.TryGetValue(reference, out ServiceToken? serviceToken))
-            return TryGetReferenceTokenFromParent(reference, out token);
-
-        token = serviceToken;
-        return true;
-    }
-
-    private bool TryGetReferenceTokenFromParent(object reference, [NotNullWhen(true)] out object? token)
-    {
-        if (parent is null)
         {
             token = null;
             return false;
         }
 
-        return parent.TryGetReferenceToken(reference, out token);
+        token = serviceToken;
+        return true;
     }
 }

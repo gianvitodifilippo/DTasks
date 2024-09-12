@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using DTasks.Extensions.Microsoft.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Extensions.Microsoft.Hosting;
 

@@ -9,79 +9,79 @@ namespace DTasks.Extensions.Microsoft.DependencyInjection;
 using KeyedServiceFactory = Func<IServiceProvider, object?, object>;
 using ServiceFactory = Func<IServiceProvider, object>;
 
-internal sealed class ServiceContainerBuilder(IServiceCollection services)
+internal sealed class ServiceContainerBuilder(IServiceCollection services, IServiceResolverBuilder resolverBuilder) : IServiceContainerBuilder
 {
-    private readonly MethodInfo _markSingletonMethod = typeof(ServiceMarker).GetRequiredMethod(
-        name: nameof(ServiceMarker.MarkSingleton),
+    private readonly MethodInfo _mapSingletonMethod = typeof(ILifetimeServiceMapper).GetRequiredMethod(
+        name: nameof(ILifetimeServiceMapper.MapSingleton),
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [typeof(IServiceProvider), typeof(object), typeof(ServiceToken)]);
 
-    private readonly MethodInfo _markScopedMethod = typeof(ServiceMarker).GetRequiredMethod(
-        name: nameof(ServiceMarker.MarkScoped),
+    private readonly MethodInfo _mapScopedMethod = typeof(ILifetimeServiceMapper).GetRequiredMethod(
+        name: nameof(ILifetimeServiceMapper.MapScoped),
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [typeof(IServiceProvider), typeof(object), typeof(ServiceToken)]);
 
-    private readonly MethodInfo _markTransientMethod = typeof(ServiceMarker).GetRequiredMethod(
-        name: nameof(ServiceMarker.MarkTransient),
+    private readonly MethodInfo _mapTransientMethod = typeof(ILifetimeServiceMapper).GetRequiredMethod(
+        name: nameof(ILifetimeServiceMapper.MapTransient),
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [typeof(IServiceProvider), typeof(object), typeof(ServiceToken)]);
 
-    private readonly MethodInfo _getServiceMarkerMethod = typeof(ServiceProviderServiceExtensions).GetRequiredMethod(
+    private readonly MethodInfo _getServiceMapperMethod = typeof(ServiceProviderServiceExtensions).GetRequiredMethod(
         name: nameof(ServiceProviderServiceExtensions.GetRequiredService),
-        bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+        bindingAttr: BindingFlags.Static | BindingFlags.Public,
         parameterTypes: [typeof(IServiceProvider)])
-        .MakeGenericMethod(typeof(ServiceMarker));
+        .MakeGenericMethod(typeof(ILifetimeServiceMapper));
 
     private readonly MethodInfo _getRequiredKeyedServiceMethod = typeof(ServiceProviderKeyedServiceExtensions).GetRequiredMethod(
         name: nameof(ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService),
         bindingAttr: BindingFlags.Static | BindingFlags.Public,
         parameterTypes: [typeof(IServiceProvider), typeof(Type), typeof(object)]);
 
-    private readonly ServiceResolverBuilder _resolverBuilder = new();
-    private readonly object _rootScopeKey = new();
-    private readonly object _childScopeKey = new();
-
     public void AddDTaskServices()
     {
-        ServiceResolver resolver = _resolverBuilder.BuildServiceResolver();
+        ServiceResolver resolver = resolverBuilder.BuildServiceResolver();
 
         services
-            .AddSingleton(sp => new ServiceMarker(sp, _rootScopeKey, _childScopeKey))
-            .AddKeyedSingleton(_rootScopeKey, (sp, key) => new DTaskScope(sp, resolver, null))
-            .AddKeyedScoped(_childScopeKey, (sp, key) => new DTaskScope(sp, resolver, sp.GetRequiredKeyedService<DTaskScope>(_rootScopeKey)))
-            .AddScoped<IDTaskScope>(sp => sp.GetRequiredService<DTaskScope>());
+            .AddSingleton(resolver)
+            .AddSingleton<ILifetimeServiceMapper, LifetimeServiceMapper>()
+            .AddSingleton<RootDTaskScope>()
+            .AddSingleton<IRootDTaskScope>(sp => sp.GetRequiredService<RootDTaskScope>())
+            .AddSingleton<IRootServiceMapper>(sp => sp.GetRequiredService<RootDTaskScope>())
+            .AddScoped(sp => new ChildDTaskScope(sp, sp.GetRequiredService<ServiceResolver>(), sp.GetRequiredService<RootDTaskScope>()))
+            .AddScoped<IDTaskScope>(sp => sp.GetRequiredService<ChildDTaskScope>())
+            .AddScoped<IServiceMapper>(sp => sp.GetRequiredService<ChildDTaskScope>());
     }
 
-    public void Mark(ServiceDescriptor descriptor)
+    public void Intercept(ServiceDescriptor descriptor)
     {
         services.Remove(descriptor);
 
-        ServiceTypeId typeId = _resolverBuilder.AddServiceType(descriptor.ServiceType);
+        ServiceTypeId typeId = resolverBuilder.AddServiceType(descriptor.ServiceType);
         ServiceToken token = descriptor.IsKeyedService
             ? ServiceToken.Create(typeId, descriptor.ServiceKey)
             : ServiceToken.Create(typeId);
 
         // Using expressions to build the factory helps reducing the cyclomatic complexity of this method
 
-        MethodInfo markMethod = descriptor.Lifetime switch
+        MethodInfo mapMethod = descriptor.Lifetime switch
         {
-            ServiceLifetime.Singleton => _markSingletonMethod,
-            ServiceLifetime.Scoped => _markScopedMethod,
-            ServiceLifetime.Transient => _markTransientMethod,
+            ServiceLifetime.Singleton => _mapSingletonMethod,
+            ServiceLifetime.Scoped => _mapScopedMethod,
+            ServiceLifetime.Transient => _mapTransientMethod,
             _ => throw new InvalidOperationException($"Invalid service lifetime '{descriptor.Lifetime}'.")
         };
 
         ParameterExpression servicesParam = Expression.Parameter(typeof(IServiceProvider), "services");
-        Expression markedInstanceExpr = MakeMarkedInstanceExpression(descriptor, servicesParam);
+        Expression mappdInstanceExpr = MakeMarkedInstanceExpression(descriptor, servicesParam);
 
-        // sp.GetRequiredService<ServiceMarker>().`markMethod`(sp, `markedInstanceExpr`, token)
+        // sp.GetRequiredService<ILifetimeServiceMapper>().`mapMethod`(sp, `mappdInstanceExpr`, token)
         Expression body = Expression.Call(
             instance: Expression.Call(
-                method: _getServiceMarkerMethod,
+                method: _getServiceMapperMethod,
                 arg0: servicesParam),
-            method: markMethod,
+            method: mapMethod,
             arg0: servicesParam,
-            arg1: markedInstanceExpr,
+            arg1: mappdInstanceExpr,
             arg2: Expression.Constant(token));
 
         if (descriptor.IsKeyedService)
@@ -103,29 +103,39 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services)
 
     private Expression MakeMarkedInstanceExpression(ServiceDescriptor descriptor, ParameterExpression servicesParam)
     {
-        if (descriptor.ImplementationType is Type implementationType)
-            return MakeImplementationTypeExpression(descriptor, servicesParam, implementationType);
+        if (descriptor.IsKeyedService)
+        {
+            if (descriptor.KeyedImplementationType is Type keyedImplementationType)
+                return MakeImplementationTypeExpression(descriptor, servicesParam, keyedImplementationType);
 
-        if (descriptor.ImplementationInstance is object implementationInstance)
-            return MakeImplementationInstanceExpression(implementationInstance);
+            if (descriptor.KeyedImplementationInstance is object keyedImplementationInstance)
+                return MakeImplementationInstanceExpression(keyedImplementationInstance);
 
-        if (descriptor.ImplementationFactory is ServiceFactory implementationFactory)
-            return MakeImplementationFactoryExpression(servicesParam, implementationFactory);
+            if (descriptor.KeyedImplementationFactory is KeyedServiceFactory keyedImplementationFactory)
+                return MakeKeyedImplementationFactoryExpression(descriptor.ServiceKey, servicesParam, keyedImplementationFactory);
+        }
+        else
+        {
+            if (descriptor.ImplementationType is Type implementationType)
+                return MakeImplementationTypeExpression(descriptor, servicesParam, implementationType);
 
-        if (descriptor.KeyedImplementationType is Type keyedImplementationType)
-            return MakeImplementationTypeExpression(descriptor, servicesParam, keyedImplementationType);
+            if (descriptor.ImplementationInstance is object implementationInstance)
+                return MakeImplementationInstanceExpression(implementationInstance);
 
-        if (descriptor.KeyedImplementationInstance is object keyedImplementationInstance)
-            return MakeImplementationInstanceExpression(keyedImplementationInstance);
-
-        if (descriptor.KeyedImplementationFactory is KeyedServiceFactory keyedImplementationFactory)
-            return MakeKeyedImplementationFactoryExpression(descriptor.ServiceKey, servicesParam, keyedImplementationFactory);
+            if (descriptor.ImplementationFactory is ServiceFactory implementationFactory)
+                return MakeImplementationFactoryExpression(servicesParam, implementationFactory);
+        }
 
         throw new InvalidOperationException("Invalid service descriptor.");
     }
 
     private Expression MakeImplementationTypeExpression(ServiceDescriptor descriptor, ParameterExpression servicesParam, Type implementationType)
     {
+        // We register the original service descriptor with a key that is only visible here.
+        // We don't register the implementation type directly for two reasons:
+        // 1. When descriptor.ServiceType == descriptor.ImplementationType we register the same service type twice, and
+        // 2. We don't want to add an extra service which is publicly resolvable by the consumers.
+
         object helperKey = new();
         services.Add(new ServiceDescriptor(descriptor.ServiceType, helperKey, implementationType, descriptor.Lifetime));
 
@@ -157,5 +167,10 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services)
         return Expression.Invoke(
             expression: Expression.Constant(keyedImplementationFactory),
             arguments: [servicesParam, Expression.Constant(serviceKey)]);
+    }
+
+    public static ServiceContainerBuilder Create(IServiceCollection services)
+    {
+        return new ServiceContainerBuilder(services, new ServiceResolverBuilder());
     }
 }
