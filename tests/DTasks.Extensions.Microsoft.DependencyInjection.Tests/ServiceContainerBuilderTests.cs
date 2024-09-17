@@ -10,7 +10,7 @@ public partial class ServiceContainerBuilderTests
 
     private readonly IServiceCollection _services;
     private readonly IServiceResolverBuilder _resolverBuilder;
-    private readonly ILifetimeServiceMapper _mapper;
+    private readonly IServiceMapper _mapper;
     private readonly ServiceTypeId _typeId;
     private readonly object _serviceKey;
     private readonly ServiceContainerBuilder _sut;
@@ -19,7 +19,7 @@ public partial class ServiceContainerBuilderTests
     {
         _services = new ServiceCollection();
         _resolverBuilder = Substitute.For<IServiceResolverBuilder>();
-        _mapper = Substitute.For<ILifetimeServiceMapper>();
+        _mapper = Substitute.For<IServiceMapper>();
         _typeId = new ServiceTypeId(TypeId);
         _serviceKey = new();
         _sut = new ServiceContainerBuilder(_services, _resolverBuilder);
@@ -66,7 +66,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);
@@ -85,7 +85,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);
@@ -104,7 +104,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);
@@ -123,7 +123,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);
@@ -142,7 +142,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);
@@ -161,7 +161,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);
@@ -180,7 +180,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);
@@ -199,7 +199,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);
@@ -218,7 +218,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);
@@ -237,7 +237,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);
@@ -256,7 +256,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);
@@ -275,7 +275,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);
@@ -294,7 +294,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);
@@ -313,7 +313,7 @@ public partial class ServiceContainerBuilderTests
         _services.Add(descriptor);
 
         // Act
-        _sut.Intercept(descriptor);
+        _sut.Replace(descriptor);
 
         // Assert
         _services.Should().NotContain(descriptor);

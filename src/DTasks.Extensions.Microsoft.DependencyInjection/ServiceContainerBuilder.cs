@@ -1,6 +1,7 @@
 ﻿using DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 using DTasks.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -11,18 +12,18 @@ using ServiceFactory = Func<IServiceProvider, object>;
 
 internal sealed class ServiceContainerBuilder(IServiceCollection services, IServiceResolverBuilder resolverBuilder) : IServiceContainerBuilder
 {
-    private readonly MethodInfo _mapSingletonMethod = typeof(ILifetimeServiceMapper).GetRequiredMethod(
-        name: nameof(ILifetimeServiceMapper.MapSingleton),
+    private readonly MethodInfo _mapSingletonMethod = typeof(IServiceMapper).GetRequiredMethod(
+        name: nameof(IServiceMapper.MapSingleton),
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [typeof(IServiceProvider), typeof(object), typeof(ServiceToken)]);
 
-    private readonly MethodInfo _mapScopedMethod = typeof(ILifetimeServiceMapper).GetRequiredMethod(
-        name: nameof(ILifetimeServiceMapper.MapScoped),
+    private readonly MethodInfo _mapScopedMethod = typeof(IServiceMapper).GetRequiredMethod(
+        name: nameof(IServiceMapper.MapScoped),
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [typeof(IServiceProvider), typeof(object), typeof(ServiceToken)]);
 
-    private readonly MethodInfo _mapTransientMethod = typeof(ILifetimeServiceMapper).GetRequiredMethod(
-        name: nameof(ILifetimeServiceMapper.MapTransient),
+    private readonly MethodInfo _mapTransientMethod = typeof(IServiceMapper).GetRequiredMethod(
+        name: nameof(IServiceMapper.MapTransient),
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [typeof(IServiceProvider), typeof(object), typeof(ServiceToken)]);
 
@@ -30,7 +31,7 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
         name: nameof(ServiceProviderServiceExtensions.GetRequiredService),
         bindingAttr: BindingFlags.Static | BindingFlags.Public,
         parameterTypes: [typeof(IServiceProvider)])
-        .MakeGenericMethod(typeof(ILifetimeServiceMapper));
+        .MakeGenericMethod(typeof(IServiceMapper));
 
     private readonly MethodInfo _getRequiredKeyedServiceMethod = typeof(ServiceProviderKeyedServiceExtensions).GetRequiredMethod(
         name: nameof(ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService),
@@ -43,17 +44,19 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
 
         services
             .AddSingleton(resolver)
-            .AddSingleton<ILifetimeServiceMapper, LifetimeServiceMapper>()
+            .AddSingleton<IServiceMapper, ServiceMapper>()
             .AddSingleton<RootDTaskScope>()
             .AddSingleton<IRootDTaskScope>(sp => sp.GetRequiredService<RootDTaskScope>())
             .AddSingleton<IRootServiceMapper>(sp => sp.GetRequiredService<RootDTaskScope>())
             .AddScoped(sp => new ChildDTaskScope(sp, sp.GetRequiredService<ServiceResolver>(), sp.GetRequiredService<RootDTaskScope>()))
             .AddScoped<IDTaskScope>(sp => sp.GetRequiredService<ChildDTaskScope>())
-            .AddScoped<IServiceMapper>(sp => sp.GetRequiredService<ChildDTaskScope>());
+            .AddScoped<IChildServiceMapper>(sp => sp.GetRequiredService<ChildDTaskScope>());
     }
 
-    public void Intercept(ServiceDescriptor descriptor)
+    public void Replace(ServiceDescriptor descriptor)
     {
+        Debug.Assert(!descriptor.ServiceType.ContainsGenericParameters, "Open generic services can't be replaced.");
+
         services.Remove(descriptor);
 
         ServiceTypeId typeId = resolverBuilder.AddServiceType(descriptor.ServiceType);
@@ -68,20 +71,20 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
             ServiceLifetime.Singleton => _mapSingletonMethod,
             ServiceLifetime.Scoped => _mapScopedMethod,
             ServiceLifetime.Transient => _mapTransientMethod,
-            _ => throw new InvalidOperationException($"Invalid service lifetime '{descriptor.Lifetime}'.")
+            _ => throw new InvalidOperationException($"Invalid service lifetime: '{descriptor.Lifetime}'.")
         };
 
         ParameterExpression servicesParam = Expression.Parameter(typeof(IServiceProvider), "services");
-        Expression mappdInstanceExpr = MakeMarkedInstanceExpression(descriptor, servicesParam);
+        Expression mappedInstanceExpr = MakeMarkedInstanceExpression(descriptor, servicesParam);
 
-        // sp.GetRequiredService<ILifetimeServiceMapper>().`mapMethod`(sp, `mappdInstanceExpr`, token)
+        // sp.GetRequiredService<IServiceMapper>().`mapMethod`(sp, `mappedInstanceExpr`, token)
         Expression body = Expression.Call(
             instance: Expression.Call(
                 method: _getServiceMapperMethod,
                 arg0: servicesParam),
             method: mapMethod,
             arg0: servicesParam,
-            arg1: mappdInstanceExpr,
+            arg1: mappedInstanceExpr,
             arg2: Expression.Constant(token));
 
         if (descriptor.IsKeyedService)

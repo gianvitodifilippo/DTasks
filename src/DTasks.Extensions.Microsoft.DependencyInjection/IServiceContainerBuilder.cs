@@ -4,7 +4,7 @@ namespace DTasks.Extensions.Microsoft.DependencyInjection;
 
 internal interface IServiceContainerBuilder
 {
-    void Intercept(ServiceDescriptor descriptor);
+    void Replace(ServiceDescriptor descriptor);
 
     void AddDTaskServices();
 }

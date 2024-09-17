@@ -5,12 +5,12 @@ namespace DTasks.Extensions.Microsoft.DependencyInjection;
 public class LifetimeServiceMapperTests
 {
     private readonly IServiceProvider _applicationServices;
-    private readonly LifetimeServiceMapper _sut;
+    private readonly ServiceMapper _sut;
 
     public LifetimeServiceMapperTests()
     {
         _applicationServices = Substitute.For<IServiceProvider>();
-        _sut = new LifetimeServiceMapper(_applicationServices);
+        _sut = new ServiceMapper(_applicationServices);
     }
 
     [Fact]
@@ -38,12 +38,12 @@ public class LifetimeServiceMapperTests
     {
         // Arrange
         var services = Substitute.For<IServiceProvider>();
-        var mapper = Substitute.For<IServiceMapper>();
+        var mapper = Substitute.For<IChildServiceMapper>();
         var service = new object();
         var token = Substitute.For<ServiceToken>();
 
         services
-            .GetService(typeof(IServiceMapper))
+            .GetService(typeof(IChildServiceMapper))
             .Returns(mapper);
 
         // Act
@@ -78,12 +78,12 @@ public class LifetimeServiceMapperTests
     {
         // Arrange
         var services = Substitute.For<IServiceProvider>();
-        var mapper = Substitute.For<IServiceMapper>();
+        var mapper = Substitute.For<IChildServiceMapper>();
         var service = new object();
         var token = Substitute.For<ServiceToken>();
 
         services
-            .GetService(typeof(IServiceMapper))
+            .GetService(typeof(IChildServiceMapper))
             .Returns(mapper);
 
         // Act

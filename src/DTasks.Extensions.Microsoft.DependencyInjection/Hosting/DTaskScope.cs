@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 
-internal class DTaskScope : IDTaskScope, IServiceMapper
+internal class DTaskScope : IDTaskScope
 {
     private readonly IServiceProvider _services;
     private readonly ServiceResolver _resolver;
@@ -17,7 +17,7 @@ internal class DTaskScope : IDTaskScope, IServiceMapper
         _tokens = [];
     }
 
-    public void MapService(object service, ServiceToken token)
+    protected void MapService(object service, ServiceToken token)
     {
         _tokens.Add(service, token);
     }

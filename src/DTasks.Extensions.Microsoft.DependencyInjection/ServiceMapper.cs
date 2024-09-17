@@ -3,19 +3,19 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection;
 
-internal sealed class LifetimeServiceMapper(IServiceProvider applicationServices) : ILifetimeServiceMapper
+internal sealed class ServiceMapper(IServiceProvider applicationServices) : IServiceMapper
 {
     public object MapSingleton(IServiceProvider services, object service, ServiceToken token)
     {
-        IRootServiceMapper marker = services.GetRequiredService<IRootServiceMapper>();
-        marker.MapService(service, token);
+        IRootServiceMapper mapper = services.GetRequiredService<IRootServiceMapper>();
+        mapper.MapService(service, token);
         return service;
     }
 
     public object MapScoped(IServiceProvider services, object service, ServiceToken token)
     {
-        IServiceMapper marker = services.GetRequiredService<IServiceMapper>();
-        marker.MapService(service, token);
+        IChildServiceMapper mapper = services.GetRequiredService<IChildServiceMapper>();
+        mapper.MapService(service, token);
         return service;
     }
 
