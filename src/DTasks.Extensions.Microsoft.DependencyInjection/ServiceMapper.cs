@@ -3,26 +3,26 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection;
 
-internal sealed class ServiceMapper(IServiceProvider applicationServices) : IServiceMapper
+internal sealed class ServiceMapper(IServiceProvider rootProvider) : IServiceMapper
 {
-    public object MapSingleton(IServiceProvider services, object service, ServiceToken token)
+    public object MapSingleton(IServiceProvider provider, object service, ServiceToken token)
     {
-        IRootServiceMapper mapper = services.GetRequiredService<IRootServiceMapper>();
+        IRootServiceMapper mapper = provider.GetRequiredService<IRootServiceMapper>();
         mapper.MapService(service, token);
         return service;
     }
 
-    public object MapScoped(IServiceProvider services, object service, ServiceToken token)
+    public object MapScoped(IServiceProvider provider, object service, ServiceToken token)
     {
-        IChildServiceMapper mapper = services.GetRequiredService<IChildServiceMapper>();
+        IChildServiceMapper mapper = provider.GetRequiredService<IChildServiceMapper>();
         mapper.MapService(service, token);
         return service;
     }
 
-    public object MapTransient(IServiceProvider services, object service, ServiceToken token)
+    public object MapTransient(IServiceProvider provider, object service, ServiceToken token)
     {
-        return ReferenceEquals(services, applicationServices)
-            ? MapSingleton(services, service, token)
-            : MapScoped(services, service, token);
+        return ReferenceEquals(provider, rootProvider)
+            ? MapSingleton(provider, service, token)
+            : MapScoped(provider, service, token);
     }
 }

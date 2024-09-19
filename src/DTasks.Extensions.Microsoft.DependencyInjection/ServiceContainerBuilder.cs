@@ -10,7 +10,7 @@ namespace DTasks.Extensions.Microsoft.DependencyInjection;
 using KeyedServiceFactory = Func<IServiceProvider, object?, object>;
 using ServiceFactory = Func<IServiceProvider, object>;
 
-internal sealed class ServiceContainerBuilder(IServiceCollection services, IServiceResolverBuilder resolverBuilder) : IServiceContainerBuilder
+internal sealed class ServiceContainerBuilder(IServiceCollection services, IServiceRegisterBuilder registerBuilder) : IServiceContainerBuilder
 {
     private readonly MethodInfo _mapSingletonMethod = typeof(IServiceMapper).GetRequiredMethod(
         name: nameof(IServiceMapper.MapSingleton),
@@ -40,15 +40,15 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
 
     public void AddDTaskServices()
     {
-        ServiceResolver resolver = resolverBuilder.BuildServiceResolver();
+        IServiceRegister register = registerBuilder.Build();
 
         services
-            .AddSingleton(resolver)
+            .AddSingleton(register)
             .AddSingleton<IServiceMapper, ServiceMapper>()
             .AddSingleton<RootDTaskScope>()
             .AddSingleton<IRootDTaskScope>(sp => sp.GetRequiredService<RootDTaskScope>())
             .AddSingleton<IRootServiceMapper>(sp => sp.GetRequiredService<RootDTaskScope>())
-            .AddScoped(sp => new ChildDTaskScope(sp, sp.GetRequiredService<ServiceResolver>(), sp.GetRequiredService<RootDTaskScope>()))
+            .AddScoped(sp => new ChildDTaskScope(sp, sp.GetRequiredService<IServiceRegister>(), sp.GetRequiredService<RootDTaskScope>()))
             .AddScoped<IDTaskScope>(sp => sp.GetRequiredService<ChildDTaskScope>())
             .AddScoped<IChildServiceMapper>(sp => sp.GetRequiredService<ChildDTaskScope>());
     }
@@ -59,7 +59,7 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
 
         services.Remove(descriptor);
 
-        ServiceTypeId typeId = resolverBuilder.AddServiceType(descriptor.ServiceType);
+        ServiceTypeId typeId = registerBuilder.AddServiceType(descriptor.ServiceType);
         ServiceToken token = descriptor.IsKeyedService
             ? ServiceToken.Create(typeId, descriptor.ServiceKey)
             : ServiceToken.Create(typeId);
@@ -74,65 +74,65 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
             _ => throw new InvalidOperationException($"Invalid service lifetime: '{descriptor.Lifetime}'.")
         };
 
-        ParameterExpression servicesParam = Expression.Parameter(typeof(IServiceProvider), "services");
-        Expression mappedInstanceExpr = MakeMarkedInstanceExpression(descriptor, servicesParam);
+        ParameterExpression providerParam = Expression.Parameter(typeof(IServiceProvider), "provider");
+        Expression mappedInstanceExpr = MakeMarkedInstanceExpression(descriptor, providerParam);
 
         // sp.GetRequiredService<IServiceMapper>().`mapMethod`(sp, `mappedInstanceExpr`, token)
         Expression body = Expression.Call(
             instance: Expression.Call(
                 method: _getServiceMapperMethod,
-                arg0: servicesParam),
+                arg0: providerParam),
             method: mapMethod,
-            arg0: servicesParam,
+            arg0: providerParam,
             arg1: mappedInstanceExpr,
             arg2: Expression.Constant(token));
 
         if (descriptor.IsKeyedService)
         {
             ParameterExpression keyParam = Expression.Parameter(typeof(object), "key");
-            Expression<KeyedServiceFactory> factoryLambda = Expression.Lambda<KeyedServiceFactory>(body, [servicesParam, keyParam]);
+            Expression<KeyedServiceFactory> factoryLambda = Expression.Lambda<KeyedServiceFactory>(body, [providerParam, keyParam]);
             KeyedServiceFactory factory = factoryLambda.Compile();
 
             services.Add(new ServiceDescriptor(descriptor.ServiceType, descriptor.ServiceKey, factory, descriptor.Lifetime));
         }
         else
         {
-            Expression<ServiceFactory> factoryLambda = Expression.Lambda<ServiceFactory>(body, [servicesParam]);
+            Expression<ServiceFactory> factoryLambda = Expression.Lambda<ServiceFactory>(body, [providerParam]);
             ServiceFactory factory = factoryLambda.Compile();
 
             services.Add(new ServiceDescriptor(descriptor.ServiceType, factory, descriptor.Lifetime));
         }
     }
 
-    private Expression MakeMarkedInstanceExpression(ServiceDescriptor descriptor, ParameterExpression servicesParam)
+    private Expression MakeMarkedInstanceExpression(ServiceDescriptor descriptor, ParameterExpression providerParam)
     {
         if (descriptor.IsKeyedService)
         {
             if (descriptor.KeyedImplementationType is Type keyedImplementationType)
-                return MakeImplementationTypeExpression(descriptor, servicesParam, keyedImplementationType);
+                return MakeImplementationTypeExpression(descriptor, providerParam, keyedImplementationType);
 
             if (descriptor.KeyedImplementationInstance is object keyedImplementationInstance)
                 return MakeImplementationInstanceExpression(keyedImplementationInstance);
 
             if (descriptor.KeyedImplementationFactory is KeyedServiceFactory keyedImplementationFactory)
-                return MakeKeyedImplementationFactoryExpression(descriptor.ServiceKey, servicesParam, keyedImplementationFactory);
+                return MakeKeyedImplementationFactoryExpression(descriptor.ServiceKey, providerParam, keyedImplementationFactory);
         }
         else
         {
             if (descriptor.ImplementationType is Type implementationType)
-                return MakeImplementationTypeExpression(descriptor, servicesParam, implementationType);
+                return MakeImplementationTypeExpression(descriptor, providerParam, implementationType);
 
             if (descriptor.ImplementationInstance is object implementationInstance)
                 return MakeImplementationInstanceExpression(implementationInstance);
 
             if (descriptor.ImplementationFactory is ServiceFactory implementationFactory)
-                return MakeImplementationFactoryExpression(servicesParam, implementationFactory);
+                return MakeImplementationFactoryExpression(providerParam, implementationFactory);
         }
 
         throw new InvalidOperationException("Invalid service descriptor.");
     }
 
-    private Expression MakeImplementationTypeExpression(ServiceDescriptor descriptor, ParameterExpression servicesParam, Type implementationType)
+    private Expression MakeImplementationTypeExpression(ServiceDescriptor descriptor, ParameterExpression providerParam, Type implementationType)
     {
         // We register the original service descriptor with a key that is only visible here.
         // We don't register the implementation type directly for two reasons:
@@ -145,7 +145,7 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
         // sp.GetRequiredKeyedService(descriptor.ServiceType, helperKey)
         return Expression.Call(
             method: _getRequiredKeyedServiceMethod,
-            arg0: servicesParam,
+            arg0: providerParam,
             arg1: Expression.Constant(descriptor.ServiceType),
             arg2: Expression.Constant(helperKey));
     }
@@ -156,24 +156,24 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
         return Expression.Constant(implementationInstance);
     }
 
-    private static Expression MakeImplementationFactoryExpression(ParameterExpression servicesParam, ServiceFactory implementationFactory)
+    private static Expression MakeImplementationFactoryExpression(ParameterExpression providerParam, ServiceFactory implementationFactory)
     {
-        // implementationFactory(services)
+        // implementationFactory(provider)
         return Expression.Invoke(
             expression: Expression.Constant(implementationFactory),
-            arguments: servicesParam);
+            arguments: providerParam);
     }
 
-    private static Expression MakeKeyedImplementationFactoryExpression(object? serviceKey, ParameterExpression servicesParam, KeyedServiceFactory keyedImplementationFactory)
+    private static Expression MakeKeyedImplementationFactoryExpression(object? serviceKey, ParameterExpression providerParam, KeyedServiceFactory keyedImplementationFactory)
     {
-        // keyedImplementationFactory(services, serviceKey)
+        // keyedImplementationFactory(provider, serviceKey)
         return Expression.Invoke(
             expression: Expression.Constant(keyedImplementationFactory),
-            arguments: [servicesParam, Expression.Constant(serviceKey)]);
+            arguments: [providerParam, Expression.Constant(serviceKey)]);
     }
 
     public static ServiceContainerBuilder Create(IServiceCollection services)
     {
-        return new ServiceContainerBuilder(services, new ServiceResolverBuilder());
+        return new ServiceContainerBuilder(services, new ServiceRegisterBuilder());
     }
 }

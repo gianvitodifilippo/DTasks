@@ -9,7 +9,7 @@ public partial class ServiceContainerBuilderTests
     private const string TypeId = "typeId";
 
     private readonly IServiceCollection _services;
-    private readonly IServiceResolverBuilder _resolverBuilder;
+    private readonly IServiceRegisterBuilder _registerBuilder;
     private readonly IServiceMapper _mapper;
     private readonly ServiceTypeId _typeId;
     private readonly object _serviceKey;
@@ -18,15 +18,15 @@ public partial class ServiceContainerBuilderTests
     public ServiceContainerBuilderTests()
     {
         _services = new ServiceCollection();
-        _resolverBuilder = Substitute.For<IServiceResolverBuilder>();
+        _registerBuilder = Substitute.For<IServiceRegisterBuilder>();
         _mapper = Substitute.For<IServiceMapper>();
         _typeId = new ServiceTypeId(TypeId);
         _serviceKey = new();
-        _sut = new ServiceContainerBuilder(_services, _resolverBuilder);
+        _sut = new ServiceContainerBuilder(_services, _registerBuilder);
 
         _services.AddSingleton(_mapper);
 
-        _resolverBuilder
+        _registerBuilder
             .AddServiceType(Arg.Any<Type>())
             .Returns(_typeId);
 

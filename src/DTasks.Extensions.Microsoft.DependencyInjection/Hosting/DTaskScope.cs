@@ -6,14 +6,14 @@ namespace DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 
 internal class DTaskScope : IDTaskScope
 {
-    private readonly IServiceProvider _services;
-    private readonly ServiceResolver _resolver;
+    private readonly IServiceProvider _provider;
+    private readonly IServiceRegister _register;
     private readonly Dictionary<object, ServiceToken> _tokens;
 
-    protected DTaskScope(IServiceProvider services, ServiceResolver resolver)
+    protected DTaskScope(IServiceProvider provider, IServiceRegister register)
     {
-        _services = services;
-        _resolver = resolver;
+        _provider = provider;
+        _register = register;
         _tokens = [];
     }
 
@@ -33,12 +33,12 @@ internal class DTaskScope : IDTaskScope
         if (!ServiceTypeId.TryParse(serviceToken.TypeId, out ServiceTypeId typeId))
             return False(out reference);
 
-        if (!_resolver.Invoke(typeId, out Type? serviceType))
+        if (!_register.IsDAsyncService(typeId, out Type? serviceType))
             return False(out reference);
 
         reference = serviceToken is IKeyedServiceToken { Key: var serviceKey }
-            ? _services.GetRequiredKeyedService(serviceType, serviceKey)
-            : _services.GetRequiredService(serviceType);
+            ? _provider.GetRequiredKeyedService(serviceType, serviceKey)
+            : _provider.GetRequiredService(serviceType);
 
         return true;
 

@@ -1,5 +1,7 @@
+using System.Runtime.CompilerServices;
 using DTasks.Extensions.Microsoft.DependencyInjection.CodeAnalysis;
 using DTasks.Utils;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection;
 
@@ -10,8 +12,9 @@ public static class DTasksServiceProviderExtensions
     {
         ThrowHelper.ThrowIfNull(provider);
         ThrowHelper.ThrowIfNull(serviceType);
+        EnsureDAsyncService(provider, serviceType);
 
-        throw new NotImplementedException();
+        return provider.GetService(serviceType);
     }
 
     [return: DAsyncService]
@@ -19,8 +22,9 @@ public static class DTasksServiceProviderExtensions
         where T : notnull
     {
         ThrowHelper.ThrowIfNull(provider);
+        EnsureDAsyncService(provider, typeof(T));
 
-        throw new NotImplementedException();
+        return provider.GetService<T>();
     }
 
     [return: DAsyncService]
@@ -28,8 +32,9 @@ public static class DTasksServiceProviderExtensions
     {
         ThrowHelper.ThrowIfNull(provider);
         ThrowHelper.ThrowIfNull(serviceType);
+        EnsureDAsyncService(provider, serviceType);
 
-        throw new NotImplementedException();
+        return provider.GetRequiredService(serviceType);
     }
 
     [return: DAsyncService]
@@ -37,8 +42,9 @@ public static class DTasksServiceProviderExtensions
         where T : notnull
     {
         ThrowHelper.ThrowIfNull(provider);
+        EnsureDAsyncService(provider, typeof(T));
 
-        throw new NotImplementedException();
+        return provider.GetRequiredService<T>();
     }
 
     [return: DAsyncService]
@@ -46,8 +52,9 @@ public static class DTasksServiceProviderExtensions
     {
         ThrowHelper.ThrowIfNull(provider);
         ThrowHelper.ThrowIfNull(serviceType);
+        EnsureDAsyncService(provider, serviceType);
 
-        throw new NotImplementedException();
+        return provider.GetServices(serviceType);
     }
 
     [return: DAsyncService]
@@ -55,8 +62,9 @@ public static class DTasksServiceProviderExtensions
         where T : notnull
     {
         ThrowHelper.ThrowIfNull(provider);
+        EnsureDAsyncService(provider, typeof(T));
 
-        throw new NotImplementedException();
+        return provider.GetServices<T>();
     }
 
     [return: DAsyncService]
@@ -64,16 +72,25 @@ public static class DTasksServiceProviderExtensions
     {
         ThrowHelper.ThrowIfNull(provider);
         ThrowHelper.ThrowIfNull(serviceType);
+        EnsureDAsyncService(provider, serviceType);
 
-        throw new NotImplementedException();
+        // TODO: This provider.GetKeyedService(serviceType, serviceKey) should be available when .NET 9 is shipped (https://github.com/dotnet/runtime/issues/102816)
+        if (provider is IKeyedServiceProvider keyedServiceProvider)
+        {
+            return keyedServiceProvider.GetKeyedService(serviceType, serviceKey);
+        }
+
+        throw new InvalidOperationException("This service provider doesn't support keyed services.");
     }
 
     [return: DAsyncService]
     public static T? GetKeyedDAsyncService<T>(this IServiceProvider provider, object? serviceKey)
+        where T : notnull
     {
         ThrowHelper.ThrowIfNull(provider);
+        EnsureDAsyncService(provider, typeof(T));
 
-        throw new NotImplementedException();
+        return provider.GetKeyedService<T>(serviceKey);
     }
 
     [return: DAsyncService]
@@ -81,16 +98,19 @@ public static class DTasksServiceProviderExtensions
     {
         ThrowHelper.ThrowIfNull(provider);
         ThrowHelper.ThrowIfNull(serviceType);
+        EnsureDAsyncService(provider, serviceType);
 
-        throw new NotImplementedException();
+        return provider.GetRequiredKeyedService(serviceType, serviceKey);
     }
 
     [return: DAsyncService]
-    public static T GetRequiredKeyedService<T>(this IServiceProvider provider, object? serviceKey) where T : notnull
+    public static T GetRequiredKeyedService<T>(this IServiceProvider provider, object? serviceKey)
+        where T : notnull
     {
         ThrowHelper.ThrowIfNull(provider);
+        EnsureDAsyncService(provider, typeof(T));
 
-        throw new NotImplementedException();
+        return provider.GetRequiredKeyedService<T>(serviceKey);
     }
 
     [return: DAsyncService]
@@ -98,15 +118,25 @@ public static class DTasksServiceProviderExtensions
     {
         ThrowHelper.ThrowIfNull(provider);
         ThrowHelper.ThrowIfNull(serviceType);
+        EnsureDAsyncService(provider, serviceType);
 
-        throw new NotImplementedException();
+        return provider.GetKeyedServices(serviceType, serviceKey);
     }
 
     [return: DAsyncService]
     public static IEnumerable<T> GetKeyedDAsyncServices<T>(this IServiceProvider provider, object? serviceKey)
+        where T : notnull
     {
         ThrowHelper.ThrowIfNull(provider);
+        EnsureDAsyncService(provider, typeof(T));
 
-        throw new NotImplementedException();
+        return provider.GetKeyedServices<T>(serviceKey);
+    }
+
+    private static void EnsureDAsyncService(IServiceProvider provider, Type serviceType, [CallerArgumentExpression(nameof(serviceType))] string? parameterName = null)
+    {
+        IServiceRegister register = provider.GetRequiredService<IServiceRegister>();
+        if (!register.IsDAsyncService(serviceType))
+            throw new ArgumentException($"'{serviceType.Name}' is not a d-async service.", parameterName);
     }
 }

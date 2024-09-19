@@ -12,6 +12,8 @@ internal class DTasksServiceConfiguration(IServiceCollection services) : IDTasks
     private readonly HashSet<KeyedServiceIdentifier> _additionalKeyedServiceTypes = [];
     private readonly HashSet<Type> _additionalServiceTypes = [];
 
+    public IServiceCollection Services => services;
+
     public IDTasksServiceConfiguration RegisterDAsyncService(Type serviceType, object? serviceKey)
     {
         ThrowHelper.ThrowIfNull(serviceType);

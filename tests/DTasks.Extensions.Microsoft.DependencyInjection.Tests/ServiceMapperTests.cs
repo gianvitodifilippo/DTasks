@@ -2,32 +2,32 @@
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection;
 
-public class LifetimeServiceMapperTests
+public class ServiceMapperTests
 {
-    private readonly IServiceProvider _applicationServices;
+    private readonly IServiceProvider _rootProvider;
     private readonly ServiceMapper _sut;
 
-    public LifetimeServiceMapperTests()
+    public ServiceMapperTests()
     {
-        _applicationServices = Substitute.For<IServiceProvider>();
-        _sut = new ServiceMapper(_applicationServices);
+        _rootProvider = Substitute.For<IServiceProvider>();
+        _sut = new ServiceMapper(_rootProvider);
     }
 
     [Fact]
     public void MarkSingleton_UsesRootServiceMarker()
     {
         // Arrange
-        var services = Substitute.For<IServiceProvider>();
+        var provider = Substitute.For<IServiceProvider>();
         var mapper = Substitute.For<IRootServiceMapper>();
         var service = new object();
         var token = Substitute.For<ServiceToken>();
 
-        services
+        provider
             .GetService(typeof(IRootServiceMapper))
             .Returns(mapper);
 
         // Act
-        _sut.MapSingleton(services, service, token);
+        _sut.MapSingleton(provider, service, token);
 
         // Assert
         mapper.Received(1).MapService(service, token);
@@ -37,17 +37,17 @@ public class LifetimeServiceMapperTests
     public void MarkScoped_UsesServiceMarker()
     {
         // Arrange
-        var services = Substitute.For<IServiceProvider>();
+        var provider = Substitute.For<IServiceProvider>();
         var mapper = Substitute.For<IChildServiceMapper>();
         var service = new object();
         var token = Substitute.For<ServiceToken>();
 
-        services
+        provider
             .GetService(typeof(IChildServiceMapper))
             .Returns(mapper);
 
         // Act
-        _sut.MapScoped(services, service, token);
+        _sut.MapScoped(provider, service, token);
 
         // Assert
         mapper.Received(1).MapService(service, token);
@@ -57,17 +57,17 @@ public class LifetimeServiceMapperTests
     public void MarkTransient_UsesRootServiceMarker_WhenResolvedAsPartOfSingletonService()
     {
         // Arrange
-        var services = _applicationServices;
+        var provider = _rootProvider;
         var mapper = Substitute.For<IRootServiceMapper>();
         var service = new object();
         var token = Substitute.For<ServiceToken>();
 
-        services
+        provider
             .GetService(typeof(IRootServiceMapper))
             .Returns(mapper);
 
         // Act
-        _sut.MapTransient(services, service, token);
+        _sut.MapTransient(provider, service, token);
 
         // Assert
         mapper.Received(1).MapService(service, token);
@@ -77,17 +77,17 @@ public class LifetimeServiceMapperTests
     public void MarkTransient_UsesServiceMarker_WhenResolvedAsPartOfScopedService()
     {
         // Arrange
-        var services = Substitute.For<IServiceProvider>();
+        var provider = Substitute.For<IServiceProvider>();
         var mapper = Substitute.For<IChildServiceMapper>();
         var service = new object();
         var token = Substitute.For<ServiceToken>();
 
-        services
+        provider
             .GetService(typeof(IChildServiceMapper))
             .Returns(mapper);
 
         // Act
-        _sut.MapTransient(services, service, token);
+        _sut.MapTransient(provider, service, token);
 
         // Assert
         mapper.Received(1).MapService(service, token);
