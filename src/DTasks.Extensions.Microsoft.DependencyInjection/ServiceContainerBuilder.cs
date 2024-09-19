@@ -1,4 +1,6 @@
 ﻿using DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
+using DTasks.Extensions.Microsoft.DependencyInjection.Mapping;
+using DTasks.Extensions.Microsoft.DependencyInjection.Utils;
 using DTasks.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
@@ -33,10 +35,47 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
         parameterTypes: [typeof(IServiceProvider)])
         .MakeGenericMethod(typeof(IServiceMapper));
 
-    private readonly MethodInfo _getRequiredKeyedServiceMethod = typeof(ServiceProviderKeyedServiceExtensions).GetRequiredMethod(
+    private readonly MethodInfo _getServiceGenericMethod = typeof(ServiceProviderServiceExtensions).GetRequiredMethod(
+        name: nameof(ServiceProviderServiceExtensions.GetService),
+        bindingAttr: BindingFlags.Static | BindingFlags.Public,
+        parameterTypes: [typeof(IServiceProvider)]);
+
+    private readonly MethodInfo _getKeyedServiceGenericMethod = typeof(ServiceProviderKeyedServiceExtensions).GetRequiredMethod(
+        name: nameof(ServiceProviderKeyedServiceExtensions.GetKeyedService),
+        bindingAttr: BindingFlags.Static | BindingFlags.Public,
+        parameterTypes: [typeof(IServiceProvider), typeof(object)]);
+
+    private readonly MethodInfo _getDAsyncServiceGenericMethod = typeof(DTasksServiceProviderExtensions).GetRequiredMethod(
+        name: nameof(DTasksServiceProviderExtensions.GetDAsyncService),
+        bindingAttr: BindingFlags.Static | BindingFlags.Public,
+        parameterTypes: [typeof(IServiceProvider)]);
+
+    private readonly MethodInfo _getKeyedDAsyncServiceGenericMethod = typeof(DTasksServiceProviderExtensions).GetRequiredMethod(
+        name: nameof(DTasksServiceProviderExtensions.GetKeyedDAsyncService),
+        bindingAttr: BindingFlags.Static | BindingFlags.Public,
+        parameterTypes: [typeof(IServiceProvider), typeof(object)]);
+
+    private readonly MethodInfo _getRequiredServiceGenericMethod = typeof(ServiceProviderServiceExtensions).GetRequiredMethod(
+        name: nameof(ServiceProviderServiceExtensions.GetRequiredService),
+        bindingAttr: BindingFlags.Static | BindingFlags.Public,
+        parameterTypes: [typeof(IServiceProvider)]);
+
+    private readonly MethodInfo _getRequiredKeyedServiceGenericMethod = typeof(ServiceProviderKeyedServiceExtensions).GetRequiredMethod(
         name: nameof(ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService),
         bindingAttr: BindingFlags.Static | BindingFlags.Public,
-        parameterTypes: [typeof(IServiceProvider), typeof(Type), typeof(object)]);
+        parameterTypes: [typeof(IServiceProvider), typeof(object)]);
+
+    private readonly MethodInfo _getRequiredDAsyncServiceGenericMethod = typeof(DTasksServiceProviderExtensions).GetRequiredMethod(
+        name: nameof(DTasksServiceProviderExtensions.GetRequiredDAsyncService),
+        bindingAttr: BindingFlags.Static | BindingFlags.Public,
+        parameterTypes: [typeof(IServiceProvider)]);
+
+    private readonly MethodInfo _getRequiredKeyedDAsyncServiceGenericMethod = typeof(DTasksServiceProviderExtensions).GetRequiredMethod(
+        name: nameof(DTasksServiceProviderExtensions.GetRequiredKeyedDAsyncService),
+        bindingAttr: BindingFlags.Static | BindingFlags.Public,
+        parameterTypes: [typeof(IServiceProvider), typeof(object)]);
+
+    private readonly ConstructorLocator _constructorLocator = new(services);
 
     public void AddDTaskServices()
     {
@@ -46,18 +85,16 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
             .AddSingleton(register)
             .AddSingleton<IServiceMapper, ServiceMapper>()
             .AddSingleton<RootDTaskScope>()
-            .AddSingleton<IRootDTaskScope>(sp => sp.GetRequiredService<RootDTaskScope>())
-            .AddSingleton<IRootServiceMapper>(sp => sp.GetRequiredService<RootDTaskScope>())
-            .AddScoped(sp => new ChildDTaskScope(sp, sp.GetRequiredService<IServiceRegister>(), sp.GetRequiredService<RootDTaskScope>()))
-            .AddScoped<IDTaskScope>(sp => sp.GetRequiredService<ChildDTaskScope>())
-            .AddScoped<IChildServiceMapper>(sp => sp.GetRequiredService<ChildDTaskScope>());
+            .AddSingleton<IRootDTaskScope>(provider => provider.GetRequiredService<RootDTaskScope>())
+            .AddSingleton<IRootServiceMapper>(provider => provider.GetRequiredService<RootDTaskScope>())
+            .AddScoped<ChildDTaskScope>()
+            .AddScoped<IDTaskScope>(provider => provider.GetRequiredService<ChildDTaskScope>())
+            .AddScoped<IChildServiceMapper>(provider => provider.GetRequiredService<ChildDTaskScope>());
     }
 
     public void Replace(ServiceDescriptor descriptor)
     {
         Debug.Assert(!descriptor.ServiceType.ContainsGenericParameters, "Open generic services can't be replaced.");
-
-        services.Remove(descriptor);
 
         ServiceTypeId typeId = registerBuilder.AddServiceType(descriptor.ServiceType);
         ServiceToken token = descriptor.IsKeyedService
@@ -75,9 +112,9 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
         };
 
         ParameterExpression providerParam = Expression.Parameter(typeof(IServiceProvider), "provider");
-        Expression mappedInstanceExpr = MakeMarkedInstanceExpression(descriptor, providerParam);
+        Expression mappedInstanceExpr = MakeMappedInstanceExpression(descriptor, providerParam);
 
-        // sp.GetRequiredService<IServiceMapper>().`mapMethod`(sp, `mappedInstanceExpr`, token)
+        // provider.GetRequiredService<IServiceMapper>().`mapMethod`(provider, `mappedInstanceExpr`, token)
         Expression body = Expression.Call(
             instance: Expression.Call(
                 method: _getServiceMapperMethod,
@@ -102,9 +139,11 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
 
             services.Add(new ServiceDescriptor(descriptor.ServiceType, factory, descriptor.Lifetime));
         }
+
+        services.Remove(descriptor);
     }
 
-    private Expression MakeMarkedInstanceExpression(ServiceDescriptor descriptor, ParameterExpression providerParam)
+    private Expression MakeMappedInstanceExpression(ServiceDescriptor descriptor, ParameterExpression providerParam)
     {
         if (descriptor.IsKeyedService)
         {
@@ -134,20 +173,88 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
 
     private Expression MakeImplementationTypeExpression(ServiceDescriptor descriptor, ParameterExpression providerParam, Type implementationType)
     {
-        // We register the original service descriptor with a key that is only visible here.
-        // We don't register the implementation type directly for two reasons:
-        // 1. When descriptor.ServiceType == descriptor.ImplementationType we register the same service type twice, and
-        // 2. We don't want to add an extra service which is publicly resolvable by the consumers.
+        ConstructorInfo? constructor = _constructorLocator.GetDependencyInjectionConstructor(implementationType);
+        if (constructor is null)
+            throw new NotSupportedException($"Unable to activate type '{implementationType.Name}' as a d-async service.");
 
-        object helperKey = new();
-        services.Add(new ServiceDescriptor(descriptor.ServiceType, helperKey, implementationType, descriptor.Lifetime));
+        ParameterInfo[] parameters = constructor.GetParameters();
+        Expression[] arguments = new Expression[parameters.Length];
 
-        // sp.GetRequiredKeyedService(descriptor.ServiceType, helperKey)
-        return Expression.Call(
-            method: _getRequiredKeyedServiceMethod,
-            arg0: providerParam,
-            arg1: Expression.Constant(descriptor.ServiceType),
-            arg2: Expression.Constant(helperKey));
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            ParameterInfo parameter = parameters[i];
+            bool isDAsyncDependency = parameter.IsDefined(typeof(DAsyncServiceAttribute), inherit: true);
+            bool hasDefaultValue = ParameterDefaultValue.TryGetDefaultValue(parameter, out object? defaultValue);
+
+            if (parameter.IsDefined(typeof(ServiceKeyAttribute), inherit: true))
+            {
+                if (isDAsyncDependency)
+                    throw new InvalidOperationException($"""
+                        A constructor parameter may not be decorated with both [ServiceKey] and [DAsyncService].
+                        The implementation type that contains this parameter is '{implementationType.Name}'.
+                        """);
+
+                object? serviceKey = descriptor.IsKeyedService ? descriptor.ServiceKey : null; // Don't throw here if the service is not keyed, since an exception will be thrown anyway
+                arguments[i] = Expression.Constant(serviceKey, parameter.ParameterType);
+                break;
+            }
+
+            if (parameter.GetCustomAttribute<FromKeyedServicesAttribute>(inherit: true) is { } fromKeyedServiceAttribute)
+            {
+                if (hasDefaultValue)
+                {
+                    MethodInfo getDependencyMethod = isDAsyncDependency
+                        ? _getKeyedDAsyncServiceGenericMethod.MakeGenericMethod(parameter.ParameterType)
+                        : _getKeyedServiceGenericMethod.MakeGenericMethod(parameter.ParameterType);
+
+                    arguments[i] = Expression.Coalesce(
+                        left: Expression.Call(
+                            method: getDependencyMethod,
+                            arg0: providerParam,
+                            arg1: Expression.Constant(fromKeyedServiceAttribute.Key)),
+                        right: Expression.Constant(defaultValue, parameter.ParameterType));
+                }
+                else
+                {
+                    MethodInfo getDependencyMethod = isDAsyncDependency
+                        ? _getRequiredKeyedDAsyncServiceGenericMethod.MakeGenericMethod(parameter.ParameterType)
+                        : _getRequiredKeyedServiceGenericMethod.MakeGenericMethod(parameter.ParameterType);
+
+                    arguments[i] = Expression.Call(
+                        method: getDependencyMethod,
+                        arg0: providerParam,
+                        arg1: Expression.Constant(fromKeyedServiceAttribute.Key));
+                }
+            }
+            else
+            {
+                if (hasDefaultValue)
+                {
+                    MethodInfo getDependencyMethod = isDAsyncDependency
+                        ? _getDAsyncServiceGenericMethod.MakeGenericMethod(parameter.ParameterType)
+                        : _getServiceGenericMethod.MakeGenericMethod(parameter.ParameterType);
+
+                    arguments[i] = Expression.Coalesce(
+                        left: Expression.Call(
+                            method: getDependencyMethod,
+                            arg0: providerParam),
+                        right: Expression.Constant(defaultValue, parameter.ParameterType));
+                }
+                else
+                {
+                    MethodInfo getDependencyMethod = isDAsyncDependency
+                        ? _getRequiredDAsyncServiceGenericMethod.MakeGenericMethod(parameter.ParameterType)
+                        : _getRequiredServiceGenericMethod.MakeGenericMethod(parameter.ParameterType);
+
+                    arguments[i] = Expression.Call(
+                        method: getDependencyMethod,
+                        arg0: providerParam);
+                }
+            }
+        }
+
+        // new `implementationType`(`arguments`)
+        return Expression.New(constructor, arguments);
     }
 
     private static Expression MakeImplementationInstanceExpression(object implementationInstance)

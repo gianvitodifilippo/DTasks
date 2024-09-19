@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection;
+
 internal interface IServiceRegister
 {
     bool IsDAsyncService(Type serviceType);

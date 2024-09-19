@@ -1,6 +1,6 @@
 ﻿using DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 
-namespace DTasks.Extensions.Microsoft.DependencyInjection;
+namespace DTasks.Extensions.Microsoft.DependencyInjection.Mapping;
 
 public class ServiceMapperTests
 {

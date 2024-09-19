@@ -1,8 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
+using DTasks.Extensions.Microsoft.DependencyInjection.Mapping;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 
-internal sealed class ChildDTaskScope(IServiceProvider provider, IServiceRegister register, IRootDTaskScope root) : DTaskScope(provider, register), IChildServiceMapper
+internal sealed class ChildDTaskScope(IServiceProvider provider, IServiceRegister register, RootDTaskScope root) : DTaskScope(provider, register), IChildServiceMapper
 {
     public override bool TryGetReferenceToken(object reference, [NotNullWhen(true)] out object? token)
     {

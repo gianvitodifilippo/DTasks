@@ -1,7 +1,6 @@
-using System.Runtime.CompilerServices;
-using DTasks.Extensions.Microsoft.DependencyInjection.CodeAnalysis;
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
+using System.Runtime.CompilerServices;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection;
 
@@ -94,7 +93,7 @@ public static class DTasksServiceProviderExtensions
     }
 
     [return: DAsyncService]
-    public static object GetRequiredKeyedService(this IServiceProvider provider, Type serviceType, object? serviceKey)
+    public static object GetRequiredKeyedDAsyncService(this IServiceProvider provider, Type serviceType, object? serviceKey)
     {
         ThrowHelper.ThrowIfNull(provider);
         ThrowHelper.ThrowIfNull(serviceType);
@@ -104,7 +103,7 @@ public static class DTasksServiceProviderExtensions
     }
 
     [return: DAsyncService]
-    public static T GetRequiredKeyedService<T>(this IServiceProvider provider, object? serviceKey)
+    public static T GetRequiredKeyedDAsyncService<T>(this IServiceProvider provider, object? serviceKey)
         where T : notnull
     {
         ThrowHelper.ThrowIfNull(provider);

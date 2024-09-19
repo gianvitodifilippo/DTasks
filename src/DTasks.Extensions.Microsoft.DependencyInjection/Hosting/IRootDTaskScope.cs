@@ -2,4 +2,4 @@
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 
-internal interface IRootDTaskScope : IDTaskScope;
+public interface IRootDTaskScope : IDTaskScope;

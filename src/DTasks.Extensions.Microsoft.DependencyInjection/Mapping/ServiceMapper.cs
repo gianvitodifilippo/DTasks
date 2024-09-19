@@ -1,7 +1,7 @@
 ﻿using DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DTasks.Extensions.Microsoft.DependencyInjection;
+namespace DTasks.Extensions.Microsoft.DependencyInjection.Mapping;
 
 internal sealed class ServiceMapper(IServiceProvider rootProvider) : IServiceMapper
 {
