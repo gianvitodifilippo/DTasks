@@ -38,10 +38,10 @@ public partial class ServiceContainerBuilderTests
     {
         public override IEnumerable<object[]> GetData(MethodInfo testMethod)
         {
-            Type implementationType = typeof(MyService);
+            Type implementationType = typeof(Service);
 
-            yield return [typeof(IMyService), implementationType];
-            yield return [typeof(MyService), implementationType];
+            yield return [typeof(IService), implementationType];
+            yield return [typeof(Service), implementationType];
         }
     }
 
@@ -49,14 +49,33 @@ public partial class ServiceContainerBuilderTests
     {
         public override IEnumerable<object[]> GetData(MethodInfo testMethod)
         {
-            object implementationInstance = new MyService();
+            object implementationInstance = new Service();
 
-            yield return [typeof(IMyService), implementationInstance];
-            yield return [typeof(MyService), implementationInstance];
+            yield return [typeof(IService), implementationInstance];
+            yield return [typeof(Service), implementationInstance];
         }
     }
 
-    private interface IMyService;
+    private interface IService;
 
-    private sealed class MyService : IMyService;
+    private class Service : IService;
+
+    private class Dependency1;
+    private class Dependency2;
+    private class Dependency3;
+    private class Dependency4;
+    private class NonResolvableDependency;
+
+    private record ServiceWithAllKindsOfDependencies(
+        [ServiceKey]                               string Key,
+                                                   Dependency1 Dependency1,
+        [FromKeyedServices("dep2")]                Dependency2 Dependency2,
+        [DAsyncService]                            Dependency3 Dependency3,
+        [DAsyncService, FromKeyedServices("dep4")] Dependency4 Dependency4,
+                                                   NonResolvableDependency? Dependency5 = null,
+        [FromKeyedServices("dep6")]                NonResolvableDependency? Dependency6 = null,
+        [DAsyncService]                            NonResolvableDependency? Dependency7 = null,
+        [DAsyncService, FromKeyedServices("dep8")] NonResolvableDependency? Dependency8 = null);
+
+    private record ServiceWithInvalidKey([ServiceKey] string Key);
 }

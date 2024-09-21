@@ -11,9 +11,14 @@ public static class DTasksServiceProviderExtensions
     {
         ThrowHelper.ThrowIfNull(provider);
         ThrowHelper.ThrowIfNull(serviceType);
-        EnsureDAsyncService(provider, serviceType);
 
-        return provider.GetService(serviceType);
+        object? service = provider.GetService(serviceType);
+        if (service is not null)
+        {
+            EnsureDAsyncService(provider, serviceType);
+        }
+
+        return service;
     }
 
     [return: DAsyncService]
@@ -21,9 +26,14 @@ public static class DTasksServiceProviderExtensions
         where T : notnull
     {
         ThrowHelper.ThrowIfNull(provider);
-        EnsureDAsyncService(provider, typeof(T));
 
-        return provider.GetService<T>();
+        T? service = provider.GetService<T>();
+        if (service is not null)
+        {
+            EnsureDAsyncService(provider, typeof(T));
+        }
+
+        return service;
     }
 
     [return: DAsyncService]
@@ -31,9 +41,11 @@ public static class DTasksServiceProviderExtensions
     {
         ThrowHelper.ThrowIfNull(provider);
         ThrowHelper.ThrowIfNull(serviceType);
+
+        object service = provider.GetRequiredService(serviceType);
         EnsureDAsyncService(provider, serviceType);
 
-        return provider.GetRequiredService(serviceType);
+        return service;
     }
 
     [return: DAsyncService]
@@ -41,9 +53,11 @@ public static class DTasksServiceProviderExtensions
         where T : notnull
     {
         ThrowHelper.ThrowIfNull(provider);
+
+        T service = provider.GetRequiredService<T>();
         EnsureDAsyncService(provider, typeof(T));
 
-        return provider.GetRequiredService<T>();
+        return service;
     }
 
     [return: DAsyncService]
@@ -51,9 +65,11 @@ public static class DTasksServiceProviderExtensions
     {
         ThrowHelper.ThrowIfNull(provider);
         ThrowHelper.ThrowIfNull(serviceType);
+
+        IEnumerable<object?> services = provider.GetServices(serviceType);
         EnsureDAsyncService(provider, serviceType);
 
-        return provider.GetServices(serviceType);
+        return services;
     }
 
     [return: DAsyncService]
@@ -61,25 +77,30 @@ public static class DTasksServiceProviderExtensions
         where T : notnull
     {
         ThrowHelper.ThrowIfNull(provider);
+
+        IEnumerable<T> services = provider.GetServices<T>();
         EnsureDAsyncService(provider, typeof(T));
 
-        return provider.GetServices<T>();
+        return services;
     }
 
+    // TODO: provider.GetKeyedService(serviceType, serviceKey) should be available when .NET 9 is shipped (https://github.com/dotnet/runtime/issues/102816)
     [return: DAsyncService]
     public static object? GetKeyedDAsyncService(this IServiceProvider provider, Type serviceType, object? serviceKey)
     {
         ThrowHelper.ThrowIfNull(provider);
         ThrowHelper.ThrowIfNull(serviceType);
-        EnsureDAsyncService(provider, serviceType);
 
-        // TODO: This provider.GetKeyedService(serviceType, serviceKey) should be available when .NET 9 is shipped (https://github.com/dotnet/runtime/issues/102816)
-        if (provider is IKeyedServiceProvider keyedServiceProvider)
+        if (provider is not IKeyedServiceProvider keyedServiceProvider)
+            throw new InvalidOperationException("This service provider doesn't support keyed services.");
+
+        object? service = keyedServiceProvider.GetKeyedService(serviceType, serviceKey);
+        if (service is not null)
         {
-            return keyedServiceProvider.GetKeyedService(serviceType, serviceKey);
+            EnsureDAsyncService(provider, serviceType);
         }
 
-        throw new InvalidOperationException("This service provider doesn't support keyed services.");
+        return service;
     }
 
     [return: DAsyncService]
@@ -87,9 +108,14 @@ public static class DTasksServiceProviderExtensions
         where T : notnull
     {
         ThrowHelper.ThrowIfNull(provider);
-        EnsureDAsyncService(provider, typeof(T));
 
-        return provider.GetKeyedService<T>(serviceKey);
+        T? service = provider.GetKeyedService<T>(serviceKey);
+        if (service is not null)
+        {
+            EnsureDAsyncService(provider, typeof(T));
+        }
+
+        return service;
     }
 
     [return: DAsyncService]
@@ -97,9 +123,11 @@ public static class DTasksServiceProviderExtensions
     {
         ThrowHelper.ThrowIfNull(provider);
         ThrowHelper.ThrowIfNull(serviceType);
+
+        object service = provider.GetRequiredKeyedService(serviceType, serviceKey);
         EnsureDAsyncService(provider, serviceType);
 
-        return provider.GetRequiredKeyedService(serviceType, serviceKey);
+        return service;
     }
 
     [return: DAsyncService]
@@ -107,9 +135,11 @@ public static class DTasksServiceProviderExtensions
         where T : notnull
     {
         ThrowHelper.ThrowIfNull(provider);
+
+        T service = provider.GetRequiredKeyedService<T>(serviceKey);
         EnsureDAsyncService(provider, typeof(T));
 
-        return provider.GetRequiredKeyedService<T>(serviceKey);
+        return service;
     }
 
     [return: DAsyncService]
@@ -117,9 +147,11 @@ public static class DTasksServiceProviderExtensions
     {
         ThrowHelper.ThrowIfNull(provider);
         ThrowHelper.ThrowIfNull(serviceType);
+
+        IEnumerable<object?> services = provider.GetKeyedServices(serviceType, serviceKey);
         EnsureDAsyncService(provider, serviceType);
 
-        return provider.GetKeyedServices(serviceType, serviceKey);
+        return services;
     }
 
     [return: DAsyncService]
@@ -127,9 +159,11 @@ public static class DTasksServiceProviderExtensions
         where T : notnull
     {
         ThrowHelper.ThrowIfNull(provider);
+
+        IEnumerable<T> services = provider.GetKeyedServices<T>(serviceKey);
         EnsureDAsyncService(provider, typeof(T));
 
-        return provider.GetKeyedServices<T>(serviceKey);
+        return services;
     }
 
     private static void EnsureDAsyncService(IServiceProvider provider, Type serviceType, [CallerArgumentExpression(nameof(serviceType))] string? parameterName = null)

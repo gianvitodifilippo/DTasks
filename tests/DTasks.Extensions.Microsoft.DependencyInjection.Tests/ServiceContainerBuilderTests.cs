@@ -60,7 +60,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationTypeData]
-    public void Intercept_ReplacesSingletonWithImplementationType(Type serviceType, Type implementationType)
+    public void Replace_ReplacesSingletonThatHasImplementationType(Type serviceType, Type implementationType)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.Singleton(serviceType, implementationType);
@@ -79,7 +79,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationInstanceData]
-    public void Intercept_ReplacesSingletonWithImplementationInstance(Type serviceType, object implementationInstance)
+    public void Replace_ReplacesSingletonThatHasImplementationInstance(Type serviceType, object implementationInstance)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.Singleton(serviceType, implementationInstance);
@@ -98,7 +98,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationInstanceData]
-    public void Intercept_ReplacesSingletonWithImplementationFactory(Type serviceType, object implementationInstance)
+    public void Replace_ReplacesSingletonThatHasImplementationFactory(Type serviceType, object implementationInstance)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.Singleton(serviceType, sp => implementationInstance);
@@ -117,7 +117,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationTypeData]
-    public void Intercept_ReplacesScopedWithImplementationType(Type serviceType, Type implementationType)
+    public void Replace_ReplacesScopedThatHasImplementationType(Type serviceType, Type implementationType)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.Scoped(serviceType, implementationType);
@@ -136,7 +136,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationInstanceData]
-    public void Intercept_ReplacesScopedWithImplementationFactory(Type serviceType, object implementationInstance)
+    public void Replace_ReplacesScopedThatHasImplementationFactory(Type serviceType, object implementationInstance)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.Scoped(serviceType, sp => implementationInstance);
@@ -155,7 +155,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationTypeData]
-    public void Intercept_ReplacesTransientWithImplementationType(Type serviceType, Type implementationType)
+    public void Replace_ReplacesTransientThatHasImplementationType(Type serviceType, Type implementationType)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.Transient(serviceType, implementationType);
@@ -174,7 +174,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationInstanceData]
-    public void Intercept_ReplacesTransientWithImplementationFactory(Type serviceType, object implementationInstance)
+    public void Replace_ReplacesTransientThatHasImplementationFactory(Type serviceType, object implementationInstance)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.Transient(serviceType, sp => implementationInstance);
@@ -193,7 +193,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationTypeData]
-    public void Intercept_ReplacesSingletonWithKeyedImplementationType(Type serviceType, Type implementationType)
+    public void Replace_ReplacesSingletonThatHasKeyedImplementationType(Type serviceType, Type implementationType)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.KeyedSingleton(serviceType, _serviceKey, implementationType);
@@ -212,7 +212,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationInstanceData]
-    public void Intercept_ReplacesSingletonWithKeyedImplementationInstance(Type serviceType, object implementationInstance)
+    public void Replace_ReplacesSingletonThatHasKeyedImplementationInstance(Type serviceType, object implementationInstance)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.KeyedSingleton(serviceType, _serviceKey, implementationInstance);
@@ -231,7 +231,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationInstanceData]
-    public void Intercept_ReplacesSingletonWithKeyedImplementationFactory(Type serviceType, object implementationInstance)
+    public void Replace_ReplacesSingletonThatHasKeyedImplementationFactory(Type serviceType, object implementationInstance)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.KeyedSingleton(serviceType, _serviceKey, (sp, key) => implementationInstance);
@@ -250,7 +250,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationTypeData]
-    public void Intercept_ReplacesScopedWithKeyedImplementationType(Type serviceType, Type implementationType)
+    public void Replace_ReplacesScopedThatHasKeyedImplementationType(Type serviceType, Type implementationType)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.KeyedScoped(serviceType, _serviceKey, implementationType);
@@ -269,7 +269,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationInstanceData]
-    public void Intercept_ReplacesScopedWithKeyedImplementationFactory(Type serviceType, object implementationInstance)
+    public void Replace_ReplacesScopedThatHasKeyedImplementationFactory(Type serviceType, object implementationInstance)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.KeyedScoped(serviceType, _serviceKey, (sp, key) => implementationInstance);
@@ -288,7 +288,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationTypeData]
-    public void Intercept_ReplacesTransientWithKeyedImplementationType(Type serviceType, Type implementationType)
+    public void Replace_ReplacesTransientThatHasKeyedImplementationType(Type serviceType, Type implementationType)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.KeyedTransient(serviceType, _serviceKey, implementationType);
@@ -307,7 +307,7 @@ public partial class ServiceContainerBuilderTests
 
     [Theory]
     [ImplementationInstanceData]
-    public void Intercept_ReplacesTransientWithKeyedImplementationFactory(Type serviceType, object implementationInstance)
+    public void Replace_ReplacesTransientThatHasKeyedImplementationFactory(Type serviceType, object implementationInstance)
     {
         // Arrange
         ServiceDescriptor descriptor = ServiceDescriptor.KeyedTransient(serviceType, _serviceKey, (sp, key) => implementationInstance);
@@ -322,6 +322,57 @@ public partial class ServiceContainerBuilderTests
         object service = GetKeyedService(serviceType, _serviceKey);
         _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
         service.Should().BeSameAs(implementationInstance);
+    }
+
+    [Fact]
+    public void Replace_HandlesImplementationTypeWithAllKindsOfDependencies()
+    {
+        // Arrange
+        string key = "key";
+        Dependency1 dependency1 = new();
+        Dependency2 dependency2 = new();
+        Dependency3 dependency3 = new();
+        Dependency4 dependency4 = new();
+
+        ServiceDescriptor descriptor1 = ServiceDescriptor.Singleton(dependency1);
+        ServiceDescriptor descriptor2 = ServiceDescriptor.KeyedSingleton("dep2", dependency2);
+        ServiceDescriptor descriptor3 = ServiceDescriptor.Singleton(dependency3);
+        ServiceDescriptor descriptor4 = ServiceDescriptor.KeyedSingleton("dep4", dependency4);
+        ServiceDescriptor targetDescriptor = ServiceDescriptor.KeyedSingleton<ServiceWithAllKindsOfDependencies, ServiceWithAllKindsOfDependencies>(key);
+
+        IServiceRegister register = Substitute.For<IServiceRegister>();
+
+        register
+            .IsDAsyncService(Arg.Any<Type>())
+            .Returns(call =>
+            {
+                Type serviceType = call.Arg<Type>();
+                return serviceType == typeof(Dependency3) || serviceType == typeof(Dependency4);
+            });
+
+        _services.AddSingleton(register);
+        _services.Add(descriptor1);
+        _services.Add(descriptor2);
+        _services.Add(descriptor3);
+        _services.Add(descriptor4);
+        _services.Add(targetDescriptor);
+
+        // Act
+        _sut.Replace(descriptor3);
+        _sut.Replace(descriptor4);
+        _sut.Replace(targetDescriptor);
+
+        // Assert
+        var result = GetKeyedService(typeof(ServiceWithAllKindsOfDependencies), key).Should().BeOfType<ServiceWithAllKindsOfDependencies>().Subject;
+        result.Key.Should().Be(key);
+        result.Dependency1.Should().Be(dependency1);
+        result.Dependency2.Should().Be(dependency2);
+        result.Dependency3.Should().Be(dependency3);
+        result.Dependency4.Should().Be(dependency4);
+        result.Dependency5.Should().BeNull();
+        result.Dependency6.Should().BeNull();
+        result.Dependency7.Should().BeNull();
+        result.Dependency8.Should().BeNull();
     }
 
     private object GetService(Type serviceType) => GetServiceProvider().GetService(serviceType)!;

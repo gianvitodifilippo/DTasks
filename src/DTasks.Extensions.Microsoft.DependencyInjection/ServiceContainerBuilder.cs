@@ -9,6 +9,7 @@ using System.Reflection;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection;
 
+using ExpressionOrError = (bool IsError, Expression Expression);
 using KeyedServiceFactory = Func<IServiceProvider, object?, object>;
 using ServiceFactory = Func<IServiceProvider, object>;
 
@@ -77,12 +78,19 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
 
     private readonly ConstructorLocator _constructorLocator = new(services);
 
+    private readonly List<Exception> _validationErrors = [];
+
     public void AddDTaskServices()
     {
         IServiceRegister register = registerBuilder.Build();
 
+        DAsyncServiceValidator validator = _validationErrors.Count == 0
+            ? () => { }
+            : () => throw new AggregateException("Some d-async services are not able to be constructed.", _validationErrors);
+
         services
             .AddSingleton(register)
+            .AddSingleton(validator)
             .AddSingleton<IServiceMapper, ServiceMapper>()
             .AddSingleton<RootDTaskScope>()
             .AddSingleton<IRootDTaskScope>(provider => provider.GetRequiredService<RootDTaskScope>())
@@ -101,28 +109,8 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
             ? ServiceToken.Create(typeId, descriptor.ServiceKey)
             : ServiceToken.Create(typeId);
 
-        // Using expressions to build the factory helps reducing the cyclomatic complexity of this method
-
-        MethodInfo mapMethod = descriptor.Lifetime switch
-        {
-            ServiceLifetime.Singleton => _mapSingletonMethod,
-            ServiceLifetime.Scoped => _mapScopedMethod,
-            ServiceLifetime.Transient => _mapTransientMethod,
-            _ => throw new InvalidOperationException($"Invalid service lifetime: '{descriptor.Lifetime}'.")
-        };
-
         ParameterExpression providerParam = Expression.Parameter(typeof(IServiceProvider), "provider");
-        Expression mappedInstanceExpr = MakeMappedInstanceExpression(descriptor, providerParam);
-
-        // provider.GetRequiredService<IServiceMapper>().`mapMethod`(provider, `mappedInstanceExpr`, token)
-        Expression body = Expression.Call(
-            instance: Expression.Call(
-                method: _getServiceMapperMethod,
-                arg0: providerParam),
-            method: mapMethod,
-            arg0: providerParam,
-            arg1: mappedInstanceExpr,
-            arg2: Expression.Constant(token));
+        Expression body = MakeServiceFactoryBody(descriptor, providerParam, token);
 
         if (descriptor.IsKeyedService)
         {
@@ -143,7 +131,32 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
         services.Remove(descriptor);
     }
 
-    private Expression MakeMappedInstanceExpression(ServiceDescriptor descriptor, ParameterExpression providerParam)
+    private Expression MakeServiceFactoryBody(ServiceDescriptor descriptor, ParameterExpression providerParam, ServiceToken token)
+    {
+        ExpressionOrError mappedInstanceResult = MakeMappedInstanceExpression(descriptor, providerParam);
+        if (mappedInstanceResult.IsError)
+            return mappedInstanceResult.Expression;
+
+        MethodInfo mapMethod = descriptor.Lifetime switch
+        {
+            ServiceLifetime.Singleton => _mapSingletonMethod,
+            ServiceLifetime.Scoped => _mapScopedMethod,
+            ServiceLifetime.Transient => _mapTransientMethod,
+            _ => throw new InvalidOperationException($"Invalid service lifetime: '{descriptor.Lifetime}'.")
+        };
+
+        // provider.GetRequiredService<IServiceMapper>().`mapMethod`(provider, `mappedInstanceExpr`, token)
+        return Expression.Call(
+            instance: Expression.Call(
+                method: _getServiceMapperMethod,
+                arg0: providerParam),
+            method: mapMethod,
+            arg0: providerParam,
+            arg1: mappedInstanceResult.Expression,
+            arg2: Expression.Constant(token));
+    }
+
+    private ExpressionOrError MakeMappedInstanceExpression(ServiceDescriptor descriptor, ParameterExpression providerParam)
     {
         if (descriptor.IsKeyedService)
         {
@@ -171,11 +184,11 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
         throw new InvalidOperationException("Invalid service descriptor.");
     }
 
-    private Expression MakeImplementationTypeExpression(ServiceDescriptor descriptor, ParameterExpression providerParam, Type implementationType)
+    private ExpressionOrError MakeImplementationTypeExpression(ServiceDescriptor descriptor, ParameterExpression providerParam, Type implementationType)
     {
         ConstructorInfo? constructor = _constructorLocator.GetDependencyInjectionConstructor(implementationType);
         if (constructor is null)
-            throw new NotSupportedException($"Unable to activate type '{implementationType.Name}' as a d-async service.");
+            return ExpectError(descriptor, implementationType);
 
         ParameterInfo[] parameters = constructor.GetParameters();
         Expression[] arguments = new Expression[parameters.Length];
@@ -183,101 +196,132 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
         for (int i = 0; i < parameters.Length; i++)
         {
             ParameterInfo parameter = parameters[i];
-            bool isDAsyncDependency = parameter.IsDefined(typeof(DAsyncServiceAttribute), inherit: true);
-            bool hasDefaultValue = ParameterDefaultValue.TryGetDefaultValue(parameter, out object? defaultValue);
 
-            if (parameter.IsDefined(typeof(ServiceKeyAttribute), inherit: true))
-            {
-                if (isDAsyncDependency)
-                    throw new InvalidOperationException($"""
-                        A constructor parameter may not be decorated with both [ServiceKey] and [DAsyncService].
-                        The implementation type that contains this parameter is '{implementationType.Name}'.
-                        """);
+            ExpressionOrError implementationArgumentResult = MakeImplementationArgument(descriptor, providerParam, implementationType, parameter);
+            if (implementationArgumentResult.IsError)
+                return implementationArgumentResult;
 
-                object? serviceKey = descriptor.IsKeyedService ? descriptor.ServiceKey : null; // Don't throw here if the service is not keyed, since an exception will be thrown anyway
-                arguments[i] = Expression.Constant(serviceKey, parameter.ParameterType);
-                break;
-            }
-
-            if (parameter.GetCustomAttribute<FromKeyedServicesAttribute>(inherit: true) is { } fromKeyedServiceAttribute)
-            {
-                if (hasDefaultValue)
-                {
-                    MethodInfo getDependencyMethod = isDAsyncDependency
-                        ? _getKeyedDAsyncServiceGenericMethod.MakeGenericMethod(parameter.ParameterType)
-                        : _getKeyedServiceGenericMethod.MakeGenericMethod(parameter.ParameterType);
-
-                    arguments[i] = Expression.Coalesce(
-                        left: Expression.Call(
-                            method: getDependencyMethod,
-                            arg0: providerParam,
-                            arg1: Expression.Constant(fromKeyedServiceAttribute.Key)),
-                        right: Expression.Constant(defaultValue, parameter.ParameterType));
-                }
-                else
-                {
-                    MethodInfo getDependencyMethod = isDAsyncDependency
-                        ? _getRequiredKeyedDAsyncServiceGenericMethod.MakeGenericMethod(parameter.ParameterType)
-                        : _getRequiredKeyedServiceGenericMethod.MakeGenericMethod(parameter.ParameterType);
-
-                    arguments[i] = Expression.Call(
-                        method: getDependencyMethod,
-                        arg0: providerParam,
-                        arg1: Expression.Constant(fromKeyedServiceAttribute.Key));
-                }
-            }
-            else
-            {
-                if (hasDefaultValue)
-                {
-                    MethodInfo getDependencyMethod = isDAsyncDependency
-                        ? _getDAsyncServiceGenericMethod.MakeGenericMethod(parameter.ParameterType)
-                        : _getServiceGenericMethod.MakeGenericMethod(parameter.ParameterType);
-
-                    arguments[i] = Expression.Coalesce(
-                        left: Expression.Call(
-                            method: getDependencyMethod,
-                            arg0: providerParam),
-                        right: Expression.Constant(defaultValue, parameter.ParameterType));
-                }
-                else
-                {
-                    MethodInfo getDependencyMethod = isDAsyncDependency
-                        ? _getRequiredDAsyncServiceGenericMethod.MakeGenericMethod(parameter.ParameterType)
-                        : _getRequiredServiceGenericMethod.MakeGenericMethod(parameter.ParameterType);
-
-                    arguments[i] = Expression.Call(
-                        method: getDependencyMethod,
-                        arg0: providerParam);
-                }
-            }
+            arguments[i] = implementationArgumentResult.Expression;
         }
 
         // new `implementationType`(`arguments`)
-        return Expression.New(constructor, arguments);
+        return Ok(Expression.New(constructor, arguments));
     }
 
-    private static Expression MakeImplementationInstanceExpression(object implementationInstance)
+    private ExpressionOrError MakeImplementationArgument(ServiceDescriptor descriptor, ParameterExpression providerParam, Type implementationType, ParameterInfo parameter)
+    {
+        bool isDAsyncDependency = parameter.IsDefined(typeof(DAsyncServiceAttribute), inherit: true);
+        bool hasDefaultValue = ParameterDefaultValue.TryGetDefaultValue(parameter, out object? defaultValue);
+
+        if (parameter.IsDefined(typeof(ServiceKeyAttribute), inherit: true))
+            return MakeServiceKeyArgument(descriptor, implementationType, parameter, isDAsyncDependency);
+
+        if (parameter.GetCustomAttribute<FromKeyedServicesAttribute>(inherit: true) is { } fromKeyedServiceAttribute)
+        {
+            MethodInfo getDependencyGenericMethod = (isDAsyncDependency, hasDefaultValue) switch
+            {
+                (true, true) => _getKeyedDAsyncServiceGenericMethod,
+                (true, false) => _getRequiredKeyedDAsyncServiceGenericMethod,
+                (false, true) => _getKeyedServiceGenericMethod,
+                (false, false) => _getRequiredKeyedServiceGenericMethod
+            };
+
+            Expression getDependency = Expression.Call(
+                method: getDependencyGenericMethod.MakeGenericMethod(parameter.ParameterType),
+                arg0: providerParam,
+                arg1: Expression.Constant(fromKeyedServiceAttribute.Key));
+
+            return Ok(hasDefaultValue
+                ? Coalesce(getDependency, parameter, defaultValue)
+                : getDependency);
+        }
+        else
+        {
+            MethodInfo getDependencyGenericMethod = (isDAsyncDependency, hasDefaultValue) switch
+            {
+                (true, true) => _getDAsyncServiceGenericMethod,
+                (true, false) => _getRequiredDAsyncServiceGenericMethod,
+                (false, true) => _getServiceGenericMethod,
+                (false, false) => _getRequiredServiceGenericMethod
+            };
+
+            Expression getDependency = Expression.Call(
+                method: getDependencyGenericMethod.MakeGenericMethod(parameter.ParameterType),
+                arg0: providerParam);
+
+            return Ok(hasDefaultValue
+                ? Coalesce(getDependency, parameter, defaultValue)
+                : getDependency);
+        }
+
+        static Expression Coalesce(Expression getDependency, ParameterInfo parameter, object? defaultValue) => Expression.Coalesce(
+            left: getDependency,
+            right: Expression.Constant(defaultValue, parameter.ParameterType));
+    }
+
+    private ExpressionOrError MakeServiceKeyArgument(ServiceDescriptor descriptor, Type implementationType, ParameterInfo parameter, bool isDAsyncDependency)
+    {
+        if (isDAsyncDependency)
+        {
+            var exception = new InvalidOperationException($"""
+                A constructor parameter may not be decorated with both [ServiceKey] and [DAsyncService].
+                The implementation type that contains this parameter is '{implementationType.Name}'.
+                """);
+
+            _validationErrors.Add(exception);
+            return Error(Expression.Throw(Expression.Constant(exception)));
+        }
+
+        if (!descriptor.IsKeyedService || descriptor.ServiceKey is not object serviceKey || serviceKey.GetType() != parameter.ParameterType)
+            return ExpectError(descriptor, implementationType);
+
+        return Ok(Expression.Constant(serviceKey, parameter.ParameterType));
+    }
+
+    private ExpressionOrError ExpectError(ServiceDescriptor descriptor, Type implementationType)
+    {
+        // NotSupportedException because it should only be thrown if the service provider doesn't throw when validating the service.
+        // This means that we don't support something that passes validation.
+
+        var exception = new NotSupportedException($"Unable to activate type '{implementationType.Name}' as a d-async service.");
+        _validationErrors.Add(exception);
+
+        // Let's inject the service using a key that's accessible only here so that we can delegate the job to the service provider when we expect a validation error
+        object helperKey = new();
+        services.Add(new ServiceDescriptor(descriptor.ServiceType, helperKey, implementationType, descriptor.Lifetime));
+
+        return Error(Expression.Block(
+            arg0: Expression.Call(
+                method: _getRequiredKeyedServiceGenericMethod.MakeGenericMethod(descriptor.ServiceType),
+                arg0: Expression.Constant(helperKey)),
+            arg1: Expression.Throw(Expression.Constant(exception))));
+    }
+
+    private static ExpressionOrError MakeImplementationInstanceExpression(object implementationInstance)
     {
         // implementationInstance
-        return Expression.Constant(implementationInstance);
+        return Ok(Expression.Constant(implementationInstance));
     }
 
-    private static Expression MakeImplementationFactoryExpression(ParameterExpression providerParam, ServiceFactory implementationFactory)
+    private static ExpressionOrError MakeImplementationFactoryExpression(ParameterExpression providerParam, ServiceFactory implementationFactory)
     {
         // implementationFactory(provider)
-        return Expression.Invoke(
+        return Ok(Expression.Invoke(
             expression: Expression.Constant(implementationFactory),
-            arguments: providerParam);
+            arguments: providerParam));
     }
 
-    private static Expression MakeKeyedImplementationFactoryExpression(object? serviceKey, ParameterExpression providerParam, KeyedServiceFactory keyedImplementationFactory)
+    private static ExpressionOrError MakeKeyedImplementationFactoryExpression(object? serviceKey, ParameterExpression providerParam, KeyedServiceFactory keyedImplementationFactory)
     {
         // keyedImplementationFactory(provider, serviceKey)
-        return Expression.Invoke(
+        return Ok(Expression.Invoke(
             expression: Expression.Constant(keyedImplementationFactory),
-            arguments: [providerParam, Expression.Constant(serviceKey)]);
+            arguments: [providerParam, Expression.Constant(serviceKey)]));
     }
+
+    private static ExpressionOrError Ok(Expression expression) => (false, expression);
+
+    private static ExpressionOrError Error(Expression expression) => (true, expression);
 
     public static ServiceContainerBuilder Create(IServiceCollection services)
     {
