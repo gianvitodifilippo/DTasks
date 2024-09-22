@@ -9,7 +9,7 @@ public static class DTasksServiceCollectionExtensions
     {
         ThrowHelper.ThrowIfNull(services);
 
-        return services.AddDTasksCore(config => {});
+        return services.AddDTasksCore(config => { });
     }
 
     public static IServiceCollection AddDTasks(this IServiceCollection services, Action<IDTasksServiceConfiguration> configure)

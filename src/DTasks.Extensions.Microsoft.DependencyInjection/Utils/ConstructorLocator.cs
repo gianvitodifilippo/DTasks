@@ -14,22 +14,13 @@ internal readonly struct ConstructorLocator(IServiceCollection services)
         typeof(IServiceProviderIsKeyedService)
     }.ToFrozenSet();
 
-    public ConstructorInfo? GetDependencyInjectionConstructor(Type implementationType)
+    public ConstructorInfo? GetDependencyInjectionConstructor(ServiceDescriptor descriptor, Type implementationType)
     {
+        // This should be kept in sync with CallSiteFactory.CreateConstructorCallSite.
+        // The only difference is that it returns null also when it detects that a service is not resolvable
+        // so that we know to expect an error.
+
         ConstructorInfo[] constructors = implementationType.GetConstructors();
-
-        return constructors.Length switch
-        {
-            0 => null,
-            1 => constructors[0],
-            _ => GetBestConstructor(constructors)
-        };
-    }
-
-    private ConstructorInfo? GetBestConstructor(ConstructorInfo[] constructors)
-    {
-        // This should be kept in sync with CallSiteFactory.CreateConstructorCallSite
-
         Array.Sort(constructors, (a, b) => b.GetParameters().Length.CompareTo(a.GetParameters().Length));
 
         ConstructorInfo? bestConstructor = null;
@@ -38,7 +29,7 @@ internal readonly struct ConstructorLocator(IServiceCollection services)
         for (int i = 0; i < constructors.Length; i++)
         {
             ParameterInfo[] parameters = constructors[i].GetParameters();
-            if (ContainsUnresolvableParameters(parameters))
+            if (ContainsUnresolvableParameters(descriptor, parameters))
                 continue;
 
             if (bestConstructor == null)
@@ -68,22 +59,22 @@ internal readonly struct ConstructorLocator(IServiceCollection services)
         return bestConstructor;
     }
 
-    private bool ContainsUnresolvableParameters(ParameterInfo[] parameters)
+    private bool ContainsUnresolvableParameters(ServiceDescriptor descriptor, ParameterInfo[] parameters)
     {
         foreach (ParameterInfo parameter in parameters)
         {
-            if (!IsResolvable(parameter))
+            if (!IsResolvable(descriptor, parameter))
                 return true;
         }
 
         return false;
     }
 
-    private bool IsResolvable(ParameterInfo parameter) =>
+    private bool IsResolvable(ServiceDescriptor descriptor, ParameterInfo parameter) =>
         IsService(parameter.ParameterType) ||
         IsEnumerableOfServices(parameter.ParameterType) ||
         IsBuiltInService(parameter.ParameterType) ||
-        IsServiceKey(parameter.ParameterType) ||
+        IsServiceKey(descriptor, parameter) ||
         HasDefaultValue(parameter);
 
     private bool IsService(Type parameterType) => services.Any(descriptor => descriptor.ServiceType == parameterType);
@@ -95,7 +86,9 @@ internal readonly struct ConstructorLocator(IServiceCollection services)
 
     private static bool IsBuiltInService(Type parameterType) => _builtInServiceTypes.Contains(parameterType);
 
-    private static bool IsServiceKey(Type parameterType) => parameterType.IsDefined(typeof(ServiceKeyAttribute), inherit: true); // Don't bother validating the parameter type since CallSiteFactory will throw an exception anyway
+    private static bool IsServiceKey(ServiceDescriptor descriptor, ParameterInfo parameter) =>
+        descriptor.IsKeyedService && // Instead of throwing, CallSiteFactory just ignores the [ServiceKey] attribute if the service is not keyed
+        parameter.IsDefined(typeof(ServiceKeyAttribute), inherit: true);
 
     private static bool HasDefaultValue(ParameterInfo parameter) => ParameterDefaultValue.TryGetDefaultValue(parameter, out _);
 }

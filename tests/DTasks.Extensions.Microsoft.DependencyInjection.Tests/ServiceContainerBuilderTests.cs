@@ -2,34 +2,42 @@
 using DTasks.Extensions.Microsoft.DependencyInjection.Mapping;
 using DTasks.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using System.Linq.Expressions;
+using static FluentAssertions.FluentActions;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection;
+
+using ServiceAccessor = Func<IKeyedServiceProvider, object?>;
 
 public partial class ServiceContainerBuilderTests
 {
     private const string TypeId = "typeId";
 
-    private readonly IServiceCollection _services;
-    private readonly IServiceRegisterBuilder _registerBuilder;
     private readonly IServiceMapper _mapper;
+    private readonly IServiceRegisterBuilder _registerBuilder;
+    private readonly IServiceRegister _register;
+    private readonly IServiceCollection _services;
     private readonly ServiceTypeId _typeId;
     private readonly object _serviceKey;
     private readonly ServiceContainerBuilder _sut;
 
     public ServiceContainerBuilderTests()
     {
-        _services = new ServiceCollection();
-        _registerBuilder = Substitute.For<IServiceRegisterBuilder>();
         _mapper = Substitute.For<IServiceMapper>();
+        _registerBuilder = Substitute.For<IServiceRegisterBuilder>();
+        _register = Substitute.For<IServiceRegister>();
+        _services = new TestServiceCollection(_mapper);
         _typeId = new ServiceTypeId(TypeId);
         _serviceKey = new();
         _sut = new ServiceContainerBuilder(_services, _registerBuilder);
 
-        _services.AddSingleton(_mapper);
-
         _registerBuilder
             .AddServiceType(Arg.Any<Type>())
             .Returns(_typeId);
+
+        _registerBuilder
+            .Build()
+            .Returns(_register);
 
         _mapper
             .MapSingleton(Arg.Any<IServiceProvider>(), Arg.Any<object>(), Arg.Any<ServiceToken>())
@@ -55,7 +63,8 @@ public partial class ServiceContainerBuilderTests
         // Assert
         _services.Should()
             .ContainSingle(Singleton<IRootDTaskScope>()).And
-            .ContainSingle(Scoped<IDTaskScope>());
+            .ContainSingle(Scoped<IDTaskScope>()).And
+            .ContainSingle(Singleton<DAsyncServiceValidator>());
     }
 
     [Theory]
@@ -68,13 +77,16 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetService(serviceType);
-        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service, Arg.Is(ServiceToken(TypeId)));
+        object? service = provider.GetService(serviceType);
         service.Should().BeOfType(implementationType);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(TypeId)));
     }
 
     [Theory]
@@ -87,13 +99,16 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetService(serviceType);
-        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service, Arg.Is(ServiceToken(TypeId)));
+        object? service = provider.GetService(serviceType);
         service.Should().BeSameAs(implementationInstance);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(TypeId)));
     }
 
     [Theory]
@@ -106,13 +121,16 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetService(serviceType);
-        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service, Arg.Is(ServiceToken(TypeId)));
+        object? service = provider.GetService(serviceType);
         service.Should().BeSameAs(implementationInstance);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(TypeId)));
     }
 
     [Theory]
@@ -125,13 +143,16 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetService(serviceType);
-        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service, Arg.Is(ServiceToken(TypeId)));
+        object? service = provider.GetService(serviceType);
         service.Should().BeOfType(implementationType);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(TypeId)));
     }
 
     [Theory]
@@ -144,13 +165,16 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetService(serviceType);
-        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service, Arg.Is(ServiceToken(TypeId)));
+        object? service = provider.GetService(serviceType);
         service.Should().BeSameAs(implementationInstance);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(TypeId)));
     }
 
     [Theory]
@@ -163,13 +187,16 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetService(serviceType);
-        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service, Arg.Is(ServiceToken(TypeId)));
+        object? service = provider.GetService(serviceType);
         service.Should().BeOfType(implementationType);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(TypeId)));
     }
 
     [Theory]
@@ -182,13 +209,16 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetService(serviceType);
-        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service, Arg.Is(ServiceToken(TypeId)));
+        object? service = provider.GetService(serviceType);
         service.Should().BeSameAs(implementationInstance);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(TypeId)));
     }
 
     [Theory]
@@ -201,13 +231,16 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetKeyedService(serviceType, _serviceKey);
-        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
+        object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeOfType(implementationType);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
     }
 
     [Theory]
@@ -220,13 +253,16 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetKeyedService(serviceType, _serviceKey);
-        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
+        object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeSameAs(implementationInstance);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
     }
 
     [Theory]
@@ -239,13 +275,16 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetKeyedService(serviceType, _serviceKey);
-        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
+        object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeSameAs(implementationInstance);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
     }
 
     [Theory]
@@ -258,13 +297,16 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetKeyedService(serviceType, _serviceKey);
-        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
+        object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeOfType(implementationType);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
     }
 
     [Theory]
@@ -277,13 +319,16 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetKeyedService(serviceType, _serviceKey);
-        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
+        object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeSameAs(implementationInstance);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
     }
 
     [Theory]
@@ -296,13 +341,16 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetKeyedService(serviceType, _serviceKey);
-        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
+        object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeOfType(implementationType);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
     }
 
     [Theory]
@@ -315,34 +363,36 @@ public partial class ServiceContainerBuilderTests
 
         // Act
         _sut.Replace(descriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
         _services.Should().NotContain(descriptor);
 
-        object service = GetKeyedService(serviceType, _serviceKey);
-        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
+        object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeSameAs(implementationInstance);
+        AssertValidatorDoesNotThrow(provider);
+        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(TypeId, _serviceKey)));
     }
 
     [Fact]
-    public void Replace_HandlesImplementationTypeWithAllKindsOfDependencies()
+    public void Replace_HandlesAllKindsOfDependencies()
     {
         // Arrange
         string key = "key";
+        Type serviceType = typeof(ServiceWithAllKindsOfDependencies);
         Dependency1 dependency1 = new();
         Dependency2 dependency2 = new();
         Dependency3 dependency3 = new();
         Dependency4 dependency4 = new();
 
         ServiceDescriptor descriptor1 = ServiceDescriptor.Singleton(dependency1);
-        ServiceDescriptor descriptor2 = ServiceDescriptor.KeyedSingleton("dep2", dependency2);
+        ServiceDescriptor descriptor2 = ServiceDescriptor.KeyedSingleton(ServiceWithAllKindsOfDependencies.Dep2Key, dependency2);
         ServiceDescriptor descriptor3 = ServiceDescriptor.Singleton(dependency3);
-        ServiceDescriptor descriptor4 = ServiceDescriptor.KeyedSingleton("dep4", dependency4);
-        ServiceDescriptor targetDescriptor = ServiceDescriptor.KeyedSingleton<ServiceWithAllKindsOfDependencies, ServiceWithAllKindsOfDependencies>(key);
+        ServiceDescriptor descriptor4 = ServiceDescriptor.KeyedSingleton(ServiceWithAllKindsOfDependencies.Dep4Key, dependency4);
+        ServiceDescriptor targetDescriptor = ServiceDescriptor.KeyedSingleton(serviceType, key, serviceType);
 
-        IServiceRegister register = Substitute.For<IServiceRegister>();
-
-        register
+        _register
             .IsDAsyncService(Arg.Any<Type>())
             .Returns(call =>
             {
@@ -350,7 +400,6 @@ public partial class ServiceContainerBuilderTests
                 return serviceType == typeof(Dependency3) || serviceType == typeof(Dependency4);
             });
 
-        _services.AddSingleton(register);
         _services.Add(descriptor1);
         _services.Add(descriptor2);
         _services.Add(descriptor3);
@@ -361,32 +410,261 @@ public partial class ServiceContainerBuilderTests
         _sut.Replace(descriptor3);
         _sut.Replace(descriptor4);
         _sut.Replace(targetDescriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
 
         // Assert
-        var result = GetKeyedService(typeof(ServiceWithAllKindsOfDependencies), key).Should().BeOfType<ServiceWithAllKindsOfDependencies>().Subject;
-        result.Key.Should().Be(key);
-        result.Dependency1.Should().Be(dependency1);
-        result.Dependency2.Should().Be(dependency2);
-        result.Dependency3.Should().Be(dependency3);
-        result.Dependency4.Should().Be(dependency4);
-        result.Dependency5.Should().BeNull();
-        result.Dependency6.Should().BeNull();
-        result.Dependency7.Should().BeNull();
-        result.Dependency8.Should().BeNull();
+        object? service = provider.GetKeyedService(serviceType, key);
+        service.Should().BeEquivalentTo(new ServiceWithAllKindsOfDependencies(
+            key,
+            dependency1,
+            dependency2,
+            dependency3,
+            dependency4,
+            Dependency5: null,
+            Dependency6: null,
+            Dependency7: null,
+            Dependency8: null));
+        AssertValidatorDoesNotThrow(provider);
     }
 
-    private object GetService(Type serviceType) => GetServiceProvider().GetService(serviceType)!;
-
-    private object GetKeyedService(Type serviceType, object serviceKey) => GetServiceProvider().GetKeyedService(serviceType, serviceKey)!;
-
-    private IKeyedServiceProvider GetServiceProvider()
+    [Fact]
+    public void Replace_HandlesAmbiguousConstructor()
     {
-        IServiceProvider provider = _services.BuildServiceProvider(new ServiceProviderOptions
-        {
-            ValidateOnBuild = true,
-            ValidateScopes = true
-        });
+        // Arrange
+        Type serviceType = typeof(UnresolvableService);
+        ServiceDescriptor descriptor1 = ServiceDescriptor.Singleton<Dependency1, Dependency1>();
+        ServiceDescriptor descriptor2 = ServiceDescriptor.Singleton<Dependency2, Dependency2>();
+        ServiceDescriptor targetDescriptor = ServiceDescriptor.Singleton(serviceType, serviceType);
 
-        return (IKeyedServiceProvider)provider.CreateScope().ServiceProvider;
+        _services.Add(descriptor1);
+        _services.Add(descriptor2);
+        _services.Add(targetDescriptor);
+
+        ServiceAccessor getService = provider => provider.GetService(serviceType);
+        using var providerBeforeReplace = BuildScopedServiceProvider(_services);
+        var expectedException = ServiceProviderException(providerBeforeReplace, getService);
+
+        // Act
+        _sut.Replace(targetDescriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
+
+        // Assert
+        AssertAccessorThrows(provider, getService, expectedException);
+        AssertValidatorThrows<NotSupportedException>(provider, serviceType);
+    }
+
+    [Fact]
+    public void Replace_HandlesUnresolvableConstructor()
+    {
+        // Arrange
+        Type serviceType = typeof(UnresolvableService);
+        ServiceDescriptor targetDescriptor = ServiceDescriptor.Singleton(serviceType, serviceType);
+        _services.Add(targetDescriptor);
+
+        ServiceAccessor getService = provider => provider.GetService(serviceType);
+        using var providerBeforeReplace = BuildScopedServiceProvider(_services);
+        var expectedException = ServiceProviderException(providerBeforeReplace, getService);
+
+        // Act
+        _sut.Replace(targetDescriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
+
+        // Assert
+        AssertAccessorThrows(provider, getService, expectedException);
+        AssertValidatorThrows<NotSupportedException>(provider, serviceType);
+    }
+
+    [Fact]
+    public void Replace_HandlesMissingDependencies()
+    {
+        // Arrange
+        Type serviceType = typeof(ServiceWithOneDependency);
+        ServiceDescriptor targetDescriptor = ServiceDescriptor.Singleton(serviceType, serviceType);
+        _services.Add(targetDescriptor);
+
+        ServiceAccessor getService = provider => provider.GetService(serviceType);
+        using var providerBeforeReplace = BuildScopedServiceProvider(_services);
+        var expectedException = ServiceProviderException(providerBeforeReplace, getService);
+
+        // Act
+        _sut.Replace(targetDescriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
+
+        // Assert
+        AssertAccessorThrows(provider, getService, expectedException);
+        AssertValidatorThrows<NotSupportedException>(provider, serviceType);
+    }
+
+    [Fact]
+    public void Replace_HandlesPrivateConstructor()
+    {
+        // Arrange
+        Type serviceType = typeof(ServiceWithPrivateConstructor);
+        ServiceDescriptor targetDescriptor = ServiceDescriptor.Singleton(serviceType, serviceType);
+        _services.Add(targetDescriptor);
+
+        ServiceAccessor getService = provider => provider.GetService(serviceType);
+        using var providerBeforeReplace = BuildScopedServiceProvider(_services);
+        var expectedException = ServiceProviderException(providerBeforeReplace, getService);
+
+        // Act
+        _sut.Replace(targetDescriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
+
+        // Assert
+        AssertAccessorThrows(provider, getService, expectedException);
+        AssertValidatorThrows<NotSupportedException>(provider, serviceType);
+    }
+
+    [Fact]
+    public void Replace_HandlesServiceKey_WhenServiceIsNotKeyed()
+    {
+        // Arrange
+        Type serviceType = typeof(ServiceWithStringServiceKey);
+        ServiceDescriptor targetDescriptor = ServiceDescriptor.Singleton(serviceType, serviceType);
+        _services.Add(targetDescriptor);
+
+        ServiceAccessor getService = provider => provider.GetService(serviceType);
+        using var providerBeforeReplace = BuildScopedServiceProvider(_services);
+        var expectedException = ServiceProviderException(providerBeforeReplace, getService);
+
+        // Act
+        _sut.Replace(targetDescriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
+
+        // Assert
+        AssertAccessorThrows(provider, getService, expectedException);
+        AssertValidatorThrows<NotSupportedException>(provider, serviceType);
+    }
+
+    [Fact]
+    public void Replace_HandlesServiceKey_WhenServiceIsNotKeyedButAServiceWithThatTypeWasRegistered()
+    {
+        // Arrange
+        Type serviceType = typeof(ServiceWithStringServiceKey);
+        string keyAsService = "whatever";
+        ServiceDescriptor targetDescriptor = ServiceDescriptor.Singleton(serviceType, serviceType);
+        _services.Add(targetDescriptor);
+        _services.AddSingleton(keyAsService);
+
+        // Act
+        _sut.Replace(targetDescriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
+
+        // Assert
+        object? service = provider.GetService(serviceType);
+        service.Should().BeEquivalentTo(new ServiceWithStringServiceKey(keyAsService));
+        AssertValidatorDoesNotThrow(provider);
+    }
+
+    [Fact]
+    public void Replace_HandlesServiceKey_WhenServiceIsNotKeyedButParameterHasDefaultValue()
+    {
+        // Arrange
+        Type serviceType = typeof(ServiceWithDefaultedServiceKey);
+        ServiceDescriptor targetDescriptor = ServiceDescriptor.Singleton(serviceType, serviceType);
+        _services.Add(targetDescriptor);
+
+        // Act
+        _sut.Replace(targetDescriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
+
+        // Assert
+        object? service = provider.GetService(serviceType);
+        service.Should().BeEquivalentTo(new ServiceWithDefaultedServiceKey());
+        AssertValidatorDoesNotThrow(provider);
+    }
+
+    [Fact]
+    public void Replace_HandlesServiceKey_WhenServiceKeyParameterHasInvalidTypeAndItIsNotObject()
+    {
+        // Arrange
+        Type serviceType = typeof(ServiceWithStringServiceKey);
+        int serviceKey = 42;
+        ServiceDescriptor targetDescriptor = ServiceDescriptor.KeyedSingleton(serviceType, serviceKey, serviceType);
+        _services.Add(targetDescriptor);
+
+        ServiceAccessor getService = provider => provider.GetKeyedService(serviceType, serviceKey);
+        using var providerBeforeReplace = BuildScopedServiceProvider(_services);
+        var expectedException = ServiceProviderException(providerBeforeReplace, getService);
+
+        // Act
+        _sut.Replace(targetDescriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
+
+        // Assert
+        AssertAccessorThrows(provider, getService, expectedException);
+        AssertValidatorThrows<NotSupportedException>(provider, serviceType);
+    }
+
+    [Fact]
+    public void Replace_HandlesServiceKey_WhenServiceKeyParameterHasInvalidTypeAndItIsObject()
+    {
+        // Arrange
+        Type serviceType = typeof(ServiceWithObjectServiceKey);
+        int serviceKey = 42;
+        ServiceDescriptor targetDescriptor = ServiceDescriptor.KeyedSingleton(serviceType, serviceKey, serviceType);
+        _services.Add(targetDescriptor);
+
+        ServiceAccessor getService = provider => provider.GetKeyedService(serviceType, serviceKey);
+        using var providerBeforeReplace = BuildScopedServiceProvider(_services);
+        var expectedException = ServiceProviderException(providerBeforeReplace, getService);
+
+        // Act
+        _sut.Replace(targetDescriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
+
+        // Assert
+        AssertAccessorThrows(provider, getService, expectedException);
+        AssertValidatorThrows<NotSupportedException>(provider, serviceType);
+    }
+
+    [Fact]
+    public void Replace_Throws_WhenParameterIsDecoratedWithBothServiceKeyAttributeAndDAsyncServiceAttribute()
+    {
+        // Arrange
+        Type serviceType = typeof(ServiceWithServiceKeyAsDAsyncService);
+        int serviceKey = 42;
+        ServiceDescriptor targetDescriptor = ServiceDescriptor.KeyedSingleton(serviceType, serviceKey, serviceType);
+        _services.Add(targetDescriptor);
+
+        // Act
+        _sut.Replace(targetDescriptor);
+        _sut.AddDTaskServices();
+        using var provider = BuildScopedServiceProvider(_services);
+
+        // Assert
+        Invoking(() => provider.GetKeyedService(serviceType, serviceKey)).Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain(serviceType.Name);
+        AssertValidatorThrows<InvalidOperationException>(provider, serviceType);
+    }
+
+    private static void AssertValidatorDoesNotThrow(IKeyedServiceProvider provider)
+    {
+        var validator = provider.GetRequiredService<DAsyncServiceValidator>();
+        Invoking(() => validator()).Should().NotThrow();
+    }
+
+    private static void AssertValidatorThrows<TException>(IKeyedServiceProvider provider, Type serviceType)
+        where TException : Exception
+    {
+        var validator = provider.GetRequiredService<DAsyncServiceValidator>();
+        Invoking(() => validator()).Should().ThrowExactly<AggregateException>()
+            .Which.InnerExceptions.Should().ContainSingle(ex => ex is TException && ex.Message.Contains(serviceType.Name));
+    }
+
+    private static void AssertAccessorThrows(IKeyedServiceProvider provider, ServiceAccessor getService, Expression<Func<Exception, bool>> expectedException)
+    {
+        provider.Invoking(getService).Should().Throw<Exception>().Which.Should().Match(expectedException);
     }
 }
