@@ -1,5 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
 using DTasks.Extensions.Microsoft.DependencyInjection.Mapping;
+using System.Diagnostics.CodeAnalysis;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 

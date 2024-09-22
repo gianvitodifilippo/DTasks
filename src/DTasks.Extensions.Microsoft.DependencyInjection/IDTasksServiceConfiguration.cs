@@ -7,6 +7,6 @@ public interface IDTasksServiceConfiguration
     IServiceCollection Services { get; }
 
     IDTasksServiceConfiguration RegisterDAsyncService(Type serviceType);
-    
+
     IDTasksServiceConfiguration RegisterDAsyncService(Type serviceType, object? serviceKey);
 }

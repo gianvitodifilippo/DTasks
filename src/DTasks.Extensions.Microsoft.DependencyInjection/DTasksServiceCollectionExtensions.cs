@@ -16,10 +16,10 @@ public static class DTasksServiceCollectionExtensions
     {
         ThrowHelper.ThrowIfNull(services);
         ThrowHelper.ThrowIfNull(configure);
-        
+
         return services.AddDTasksCore(configure);
     }
-    
+
     private static IServiceCollection AddDTasksCore(this IServiceCollection services, Action<IDTasksServiceConfiguration> configure)
     {
         if (services.Any(descriptor => descriptor.ServiceType == typeof(DTasksServiceMarker)))

@@ -3,6 +3,6 @@
 internal interface IServiceRegisterBuilder
 {
     ServiceTypeId AddServiceType(Type serviceType);
-    
+
     IServiceRegister Build();
 }

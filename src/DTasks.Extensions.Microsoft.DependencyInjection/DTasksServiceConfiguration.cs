@@ -1,7 +1,7 @@
 
-using System.Reflection;
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection;
 
@@ -20,7 +20,7 @@ internal class DTasksServiceConfiguration(IServiceCollection services) : IDTasks
 
         if (serviceType.ContainsGenericParameters)
             throw OpenGenericsNotSupported();
-        
+
         if (!services.Any(descriptor => descriptor.ServiceType == serviceType && Equals(descriptor.ServiceKey, serviceKey)))
             throw new ArgumentException($"Type '{serviceType.Name}' was not registered as a service.");
 
@@ -34,7 +34,7 @@ internal class DTasksServiceConfiguration(IServiceCollection services) : IDTasks
 
         if (serviceType.ContainsGenericParameters)
             throw OpenGenericsNotSupported();
-        
+
         if (!services.Any(descriptor => descriptor.ServiceType == serviceType))
             throw new ArgumentException($"Type '{serviceType.Name}' was not registered as a service.");
 
