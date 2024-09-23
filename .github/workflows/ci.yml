@@ -11,20 +11,31 @@ on:
 jobs:
   run-tests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        configuration: [Debug-Tests, Release-Tests]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      
       - name: Setup .NET
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 8.0.x
+      
+      - name: Cache NuGet packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+      
       - name: Restore dependencies
         run: dotnet restore
-      - name: Debug Build
-        run: dotnet build -c Debug-Tests --no-restore
-      - name: Debug Test
-        run: dotnet test --no-build --verbosity normal
-      - name: Release Build
-        run: dotnet build -c Release-Tests --no-restore
-      - name: Release Test
-        run: dotnet test --no-build --verbosity normal
+      
+      - name: Build ${{ matrix.configuration }}
+        run: dotnet build -c ${{ matrix.configuration }} --no-restore
+
+      - name: Test ${{ matrix.configuration }}
+        run: dotnet test -c ${{ matrix.configuration }} --no-build --verbosity normal
