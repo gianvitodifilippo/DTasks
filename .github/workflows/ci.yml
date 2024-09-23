@@ -21,10 +21,10 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
       - name: Debug Build
-        run: dotnet build -c Debug-Test --no-restore
+        run: dotnet build -c Debug-Tests --no-restore
       - name: Debug Test
         run: dotnet test --no-build --verbosity normal
       - name: Release Build
-        run: dotnet build -c Release-Test --no-restore
+        run: dotnet build -c Release-Tests --no-restore
       - name: Release Test
         run: dotnet test --no-build --verbosity normal
