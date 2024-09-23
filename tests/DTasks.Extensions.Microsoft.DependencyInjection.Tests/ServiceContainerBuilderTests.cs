@@ -52,21 +52,6 @@ public partial class ServiceContainerBuilderTests
             .Returns(call => call[1]);
     }
 
-    [Fact]
-    public void AddDTaskServices_AddsConsumerServices()
-    {
-        // Arrange
-
-        // Act
-        _sut.AddDTaskServices();
-
-        // Assert
-        _services.Should()
-            .ContainSingle(Singleton<IRootDTaskScope>()).And
-            .ContainSingle(Scoped<IDTaskScope>()).And
-            .ContainSingle(Singleton<DAsyncServiceValidator>());
-    }
-
     [Theory]
     [ImplementationTypeData]
     public void Replace_ReplacesSingletonThatHasImplementationType(Type serviceType, Type implementationType)

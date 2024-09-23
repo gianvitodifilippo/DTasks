@@ -9,7 +9,7 @@ public sealed class DTasksServiceProviderFactory(ServiceProviderOptions options)
 
     public IServiceProvider CreateServiceProvider(IServiceCollection services)
     {
-        IServiceProvider provider = services
+        ServiceProvider provider = services
             .AddDTasks()
             .BuildServiceProvider(options);
 

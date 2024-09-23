@@ -1,3 +1,8 @@
-﻿namespace DTasks.Extensions.Microsoft.DependencyInjection.Mapping;
+﻿using DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 
-internal interface IRootServiceMapper : IChildServiceMapper;
+namespace DTasks.Extensions.Microsoft.DependencyInjection.Mapping;
+
+internal interface IRootServiceMapper
+{
+    void MapService(object service, ServiceToken token);
+}

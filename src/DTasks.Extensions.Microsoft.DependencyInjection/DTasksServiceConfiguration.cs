@@ -1,4 +1,3 @@
-
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
@@ -14,35 +13,47 @@ internal class DTasksServiceConfiguration(IServiceCollection services) : IDTasks
 
     public IServiceCollection Services => services;
 
-    public IDTasksServiceConfiguration RegisterDAsyncService(Type serviceType, object? serviceKey)
-    {
-        ThrowHelper.ThrowIfNull(serviceType);
-
-        if (serviceType.ContainsGenericParameters)
-            throw OpenGenericsNotSupported();
-
-        if (!services.Any(descriptor => descriptor.ServiceType == serviceType && Equals(descriptor.ServiceKey, serviceKey)))
-            throw new ArgumentException($"Type '{serviceType.Name}' was not registered as a service.");
-
-        _additionalKeyedServiceTypes.Add((serviceType, serviceKey));
-        return this;
-    }
-
     public IDTasksServiceConfiguration RegisterDAsyncService(Type serviceType)
     {
         ThrowHelper.ThrowIfNull(serviceType);
 
+        return RegisterDAsyncServiceCore(serviceType);
+    }
+
+    public IDTasksServiceConfiguration RegisterDAsyncService(Type serviceType, object? serviceKey)
+    {
+        ThrowHelper.ThrowIfNull(serviceType);
+
+        return serviceKey is null
+            ? RegisterDAsyncServiceCore(serviceType)
+            : RegisterDAsyncServiceCore(serviceType, serviceKey);
+    }
+
+    private IDTasksServiceConfiguration RegisterDAsyncServiceCore(Type serviceType)
+    {
         if (serviceType.ContainsGenericParameters)
             throw OpenGenericsNotSupported();
 
         if (!services.Any(descriptor => descriptor.ServiceType == serviceType))
-            throw new ArgumentException($"Type '{serviceType.Name}' was not registered as a service.");
+            throw new ArgumentException($"Type '{serviceType.Name}' was not registered as a service.", nameof(serviceType));
 
         _additionalServiceTypes.Add(serviceType);
         return this;
     }
 
-    internal void ReplaceDAsyncServices(IServiceContainerBuilder containerBuilder)
+    private IDTasksServiceConfiguration RegisterDAsyncServiceCore(Type serviceType, object serviceKey)
+    {
+        if (serviceType.ContainsGenericParameters)
+            throw OpenGenericsNotSupported();
+
+        if (!services.Any(descriptor => descriptor.ServiceType == serviceType && Equals(descriptor.ServiceKey, serviceKey)))
+            throw new ArgumentException($"Type '{serviceType.Name}' was not registered as a service with key '{serviceKey}'.", nameof(serviceType));
+
+        _additionalKeyedServiceTypes.Add((serviceType, serviceKey));
+        return this;
+    }
+
+    public void ReplaceDAsyncServices(IServiceContainerBuilder containerBuilder)
     {
         List<ServiceDescriptor> toReplace = services.Where(IsDAsyncService).ToList();
         if (toReplace.Any(descriptor => descriptor.ServiceType.ContainsGenericParameters))

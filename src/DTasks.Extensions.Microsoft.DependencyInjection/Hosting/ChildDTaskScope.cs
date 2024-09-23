@@ -12,5 +12,5 @@ internal sealed class ChildDTaskScope(IServiceProvider provider, IServiceRegiste
             root.TryGetReferenceToken(reference, out token);
     }
 
-    void IChildServiceMapper.MapService(object service, ServiceToken token) => MapService(service, token);
+    public new void MapService(object service, ServiceToken token) => base.MapService(service, token);
 }
