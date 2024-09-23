@@ -5,12 +5,12 @@ namespace DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 public class DTaskScopeTests
 {
     private readonly IKeyedServiceProvider _provider;
-    private readonly IServiceRegister _register;
+    private readonly IDAsyncServiceRegister _register;
 
     public DTaskScopeTests()
     {
         _provider = Substitute.For<IKeyedServiceProvider>();
-        _register = Substitute.For<IServiceRegister>();
+        _register = Substitute.For<IDAsyncServiceRegister>();
     }
 
     [Fact]

@@ -1,8 +1,8 @@
 ﻿namespace DTasks.Extensions.Microsoft.DependencyInjection;
 
-internal interface IServiceRegisterBuilder
+internal interface IDAsyncServiceRegisterBuilder
 {
     ServiceTypeId AddServiceType(Type serviceType);
 
-    IServiceRegister Build();
+    IDAsyncServiceRegister Build();
 }

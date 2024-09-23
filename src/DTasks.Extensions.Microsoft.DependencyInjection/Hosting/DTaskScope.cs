@@ -7,10 +7,10 @@ namespace DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 internal class DTaskScope : IDTaskScope
 {
     private readonly IServiceProvider _provider;
-    private readonly IServiceRegister _register;
+    private readonly IDAsyncServiceRegister _register;
     private readonly Dictionary<object, ServiceToken> _tokens;
 
-    protected DTaskScope(IServiceProvider provider, IServiceRegister register)
+    protected DTaskScope(IServiceProvider provider, IDAsyncServiceRegister register)
     {
         _provider = provider;
         _register = register;

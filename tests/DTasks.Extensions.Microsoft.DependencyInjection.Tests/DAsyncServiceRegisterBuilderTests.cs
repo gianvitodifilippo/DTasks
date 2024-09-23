@@ -1,12 +1,12 @@
 ﻿namespace DTasks.Extensions.Microsoft.DependencyInjection;
 
-public class ServiceRegisterBuilderTests
+public class DAsyncServiceRegisterBuilderTests
 {
-    private readonly ServiceRegisterBuilder _sut;
+    private readonly DAsyncServiceRegisterBuilder _sut;
 
-    public ServiceRegisterBuilderTests()
+    public DAsyncServiceRegisterBuilderTests()
     {
-        _sut = new ServiceRegisterBuilder();
+        _sut = new DAsyncServiceRegisterBuilder();
     }
 
     [Fact]
@@ -16,7 +16,7 @@ public class ServiceRegisterBuilderTests
         ServiceTypeId typeId = new("id");
 
         // Act
-        IServiceRegister register = _sut.Build();
+        IDAsyncServiceRegister register = _sut.Build();
         bool isService = register.IsDAsyncService(typeId, out Type? serviceType);
 
         // Assert
@@ -31,7 +31,7 @@ public class ServiceRegisterBuilderTests
         Type serviceType = typeof(object);
 
         // Act
-        IServiceRegister register = _sut.Build();
+        IDAsyncServiceRegister register = _sut.Build();
         bool isService = register.IsDAsyncService(serviceType);
 
         // Assert
@@ -46,7 +46,7 @@ public class ServiceRegisterBuilderTests
 
         // Act
         ServiceTypeId typeId = _sut.AddServiceType(type);
-        IServiceRegister register = _sut.Build();
+        IDAsyncServiceRegister register = _sut.Build();
         bool isService = register.IsDAsyncService(typeId, out Type? serviceType);
 
         // Assert
@@ -62,7 +62,7 @@ public class ServiceRegisterBuilderTests
 
         // Act
         _sut.AddServiceType(serviceType);
-        IServiceRegister register = _sut.Build();
+        IDAsyncServiceRegister register = _sut.Build();
         bool isService = register.IsDAsyncService(serviceType);
 
         // Assert

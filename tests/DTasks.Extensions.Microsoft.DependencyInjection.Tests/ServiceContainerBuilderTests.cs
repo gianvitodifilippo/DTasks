@@ -14,8 +14,8 @@ public partial class ServiceContainerBuilderTests
     private const string TypeId = "typeId";
 
     private readonly IServiceMapper _mapper;
-    private readonly IServiceRegisterBuilder _registerBuilder;
-    private readonly IServiceRegister _register;
+    private readonly IDAsyncServiceRegisterBuilder _registerBuilder;
+    private readonly IDAsyncServiceRegister _register;
     private readonly IServiceCollection _services;
     private readonly ServiceTypeId _typeId;
     private readonly object _serviceKey;
@@ -24,8 +24,8 @@ public partial class ServiceContainerBuilderTests
     public ServiceContainerBuilderTests()
     {
         _mapper = Substitute.For<IServiceMapper>();
-        _registerBuilder = Substitute.For<IServiceRegisterBuilder>();
-        _register = Substitute.For<IServiceRegister>();
+        _registerBuilder = Substitute.For<IDAsyncServiceRegisterBuilder>();
+        _register = Substitute.For<IDAsyncServiceRegister>();
         _services = new TestServiceCollection(_mapper);
         _typeId = new ServiceTypeId(TypeId);
         _serviceKey = new();

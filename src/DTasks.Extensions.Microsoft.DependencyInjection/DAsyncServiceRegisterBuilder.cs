@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection;
 
-internal sealed class ServiceRegisterBuilder : IServiceRegisterBuilder
+internal sealed class DAsyncServiceRegisterBuilder : IDAsyncServiceRegisterBuilder
 {
     private readonly HashSet<Type> _types = [];
     private readonly Dictionary<ServiceTypeId, Type> _idsToTypes = [];
@@ -20,8 +20,8 @@ internal sealed class ServiceRegisterBuilder : IServiceRegisterBuilder
         return id;
     }
 
-    public IServiceRegister Build()
+    public IDAsyncServiceRegister Build()
     {
-        return new ServiceRegister(_types.ToFrozenSet(), _idsToTypes.ToFrozenDictionary());
+        return new DAsyncServiceRegister(_types.ToFrozenSet(), _idsToTypes.ToFrozenDictionary());
     }
 }

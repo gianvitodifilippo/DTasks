@@ -5,15 +5,15 @@ namespace DTasks.Extensions.Microsoft.DependencyInjection;
 public class DTasksServiceProviderExtensionsTests
 {
     private readonly IKeyedServiceProvider _provider;
-    private readonly IServiceRegister _register;
+    private readonly IDAsyncServiceRegister _register;
 
     public DTasksServiceProviderExtensionsTests()
     {
         _provider = Substitute.For<IKeyedServiceProvider, ISupportRequiredService>();
-        _register = Substitute.For<IServiceRegister>();
+        _register = Substitute.For<IDAsyncServiceRegister>();
 
         SupportRequiredService
-            .GetRequiredService(typeof(IServiceRegister))
+            .GetRequiredService(typeof(IDAsyncServiceRegister))
             .Returns(_register);
 
         _register

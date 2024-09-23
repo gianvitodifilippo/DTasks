@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection;
 
-internal class ServiceRegister(FrozenSet<Type> types, FrozenDictionary<ServiceTypeId, Type> idsToTypes) : IServiceRegister
+internal class DAsyncServiceRegister(FrozenSet<Type> types, FrozenDictionary<ServiceTypeId, Type> idsToTypes) : IDAsyncServiceRegister
 {
     public bool IsDAsyncService(Type serviceType) => types.Contains(serviceType);
 

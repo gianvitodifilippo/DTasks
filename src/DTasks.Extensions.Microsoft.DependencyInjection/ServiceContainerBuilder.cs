@@ -13,7 +13,7 @@ using ExpressionOrError = (bool IsError, Expression Expression);
 using KeyedServiceFactory = Func<IServiceProvider, object?, object>;
 using ServiceFactory = Func<IServiceProvider, object>;
 
-internal sealed class ServiceContainerBuilder(IServiceCollection services, IServiceRegisterBuilder registerBuilder) : IServiceContainerBuilder
+internal sealed class ServiceContainerBuilder(IServiceCollection services, IDAsyncServiceRegisterBuilder registerBuilder) : IServiceContainerBuilder
 {
     private readonly MethodInfo _mapSingletonMethod = typeof(IServiceMapper).GetRequiredMethod(
         name: nameof(IServiceMapper.MapSingleton),
@@ -87,7 +87,7 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
 
     public void AddDTaskServices()
     {
-        IServiceRegister register = registerBuilder.Build();
+        IDAsyncServiceRegister register = registerBuilder.Build();
 
         DAsyncServiceValidator validator = _validationErrors.Count == 0
             ? () => { }
@@ -360,7 +360,7 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IServ
 
     public static ServiceContainerBuilder Create(IServiceCollection services)
     {
-        return new ServiceContainerBuilder(services, new ServiceRegisterBuilder());
+        return new ServiceContainerBuilder(services, new DAsyncServiceRegisterBuilder());
     }
 
     private sealed class HelperKey;

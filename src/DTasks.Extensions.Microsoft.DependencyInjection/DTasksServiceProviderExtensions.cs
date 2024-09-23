@@ -168,7 +168,7 @@ public static class DTasksServiceProviderExtensions
 
     private static void EnsureDAsyncService(IServiceProvider provider, Type serviceType, [CallerArgumentExpression(nameof(serviceType))] string? parameterName = null)
     {
-        IServiceRegister register = provider.GetRequiredService<IServiceRegister>();
+        IDAsyncServiceRegister register = provider.GetRequiredService<IDAsyncServiceRegister>();
         if (!register.IsDAsyncService(serviceType))
             throw new ArgumentException($"'{serviceType.Name}' is not a d-async service.", parameterName);
     }
