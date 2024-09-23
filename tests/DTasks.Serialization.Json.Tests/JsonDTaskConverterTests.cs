@@ -196,9 +196,9 @@ public partial class JsonDTaskConverterTests
 
     private void VerifyHeapState(Dictionary<string, object> idsToReferences, Dictionary<object, string> referencesToIds)
     {
-        idsToReferences.Should().ContainKey("0").WhoseValue.Should().Be(_fixture.Tokens.Token1);
+        idsToReferences.Should().ContainKey("0").WhoseValue.Should().Be(_fixture.Services.Service1);
         idsToReferences.Should().ContainKey("1").WhoseValue.Should().BeOfType<SerializableType1>();
-        idsToReferences.Should().ContainKey("2").WhoseValue.Should().Be(_fixture.Tokens.Token2);
+        idsToReferences.Should().ContainKey("2").WhoseValue.Should().Be(_fixture.Services.Service2);
         idsToReferences.Should().ContainKey("3").WhoseValue.Should().BeOfType<SerializableType2>();
         idsToReferences.Should().ContainKey("4").WhoseValue.Should().BeOfType<PolymorphicType2>();
         idsToReferences.Should().ContainKey("5").WhoseValue.Should().BeOfType<SerializableType2>();

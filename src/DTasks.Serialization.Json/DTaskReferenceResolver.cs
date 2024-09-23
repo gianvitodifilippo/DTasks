@@ -27,26 +27,23 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
 
             foreach ((object reference, string id) in _referencesToIds)
             {
-                if (!_idsToReferences.TryGetValue(id, out object? referenceOrToken))
+                if (!_idsToReferences.TryGetValue(id, out _))
                     continue; // We already wrote this reference, don't write it again
 
                 writer.WriteStartObject();
 
-                if (ReferenceEquals(reference, referenceOrToken))
+                if (scope.TryGetReferenceToken(reference, out object? token))
                 {
-                    // We have an actual reference
-                    writer.WriteString(TypeKeyUtf8, reference.GetType().AssemblyQualifiedName); // TODO: Use a resolver
-                    writer.WritePropertyName(ValueKeyUtf8);
-                    JsonSerializer.Serialize(writer, reference, options);
-                }
-                else
-                {
-                    // We have a token
-                    object token = referenceOrToken;
                     writer.WriteString(IdKeyUtf8, id);
                     writer.WriteString(TypeKeyUtf8, token.GetType().AssemblyQualifiedName); // TODO: Use a resolver
                     writer.WritePropertyName(ValueKeyUtf8);
                     JsonSerializer.Serialize(writer, token, rootOptions);
+                }
+                else
+                {
+                    writer.WriteString(TypeKeyUtf8, reference.GetType().AssemblyQualifiedName); // TODO: Use a resolver
+                    writer.WritePropertyName(ValueKeyUtf8);
+                    JsonSerializer.Serialize(writer, reference, options);
                 }
 
                 writer.WriteEndObject();
@@ -90,8 +87,8 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
                 if (!scope.TryGetReference(token, out object? reference))
                     throw InvalidJsonHeap();
 
-                _idsToReferences[referenceId!] = token;
-                _referencesToIds[reference] = referenceId!;
+                _idsToReferences[referenceId] = reference;
+                _referencesToIds[reference] = referenceId;
             }
             else
             {
@@ -153,24 +150,11 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
         Debug.Assert(!_isSerializing, "We should have scanned all references before serializing the heap.");
 
         referenceId = _referencesToIds.Count.ToString();
+        _idsToReferences.Add(referenceId, value);
         _referencesToIds.Add(value, referenceId);
 
-        Debug.Assert(!_idsToReferences.ContainsKey(referenceId), $"'{nameof(_referencesToIds)}' and '{nameof(_idsToReferences)}' should be kept in sync.");
-
-        // We are currently keeping the token inside _idsToReferences although _referencesToIds holds the actual reference.
-        // We use this inside 'Serialize' to tell if a reference should be serialized as token without asking the host.
-        // This doesn't make a difference when suspending a new d-flow. Instead, it is useful when resuming a d-flow,
-        // since we could avoid calling 'TryGetReferenceToken' unnecessarily, as we would have called 'TryGetReference'
-        // on the same reference-token pair.
-
-        if (scope.TryGetReferenceToken(value, out object? token))
+        if (!scope.TryGetReferenceToken(value, out _))
         {
-            _idsToReferences[referenceId] = token;
-        }
-        else
-        {
-            _idsToReferences[referenceId] = value;
-
             // Trasverse the object graph here because we won't be able to do it during serialization
             TrasverseGraph(value);
         }
@@ -191,14 +175,7 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
     {
         Debug.Assert(!_isSerializing, $"'{nameof(ResolveReference)}' should not be called during serialization.");
 
-        object referenceOrToken = _idsToReferences[referenceId];
-
-        // We don't replace the reference with the token here: this would break
-        // the 'GetReference' method and the implementation of 'TryGetReference' should be
-        // cheaper than 'TryGetReferenceToken' and shouldn't require caching.
-        return scope.TryGetReference(referenceOrToken, out object? reference)
-            ? reference
-            : referenceOrToken;
+        return _idsToReferences[referenceId];
     }
 
     private void TrasverseGraph(object value)
