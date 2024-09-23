@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Debug Build
+        run: dotnet build -c Debug-Test --no-restore
+      - name: Debug Test
+        run: dotnet test --no-build --verbosity normal
+      - name: Release Build
+        run: dotnet build -c Release-Test --no-restore
+      - name: Release Test
+        run: dotnet test --no-build --verbosity normal
