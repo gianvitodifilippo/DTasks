@@ -12,10 +12,15 @@ internal readonly ref struct InspectorILGenerator(
     bool loadCallbackIndirectly,
     OpCode callOpCode)
 {
-    private static readonly MethodInfo s_isSuspendedGenericMethod = typeof(InspectorILGenerator).GetRequiredMethod(
-        name: nameof(IsSuspended),
-        bindingAttr: BindingFlags.Static | BindingFlags.NonPublic,
-        parameterTypes: [typeof(IStateMachineInfo)]);
+    private static readonly MethodInfo s_getTypeFromHandleMethod = typeof(Type).GetRequiredMethod(
+        name: nameof(Type.GetTypeFromHandle),
+        bindingAttr: BindingFlags.Static | BindingFlags.Public,
+        parameterTypes: [typeof(RuntimeTypeHandle)]);
+
+    private static readonly MethodInfo s_isSuspendedMethod = typeof(IStateMachineInfo).GetRequiredMethod(
+        name: nameof(IStateMachineInfo.IsSuspended),
+        bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+        parameterTypes: [typeof(Type)]);
 
     private static readonly MethodInfo s_getAwaiterMethod = typeof(DTask).GetRequiredMethod(
         name: nameof(DTask.GetAwaiter),
@@ -150,8 +155,9 @@ internal readonly ref struct InspectorILGenerator(
 
     public void CallIsSuspendedMethod(Type awaiterType)
     {
-        MethodInfo isSuspendedMethod = s_isSuspendedGenericMethod.MakeGenericMethod(awaiterType);
-        il.Emit(OpCodes.Call, isSuspendedMethod);
+        il.Emit(OpCodes.Ldtoken, awaiterType);
+        il.Emit(OpCodes.Call, s_getTypeFromHandleMethod);
+        il.Emit(OpCodes.Callvirt, s_isSuspendedMethod);
     }
 
     public void CreateAsyncMethodBuilder(Type builderType)
@@ -215,6 +221,4 @@ internal readonly ref struct InspectorILGenerator(
             loadCallbackIndirectly: !callbackType.IsValueType && callbackParameterType.IsByRef,
             callOpCode: !callbackType.IsValueType ? OpCodes.Callvirt : OpCodes.Call);
     }
-
-    private static bool IsSuspended<TAwaiter>(IStateMachineInfo info) => info.SuspendedAwaiterType == typeof(TAwaiter);
 }

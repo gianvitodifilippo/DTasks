@@ -2,5 +2,5 @@
 
 public interface IStateMachineInfo
 {
-    Type SuspendedAwaiterType { get; }
+    bool IsSuspended(Type awaiterType);
 }

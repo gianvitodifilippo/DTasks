@@ -169,13 +169,11 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
 
         #region IStateMachineInfo implementation
 
-        Type IStateMachineInfo.SuspendedAwaiterType
+        bool IStateMachineInfo.IsSuspended(Type awaiterType)
         {
-            get
-            {
-                Debug.Assert(_suspendedAwaiterType is not null, "The d-async method was not suspended.");
-                return _suspendedAwaiterType;
-            }
+            Debug.Assert(_suspendedAwaiterType is not null, "The d-async method was not suspended.");
+
+            return _suspendedAwaiterType == awaiterType;
         }
 
         #endregion

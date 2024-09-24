@@ -119,7 +119,8 @@ public class DAsyncMethodTests
         await awaiter.IsCompletedAsync();
 
         // Assert
-        sut.As<IStateMachineInfo>().SuspendedAwaiterType.Should().Be<DTask<TestResult>.Awaiter>();
+        sut.As<IStateMachineInfo>().IsSuspended(typeof(DTask<TestResult>.Awaiter)).Should().BeTrue();
+        sut.As<IStateMachineInfo>().IsSuspended(typeof(DTask.Awaiter)).Should().BeFalse();
     }
 
     private sealed class TestResult;

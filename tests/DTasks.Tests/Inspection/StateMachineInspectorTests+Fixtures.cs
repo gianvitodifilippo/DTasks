@@ -15,7 +15,12 @@ public partial class StateMachineInspectorTests
 
     private static Expression<Predicate<MethodInfo>> IsSuspendedMethod()
     {
-        return method => method.DeclaringType!.Name == "InspectorILGenerator" && method.Name == "IsSuspended";
+        return method => method.DeclaringType!.Name == nameof(IStateMachineInfo) && method.Name == nameof(IStateMachineInfo.IsSuspended);
+    }
+
+    private static Expression<Predicate<MethodInfo>> GetTypeFromHandleMethod()
+    {
+        return method => method.DeclaringType!.Name == nameof(Type) && method.Name == nameof(Type.GetTypeFromHandle);
     }
 
     private static Expression<Predicate<MethodInfo>> CreateMethod()

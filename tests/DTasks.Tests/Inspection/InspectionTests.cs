@@ -72,7 +72,9 @@ public class InspectionTests
         var deconstructor = Substitute.For<IStateMachineDeconstructor>();
         var suspender = (TestSuspender<TStateMachine>)_inspector.GetSuspender(StateMachineType);
 
-        info.SuspendedAwaiterType.Returns(typeof(DTask<int>.Awaiter));
+        info
+            .IsSuspended(typeof(DTask<int>.Awaiter))
+            .Returns(true);
 
         // Act
         suspender.Invoke(ref stateMachine, info, deconstructor);
