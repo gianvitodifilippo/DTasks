@@ -1,6 +1,5 @@
 ﻿using DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 using DTasks.Extensions.Microsoft.DependencyInjection.Mapping;
-using DTasks.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq.Expressions;
 using static FluentAssertions.FluentActions;
