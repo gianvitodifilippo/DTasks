@@ -6,7 +6,7 @@ namespace DTasks.Extensions.Microsoft.DependencyInjection.Utils;
 
 internal readonly struct ConstructorLocator(IServiceCollection services)
 {
-    private static readonly FrozenSet<Type> _builtInServiceTypes = new Type[]
+    private static readonly FrozenSet<Type> s_builtInServiceTypes = new Type[]
     {
         typeof(IServiceProvider),
         typeof(IServiceScopeFactory),
@@ -72,6 +72,7 @@ internal readonly struct ConstructorLocator(IServiceCollection services)
 
     private bool IsResolvable(ServiceDescriptor descriptor, ParameterInfo parameter) =>
         IsService(parameter.ParameterType) ||
+        IsGenericService(parameter.ParameterType) ||
         IsEnumerableOfServices(parameter.ParameterType) ||
         IsBuiltInService(parameter.ParameterType) ||
         IsServiceKey(descriptor, parameter) ||
@@ -79,12 +80,14 @@ internal readonly struct ConstructorLocator(IServiceCollection services)
 
     private bool IsService(Type parameterType) => services.Any(descriptor => descriptor.ServiceType == parameterType);
 
+    private bool IsGenericService(Type parameterType) => parameterType.IsGenericType && IsService(parameterType.GetGenericTypeDefinition());
+
     private bool IsEnumerableOfServices(Type parameterType) =>
         parameterType.IsGenericType &&
         parameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>) &&
         IsService(parameterType.GetGenericArguments()[0]);
 
-    private static bool IsBuiltInService(Type parameterType) => _builtInServiceTypes.Contains(parameterType);
+    private static bool IsBuiltInService(Type parameterType) => s_builtInServiceTypes.Contains(parameterType);
 
     private static bool IsServiceKey(ServiceDescriptor descriptor, ParameterInfo parameter) =>
         descriptor.IsKeyedService && // Instead of throwing, CallSiteFactory just ignores the [ServiceKey] attribute if the service is not keyed

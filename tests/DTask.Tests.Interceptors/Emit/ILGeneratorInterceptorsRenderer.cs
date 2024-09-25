@@ -35,13 +35,13 @@ internal static class ILGeneratorInterceptorsRenderer
                 [ExcludeFromCodeCoverage]
                 public static class ILGeneratorInterceptors
                 {
-                    private static readonly ThreadLocal<ILGenerator?> _interceptorLocal = new();
+                    private static readonly ThreadLocal<ILGenerator?> s_interceptorLocal = new();
                 
                     public static IDisposable InterceptCalls(this ILGenerator il)
                     {
-                        Debug.Assert(_interceptorLocal.Value is null);
+                        Debug.Assert(s_interceptorLocal.Value is null);
                         
-                        _interceptorLocal.Value = il;
+                        s_interceptorLocal.Value = il;
                         return new InterceptionScope(il);
                     }
                 
@@ -49,9 +49,9 @@ internal static class ILGeneratorInterceptorsRenderer
                     {
                         void IDisposable.Dispose()
                         {
-                            Debug.Assert(ReferenceEquals(il, _interceptorLocal.Value));
+                            Debug.Assert(ReferenceEquals(il, s_interceptorLocal.Value));
                             
-                            _interceptorLocal.Value = null;
+                            s_interceptorLocal.Value = null;
                         }
                     }
             """);
@@ -73,7 +73,7 @@ internal static class ILGeneratorInterceptorsRenderer
                     public static ILGenerator GetILGenerator(this DynamicMethod method)
                     {
                         ILGenerator il = method.GetILGenerator();
-                        if (_interceptorLocal.Value is not ILGenerator interceptor)
+                        if (s_interceptorLocal.Value is not ILGenerator interceptor)
                             return il;
 
                         il.Emit(OpCodes.Ret);

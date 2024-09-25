@@ -14,7 +14,6 @@ internal readonly struct ServiceTypeId(string value) : IEquatable<ServiceTypeId>
 
     public static bool TryParse(string? value, out ServiceTypeId typeId)
     {
-        // TODO: We will probably need to validate the value at some point
         if (value is null)
         {
             typeId = default;

@@ -69,7 +69,7 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowI
             do
             {
                 ReadOnlySpan<byte> stateMachineBytes = _stack.PopStateMachine(out hasNext);
-                resultTask = host._converter.DeserializeStateMachine(flowId, ref _heap, stateMachineBytes, resultTask); // TODO: CancellationToken
+                resultTask = host._converter.DeserializeStateMachine(flowId, ref _heap, stateMachineBytes, resultTask);
                 awaiter = resultTask.GetDAwaiter();
 
                 if (!await awaiter.IsCompletedAsync())

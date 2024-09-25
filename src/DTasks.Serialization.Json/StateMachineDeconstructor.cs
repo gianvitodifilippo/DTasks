@@ -75,7 +75,7 @@ internal readonly ref struct StateMachineDeconstructor(ref readonly JsonFlowHeap
                 Writer.WriteNumber(Constants.TypeMetadataKey, intId);
                 break;
 
-            default: // TODO: Support more identifier types
+            default:
                 throw new InvalidOperationException("Unsupported identifier type.");
         }
     }

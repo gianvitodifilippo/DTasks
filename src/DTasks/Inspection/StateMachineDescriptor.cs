@@ -5,6 +5,10 @@ namespace DTasks.Inspection;
 
 internal readonly struct StateMachineDescriptor
 {
+    private const string AwaiterFieldPrefix = "<>u";
+    private const string StateFieldName = "<>1__state";
+    private const string BuilderFieldName = "<>t__builder";
+
     private readonly IEnumerable<FieldInfo> _fields;
 
     private StateMachineDescriptor(Type type, ConstructorInfo? constructor, IEnumerable<FieldInfo> fields)
@@ -30,16 +34,15 @@ internal readonly struct StateMachineDescriptor
     public FieldInfo BuilderField => _fields.First(IsBuilderField);
 
     private static bool IsUserField(FieldInfo field) =>
-        !field.Name.StartsWith("<>u") &&
-        !field.Name.StartsWith("<>4") &&
+        !field.Name.StartsWith(AwaiterFieldPrefix) &&
         !IsStateField(field) &&
         !IsBuilderField(field);
 
-    private static bool IsAwaiterField(FieldInfo field) => field.Name.StartsWith("<>u") && IsDTaskAwaiterType(field.FieldType);
+    private static bool IsAwaiterField(FieldInfo field) => field.Name.StartsWith(AwaiterFieldPrefix) && IsDTaskAwaiterType(field.FieldType);
 
-    private static bool IsStateField(FieldInfo field) => field.Name == "<>1__state";
+    private static bool IsStateField(FieldInfo field) => field.Name == StateFieldName;
 
-    private static bool IsBuilderField(FieldInfo field) => field.Name == "<>t__builder";
+    private static bool IsBuilderField(FieldInfo field) => field.Name == BuilderFieldName;
 
     private static bool IsDTaskAwaiterType(Type awaiterType) =>
         awaiterType == typeof(DTask.Awaiter) ||

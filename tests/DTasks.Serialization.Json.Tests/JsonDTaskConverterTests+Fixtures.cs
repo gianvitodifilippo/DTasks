@@ -23,7 +23,7 @@ public partial class JsonDTaskConverterTests
         static extern ref Dictionary<object, string> Impl(DTaskReferenceResolver resolver);
     }
 
-    private static readonly Type _stateMachineType;
+    private static readonly Type s_stateMachineType;
 
     static JsonDTaskConverterTests()
     {
@@ -35,7 +35,7 @@ public partial class JsonDTaskConverterTests
         StateMachineAttribute? attribute = method.GetCustomAttribute<StateMachineAttribute>();
         Debug.Assert(attribute is not null);
 
-        _stateMachineType = attribute.StateMachineType;
+        s_stateMachineType = attribute.StateMachineType;
     }
 
     public static class AsyncMethodContainer

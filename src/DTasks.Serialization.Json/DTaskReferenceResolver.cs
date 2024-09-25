@@ -35,13 +35,13 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
                 if (scope.TryGetReferenceToken(reference, out object? token))
                 {
                     writer.WriteString(IdKeyUtf8, id);
-                    writer.WriteString(TypeKeyUtf8, token.GetType().AssemblyQualifiedName); // TODO: Use a resolver
+                    writer.WriteString(TypeKeyUtf8, token.GetType().AssemblyQualifiedName);
                     writer.WritePropertyName(ValueKeyUtf8);
                     JsonSerializer.Serialize(writer, token, rootOptions);
                 }
                 else
                 {
-                    writer.WriteString(TypeKeyUtf8, reference.GetType().AssemblyQualifiedName); // TODO: Use a resolver
+                    writer.WriteString(TypeKeyUtf8, reference.GetType().AssemblyQualifiedName);
                     writer.WritePropertyName(ValueKeyUtf8);
                     JsonSerializer.Serialize(writer, reference, options);
                 }
@@ -114,7 +114,7 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
             if (typeId is null)
                 throw InvalidJsonHeap();
 
-            return Type.GetType(typeId, throwOnError: true)!; // TODO: Use a resolver
+            return Type.GetType(typeId, throwOnError: true)!;
         }
 
         static void MoveToValue(ref Utf8JsonReader reader)
