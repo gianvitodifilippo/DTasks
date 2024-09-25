@@ -12,7 +12,7 @@ internal sealed class DAsyncServiceRegisterBuilder : IDAsyncServiceRegisterBuild
     {
         Debug.Assert(!_types.Contains(serviceType), $"'{serviceType.Name}' was already registered as a d-async service.");
 
-        ServiceTypeId id = new(_idsToTypes.Count.ToString()); // TODO: We should use a more robust id generation strategy
+        ServiceTypeId id = new(_idsToTypes.Count.ToString());
 
         _types.Add(serviceType);
         _idsToTypes.Add(id, serviceType);

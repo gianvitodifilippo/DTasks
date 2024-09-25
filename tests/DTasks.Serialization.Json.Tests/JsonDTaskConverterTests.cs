@@ -225,11 +225,11 @@ public partial class JsonDTaskConverterTests
     {
         // Act
         StateMachineInspector inspector = JsonDTaskConverter.CreateInspector();
-        Delegate suspender = inspector.GetSuspender(_stateMachineType);
-        Delegate resumer = inspector.GetResumer(_stateMachineType);
+        Delegate suspender = inspector.GetSuspender(s_stateMachineType);
+        Delegate resumer = inspector.GetResumer(s_stateMachineType);
 
         // Assert
-        suspender.Should().BeOfType(typeof(DTaskSuspender<>).MakeGenericType(_stateMachineType));
+        suspender.Should().BeOfType(typeof(DTaskSuspender<>).MakeGenericType(s_stateMachineType));
         resumer.Should().BeOfType<DTaskResumer>();
     }
 }

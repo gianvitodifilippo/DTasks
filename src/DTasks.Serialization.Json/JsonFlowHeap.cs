@@ -41,7 +41,7 @@ public struct JsonFlowHeap : IFlowHeap
 
     internal static JsonFlowHeap Create(IDTaskScope scope, JsonSerializerOptions rootOptions)
     {
-        ArrayBufferWriter<byte> buffer = new(); // TODO: For now we naively allocate a buffer each time
+        ArrayBufferWriter<byte> buffer = new();
         Utf8JsonWriter writer = new(buffer, new JsonWriterOptions
         {
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,

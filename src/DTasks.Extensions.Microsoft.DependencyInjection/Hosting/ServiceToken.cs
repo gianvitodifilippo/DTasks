@@ -2,8 +2,6 @@
 
 internal class ServiceToken
 {
-    protected ServiceToken() { }
-
     public string? TypeId { get; set; }
 
 

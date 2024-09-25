@@ -5,10 +5,10 @@ namespace DTasks.Storage.StackExchangeRedis;
 
 public class RedisDTaskStorageTests
 {
-    private static readonly string _flowId = "flowId";
-    private static readonly byte[] _stateMachine1Bytes = [1, 2, 3];
-    private static readonly byte[] _stateMachine2Bytes = [4, 5, 6];
-    private static readonly byte[] _heapBytes = [7, 8, 9];
+    private static readonly string s_flowId = "flowId";
+    private static readonly byte[] s_stateMachine1Bytes = [1, 2, 3];
+    private static readonly byte[] s_stateMachine2Bytes = [4, 5, 6];
+    private static readonly byte[] s_heapBytes = [7, 8, 9];
 
     private readonly IDatabase _database;
     private readonly RedisDTaskStorage _sut;
@@ -26,14 +26,14 @@ public class RedisDTaskStorageTests
         RedisFlowStack stack = _sut.CreateStack();
 
         // Act
-        stack.PushStateMachine(_stateMachine1Bytes);
-        stack.PushStateMachine(_stateMachine2Bytes);
+        stack.PushStateMachine(s_stateMachine1Bytes);
+        stack.PushStateMachine(s_stateMachine2Bytes);
         ReadOnlySpan<byte> popped1 = stack.PopStateMachine(out bool hasNext1);
         ReadOnlySpan<byte> popped2 = stack.PopStateMachine(out bool hasNext2);
 
         // Assert
-        popped1.Should().BeEquivalentTo(_stateMachine2Bytes);
-        popped2.Should().BeEquivalentTo(_stateMachine1Bytes);
+        popped1.Should().BeEquivalentTo(s_stateMachine2Bytes);
+        popped2.Should().BeEquivalentTo(s_stateMachine1Bytes);
         hasNext1.Should().BeTrue();
         hasNext2.Should().BeFalse();
     }
@@ -45,14 +45,14 @@ public class RedisDTaskStorageTests
         RedisFlowStack stack = _sut.CreateStack();
 
         // Act
-        stack.PushStateMachine(_stateMachine1Bytes);
-        stack.PushHeap(_heapBytes);
+        stack.PushStateMachine(s_stateMachine1Bytes);
+        stack.PushHeap(s_heapBytes);
         ReadOnlySpan<byte> popped1 = stack.PopHeap();
         ReadOnlySpan<byte> popped2 = stack.PopStateMachine(out _);
 
         // Assert
-        popped1.Should().BeEquivalentTo(_heapBytes);
-        popped2.Should().BeEquivalentTo(_stateMachine1Bytes);
+        popped1.Should().BeEquivalentTo(s_heapBytes);
+        popped2.Should().BeEquivalentTo(s_stateMachine1Bytes);
     }
 
     [Fact]
@@ -73,8 +73,8 @@ public class RedisDTaskStorageTests
     {
         // Arrange
         RedisFlowStack stack = _sut.CreateStack();
-        stack.PushStateMachine(_stateMachine1Bytes);
-        stack.PushHeap(_heapBytes);
+        stack.PushStateMachine(s_stateMachine1Bytes);
+        stack.PushHeap(s_heapBytes);
 
         // Act
         Action act = () => stack.PopStateMachine(out _);
@@ -88,11 +88,11 @@ public class RedisDTaskStorageTests
     {
         // Arrange
         RedisFlowStack stack = _sut.CreateStack();
-        stack.PushStateMachine(_stateMachine1Bytes);
-        stack.PushHeap(_heapBytes);
+        stack.PushStateMachine(s_stateMachine1Bytes);
+        stack.PushHeap(s_heapBytes);
 
         // Act
-        Action act = () => stack.PushStateMachine(_stateMachine2Bytes);
+        Action act = () => stack.PushStateMachine(s_stateMachine2Bytes);
 
         // Assert
         act.Should().ThrowExactly<InvalidOperationException>();
@@ -105,7 +105,7 @@ public class RedisDTaskStorageTests
         RedisFlowStack stack = _sut.CreateStack();
 
         // Act
-        Action act = () => stack.PushHeap(_heapBytes);
+        Action act = () => stack.PushHeap(s_heapBytes);
 
         // Assert
         act.Should().ThrowExactly<InvalidOperationException>();
@@ -116,11 +116,11 @@ public class RedisDTaskStorageTests
     {
         // Arrange
         RedisFlowStack stack = _sut.CreateStack();
-        stack.PushStateMachine(_stateMachine1Bytes);
-        stack.PushHeap(_heapBytes);
+        stack.PushStateMachine(s_stateMachine1Bytes);
+        stack.PushHeap(s_heapBytes);
 
         // Act
-        Action act = () => stack.PushHeap(_heapBytes);
+        Action act = () => stack.PushHeap(s_heapBytes);
 
         // Assert
         act.Should().ThrowExactly<InvalidOperationException>();
@@ -131,7 +131,7 @@ public class RedisDTaskStorageTests
     {
         // Arrange
         RedisFlowStack stack = _sut.CreateStack();
-        stack.PushStateMachine(_stateMachine1Bytes);
+        stack.PushStateMachine(s_stateMachine1Bytes);
 
         // Act
         Action act = () => stack.PopHeap();
@@ -147,16 +147,17 @@ public class RedisDTaskStorageTests
         RedisFlowStack stack = CreateInitializedStack();
 
         // Act
-        await _sut.SaveStackAsync(_flowId, ref stack);
+        await _sut.SaveStackAsync(s_flowId, ref stack);
 
         // Assert
-        await _database.Received(1).HashSetAsync(
-            key: _flowId,
-            hashFields: Arg.Is<HashEntry[]>(entries =>
-                entries.Length == 3 &&
-                entries[0].Value == _heapBytes &&
-                entries[1].Value == _stateMachine2Bytes &&
-                entries[2].Value == _stateMachine1Bytes),
+        await _database.Received(1).ListRightPushAsync(
+            key: s_flowId,
+            values: Arg.Is<RedisValue[]>(items =>
+                items.Length == 3 &&
+                items[0] == s_stateMachine1Bytes &&
+                items[1] == s_stateMachine2Bytes &&
+                items[2] == s_heapBytes),
+            when: When.Always,
             flags: Arg.Any<CommandFlags>());
     }
 
@@ -167,7 +168,7 @@ public class RedisDTaskStorageTests
         RedisFlowStack stack = _sut.CreateStack();
 
         // Act
-        Func<Task> act = () => _sut.SaveStackAsync(_flowId, ref stack);
+        Func<Task> act = () => _sut.SaveStackAsync(s_flowId, ref stack);
 
         // Assert
         await act.Should().ThrowExactlyAsync<InvalidOperationException>();
@@ -178,10 +179,10 @@ public class RedisDTaskStorageTests
     {
         // Arrange
         RedisFlowStack stack = CreateInitializedStack();
-        await _sut.SaveStackAsync(_flowId, ref stack);
+        await _sut.SaveStackAsync(s_flowId, ref stack);
 
         // Act
-        Func<Task> act = () => _sut.SaveStackAsync(_flowId, ref stack);
+        Func<Task> act = () => _sut.SaveStackAsync(s_flowId, ref stack);
 
         // Assert
         await act.Should().ThrowExactlyAsync<ObjectDisposedException>();
@@ -191,21 +192,21 @@ public class RedisDTaskStorageTests
     public async Task LoadStackAsync_RestoresStack()
     {
         // Arrange
-        HashEntry[] entries = CreateEntries();
+        RedisValue[] items = CreateItems();
         _database
-            .HashGetAllAsync(_flowId, CommandFlags.None)
-            .Returns(Task.FromResult(entries));
+            .ListRangeAsync(s_flowId)
+            .Returns(Task.FromResult(items));
 
         // Act
-        RedisFlowStack stack = await _sut.LoadStackAsync(_flowId);
+        RedisFlowStack stack = await _sut.LoadStackAsync(s_flowId);
         ReadOnlySpan<byte> poppedHeap = stack.PopHeap();
         ReadOnlySpan<byte> popped1 = stack.PopStateMachine(out bool hasNext1);
         ReadOnlySpan<byte> popped2 = stack.PopStateMachine(out bool hasNext2);
 
         // Assert
-        poppedHeap.Should().BeEquivalentTo(_heapBytes);
-        popped1.Should().BeEquivalentTo(_stateMachine2Bytes);
-        popped2.Should().BeEquivalentTo(_stateMachine1Bytes);
+        poppedHeap.Should().BeEquivalentTo(s_heapBytes);
+        popped1.Should().BeEquivalentTo(s_stateMachine2Bytes);
+        popped2.Should().BeEquivalentTo(s_stateMachine1Bytes);
         hasNext1.Should().BeTrue();
         hasNext2.Should().BeFalse();
     }
@@ -214,61 +215,27 @@ public class RedisDTaskStorageTests
     public async Task LoadStackAsync_Throws_EntriesContainsLessThanTwoElements()
     {
         // Arrange
-        HashEntry[] entries = CreateEntries();
-        entries = [entries[0]];
+        RedisValue[] items = CreateItems();
+        items = [items[0]];
         _database
-            .HashGetAllAsync(_flowId, CommandFlags.None)
-            .Returns(Task.FromResult(entries));
+            .ListRangeAsync(s_flowId)
+            .Returns(Task.FromResult(items));
 
         // Act
-        Func<Task> act = () => _sut.LoadStackAsync(_flowId);
+        Func<Task> act = () => _sut.LoadStackAsync(s_flowId);
 
         // Assert
-        (await act.Should().ThrowExactlyAsync<CorruptedDFlowException>()).Which.FlowId.Should().Be(_flowId);
-    }
-
-    [Fact]
-    public async Task LoadStackAsync_Throws_WhenHeapNameIsInvalid()
-    {
-        // Arrange
-        HashEntry[] entries = CreateEntries();
-        entries[0] = new HashEntry(name: "invalid", value: entries[0].Value);
-        _database
-            .HashGetAllAsync(_flowId, CommandFlags.None)
-            .Returns(Task.FromResult(entries));
-
-        // Act
-        Func<Task> act = () => _sut.LoadStackAsync(_flowId);
-
-        // Assert
-        (await act.Should().ThrowExactlyAsync<CorruptedDFlowException>()).Which.FlowId.Should().Be(_flowId);
-    }
-
-    [Fact]
-    public async Task LoadStackAsync_Throws_WhenStateMachineNameIsInvalid()
-    {
-        // Arrange
-        HashEntry[] entries = CreateEntries();
-        entries[1] = new HashEntry(name: "invalid", value: entries[1].Value);
-        _database
-            .HashGetAllAsync(_flowId, CommandFlags.None)
-            .Returns(Task.FromResult(entries));
-
-        // Act
-        Func<Task> act = () => _sut.LoadStackAsync(_flowId);
-
-        // Assert
-        (await act.Should().ThrowExactlyAsync<CorruptedDFlowException>()).Which.FlowId.Should().Be(_flowId);
+        (await act.Should().ThrowExactlyAsync<CorruptedDFlowException>()).Which.FlowId.Should().Be(s_flowId);
     }
 
     private RedisFlowStack CreateInitializedStack()
     {
         RedisFlowStack stack = _sut.CreateStack();
-        stack.PushStateMachine(_stateMachine1Bytes);
-        stack.PushStateMachine(_stateMachine2Bytes);
-        stack.PushHeap(_heapBytes);
+        stack.PushStateMachine(s_stateMachine1Bytes);
+        stack.PushStateMachine(s_stateMachine2Bytes);
+        stack.PushHeap(s_heapBytes);
         return stack;
     }
 
-    private HashEntry[] CreateEntries() => CreateInitializedStack().ToArrayAndDispose();
+    private RedisValue[] CreateItems() => CreateInitializedStack().ToArrayAndDispose();
 }

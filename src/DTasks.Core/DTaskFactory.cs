@@ -4,7 +4,7 @@ namespace DTasks;
 
 public sealed class DTaskFactory
 {
-    public static readonly DTaskFactory Instance = new();
+    internal static readonly DTaskFactory Instance = new();
 
     private DTaskFactory() { }
 

@@ -19,9 +19,9 @@ public class InspectionTests
         // Arrange
         int expectedNumberOfCalls =
 #if DEBUG
-            7;
+            8;
 #else
-            5;
+            6;
 #endif
         var resultTask = Substitute.For<DTask>();
         var constructor = Substitute.For<IStateMachineConstructor>();
@@ -40,13 +40,14 @@ public class InspectionTests
             .Returns(true);
 
         // Act
-        DTask task = resumer.Invoke(resultTask, constructor);
+        _ = resumer.Invoke(resultTask, constructor);
 
         // Assert
         constructor.ReceivedCalls().Should().HaveCount(expectedNumberOfCalls);
         Received.InOrder(() =>
         {
             constructor.HandleField("arg", ref Arg.Any<MyType>());
+            constructor.HandleField("<>4__this", ref Arg.Any<AsyncMethodContainer>());
             constructor.HandleField(LocalFieldName, ref Arg.Any<string>());
 #if DEBUG
             constructor.HandleField("<result>5__2", ref Arg.Any<int>());
@@ -64,9 +65,9 @@ public class InspectionTests
         // Arrange
         int expectedNumberOfCalls =
 #if DEBUG
-            6;
+            7;
 #else
-            4;
+            5;
 #endif
         var info = Substitute.For<IStateMachineInfo>();
         var deconstructor = Substitute.For<IStateMachineDeconstructor>();
@@ -84,6 +85,7 @@ public class InspectionTests
         Received.InOrder(() =>
         {
             deconstructor.HandleField("arg", arg);
+            deconstructor.HandleField("<>4__this", Arg.Any<AsyncMethodContainer>());
             deconstructor.HandleField(LocalFieldName, Arg.Any<string>());
 #if DEBUG
             deconstructor.HandleField("<result>5__2", Arg.Any<int>());

@@ -16,7 +16,7 @@ public abstract class DTask
 
     internal bool IsRunning => Status is DTaskStatus.Running;
 
-    internal bool IsCompleted => Status is DTaskStatus.RanToCompletion; // TODO: or faulted or canceled
+    internal bool IsCompleted => Status is DTaskStatus.RanToCompletion;
 
     internal bool IsSuspended => Status is DTaskStatus.Suspended;
 
@@ -51,7 +51,6 @@ public abstract class DTask
 
     public static DTask Delay(TimeSpan delay) => new DelayDTask(delay);
 
-    // TODO: Create a dedicated exception type
     private protected void EnsureCompleted()
     {
         if (!IsCompleted)
@@ -120,7 +119,7 @@ public abstract class DTask
             _task = task;
         }
 
-        public Task<bool> IsCompletedAsync() // TODO: We might split this into a method which completes the underlying task and a property (IsCompleted) which checks whether the task is completed
+        public Task<bool> IsCompletedAsync()
         {
             return _task.UnderlyingTask;
         }

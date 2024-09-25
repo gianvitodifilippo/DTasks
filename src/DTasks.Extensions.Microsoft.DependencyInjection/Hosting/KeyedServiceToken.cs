@@ -4,8 +4,6 @@ namespace DTasks.Extensions.Microsoft.DependencyInjection.Hosting;
 
 internal class KeyedServiceToken<TKey> : ServiceToken, IKeyedServiceToken
 {
-    protected KeyedServiceToken() { }
-
     public TKey? Key { get; set; }
 
     object? IKeyedServiceToken.Key

@@ -6,7 +6,7 @@ public partial class DTasksServiceConfigurationTests
     {
         DTask MyMethodDAsync();
     }
-    
+
     private interface IServiceWithoutDTaskMethods
     {
         Task MyMethodAsync();

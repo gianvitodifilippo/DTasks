@@ -13,17 +13,17 @@ public sealed class RedisDTaskStorage(IDatabase database) : IDTaskStorage<RedisF
         where TFlowId : notnull
     {
         RedisKey key = flowId.ToString();
-        HashEntry[] entries = await database.HashGetAllAsync(key);
+        RedisValue[] items = await database.ListRangeAsync(key);
 
-        return RedisFlowStack.Restore(flowId, entries);
+        return RedisFlowStack.Restore(flowId, items);
     }
 
     public Task SaveStackAsync<TFlowId>(TFlowId flowId, ref RedisFlowStack stack, CancellationToken cancellationToken = default)
         where TFlowId : notnull
     {
         RedisKey key = flowId.ToString();
-        HashEntry[] entries = stack.ToArrayAndDispose();
+        RedisValue[] items = stack.ToArrayAndDispose();
 
-        return database.HashSetAsync(key, entries);
+        return database.ListRightPushAsync(key, items);
     }
 }
