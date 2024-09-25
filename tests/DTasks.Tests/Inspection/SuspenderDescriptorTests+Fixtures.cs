@@ -1,4 +1,6 @@
-﻿namespace DTasks.Inspection;
+﻿using DTasks.Hosting;
+
+namespace DTasks.Inspection;
 
 public partial class SuspenderDescriptorTests
 {
