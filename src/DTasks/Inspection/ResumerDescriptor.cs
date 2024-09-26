@@ -40,7 +40,7 @@ internal sealed class ResumerDescriptor : IResumerDescriptor
         Type constructorType = constructorParameter.ParameterType;
         if (constructorType.IsByRef)
         {
-            constructorType = constructorType.GetElementType();
+            constructorType = constructorType.GetElementType()!;
         }
 
         if (!Inspection.ConstructorDescriptor.TryCreate(constructorType, out ConstructorDescriptor? constructorDescriptor))

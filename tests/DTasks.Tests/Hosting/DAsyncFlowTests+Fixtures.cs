@@ -1,5 +1,7 @@
 ﻿using DTasks.Inspection;
 using System.Runtime.InteropServices;
+using System.Text;
+using Xunit.Sdk;
 using static DTasks.Hosting.HostingFixtures;
 
 namespace DTasks.Hosting;
@@ -8,19 +10,18 @@ public partial class DAsyncFlowTests
 {
     public class FakeFlowStack : TestFlowStack
     {
+        private static readonly EquatableArray<byte> s_emptyArray = new([]);
+
         private readonly Stack<EquatableArray<byte>> _stack = [];
 
-        public override EquatableArray<byte> PopHeap() => Array.Empty<byte>();
-
-        public override void PushHeap(EquatableArray<byte> bytes) { }
-
-        public override EquatableArray<byte> PopStateMachine(out bool hasNext)
+        public override ValueTask<EquatableArray<byte>> PopAsync(CancellationToken cancellationToken)
         {
-            hasNext = _stack.Count > 1;
-            return _stack.Pop();
+            return ValueTask.FromResult(_stack.TryPop(out EquatableArray<byte>? bytes)
+                ? bytes
+                : s_emptyArray);
         }
 
-        public override void PushStateMachine(EquatableArray<byte> bytes)
+        public override void Push(EquatableArray<byte> bytes)
         {
             _stack.Push(bytes);
         }
@@ -30,16 +31,14 @@ public partial class DAsyncFlowTests
     {
         private readonly Dictionary<object, TestFlowStack> _stacks = [];
 
-        public IReadOnlyDictionary<object, TestFlowStack> Stacks => _stacks;
-
         public override TestFlowStack CreateStack()
         {
             return new FakeFlowStack();
         }
 
-        public override Task<TestFlowStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken)
+        public override ValueTask<TestFlowStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_stacks[flowId]);
+            return ValueTask.FromResult(_stacks[flowId]);
         }
 
         public override Task SaveStackAsync<TFlowId>(TFlowId flowId, ref TestFlowStack stack, CancellationToken cancellationToken)
@@ -47,12 +46,24 @@ public partial class DAsyncFlowTests
             _stacks[flowId] = stack;
             return Task.CompletedTask;
         }
+
+        public override Task ClearStackAsync<TFlowId>(TFlowId flowId, ref TestFlowStack stack, CancellationToken cancellationToken = default)
+        {
+            bool exists = _stacks.Remove(flowId);
+            if (!exists)
+                FailException.ForFailure("Invalid flow id");
+
+            return Task.CompletedTask;
+        }
     }
 
     public class FakeDTaskConverter : TestDTaskConverter
     {
+        private static readonly EquatableArray<byte> s_heapBytes = Encoding.UTF8.GetBytes("heap");
+
         private readonly StateMachineInspector _inspector = StateMachineInspector.Create(typeof(TestSuspender<>), typeof(TestResumer));
         private readonly Dictionary<int, Dictionary<string, object?>> _stateMachines = [];
+        private readonly Dictionary<int, object?> _values = [];
         private int _counter = 0;
 
         public override TestFlowHeap CreateHeap(IDTaskScope scope)
@@ -62,6 +73,9 @@ public partial class DAsyncFlowTests
 
         public override TestFlowHeap DeserializeHeap<TFlowId>(TFlowId flowId, IDTaskScope scope, EquatableArray<byte> bytes)
         {
+            if (bytes != s_heapBytes)
+                throw FailException.ForFailure("Invalid heap bytes.");
+
             return Substitute.For<TestFlowHeap>();
         }
 
@@ -69,7 +83,7 @@ public partial class DAsyncFlowTests
         {
             int id = MemoryMarshal.Read<int>(bytes);
             if (!_stateMachines.Remove(id, out Dictionary<string, object?>? stateMachineDictionary))
-                throw new InvalidOperationException();
+                throw FailException.ForFailure("Invalid state machine bytes.");
 
             var stateMachineType = (Type)stateMachineDictionary["$type"]!;
             var constructor = new StateMachineConstructor(stateMachineDictionary);
@@ -78,9 +92,18 @@ public partial class DAsyncFlowTests
             return resumer(resultTask, constructor);
         }
 
+        public override T Deserialize<TFlowId, T>(TFlowId flowId, ref TestFlowHeap heap, EquatableArray<byte> bytes)
+        {
+            int id = MemoryMarshal.Read<int>(bytes);
+            if (!_values.Remove(id, out object? value))
+                throw FailException.ForFailure("Invalid value bytes.");
+
+            return (T)value!;
+        }
+
         public override EquatableArray<byte> SerializeHeap(ref TestFlowHeap heap)
         {
-            return Array.Empty<byte>();
+            return s_heapBytes;
         }
 
         public override EquatableArray<byte> SerializeStateMachine<TStateMachine>(ref TestFlowHeap heap, ref TStateMachine stateMachine, IStateMachineInfo info)
@@ -95,6 +118,16 @@ public partial class DAsyncFlowTests
             byte[] bytes = new byte[4];
             MemoryMarshal.Write(bytes, id);
             _stateMachines.Add(id, stateMachineDictionary);
+
+            return bytes;
+        }
+
+        public override EquatableArray<byte> Serialize<T>(ref TestFlowHeap heap, T value)
+        {
+            int id = ++_counter;
+            byte[] bytes = new byte[4];
+            MemoryMarshal.Write(bytes, id);
+            _values.Add(id, value);
 
             return bytes;
         }

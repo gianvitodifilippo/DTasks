@@ -91,7 +91,7 @@ internal sealed class DeconstructorDescriptor : IDeconstructorDescriptor
             handleStateMethod = null;
         }
 
-        handleStateMethod ??= handleFieldSpecializedMethods.TryGetValue(typeof(int), out MethodInfo onIntField)
+        handleStateMethod ??= handleFieldSpecializedMethods.TryGetValue(typeof(int), out MethodInfo? onIntField)
             ? onIntField
             : handleFieldMethod.MakeGenericMethod(typeof(int));
 

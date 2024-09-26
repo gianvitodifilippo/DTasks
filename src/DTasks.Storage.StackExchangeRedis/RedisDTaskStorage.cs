@@ -6,24 +6,45 @@ public sealed class RedisDTaskStorage(IDatabase database) : IDTaskStorage<RedisF
 {
     public RedisFlowStack CreateStack()
     {
-        return RedisFlowStack.Create();
+        Stack<ReadOnlyMemory<byte>> items = new();
+        return new RedisFlowStack(items);
     }
 
-    public async Task<RedisFlowStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken = default)
+    public async ValueTask<RedisFlowStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken = default)
         where TFlowId : notnull
     {
         RedisKey key = flowId.ToString();
-        RedisValue[] items = await database.ListRangeAsync(key);
+        RedisValue[] values = await database.ListRangeAsync(key);
 
-        return RedisFlowStack.Restore(flowId, items);
+        Stack<ReadOnlyMemory<byte>> items = new(values.Length);
+        foreach (RedisValue value in values)
+        {
+            items.Push(value);
+        }
+
+        return new RedisFlowStack(items);
     }
 
     public Task SaveStackAsync<TFlowId>(TFlowId flowId, ref RedisFlowStack stack, CancellationToken cancellationToken = default)
         where TFlowId : notnull
     {
-        RedisKey key = flowId.ToString();
-        RedisValue[] items = stack.ToArrayAndDispose();
+        Stack<ReadOnlyMemory<byte>> items = stack.Items;
+        int count = items.Count;
 
-        return database.ListRightPushAsync(key, items);
+        RedisKey key = flowId.ToString();
+        RedisValue[] values = new RedisValue[count];
+
+        for (int i = 0; i < count; i++)
+        {
+            values[i] = items.Pop();
+        }
+
+        return database.ListRightPushAsync(key, values);
+    }
+
+    public Task ClearStackAsync<TFlowId>(TFlowId flowId, ref RedisFlowStack stack, CancellationToken cancellationToken = default) where TFlowId : notnull
+    {
+        RedisKey key = flowId.ToString();
+        return database.KeyDeleteAsync(key);
     }
 }

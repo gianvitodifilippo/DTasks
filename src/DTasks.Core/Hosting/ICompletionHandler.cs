@@ -2,7 +2,7 @@
 
 public interface ICompletionHandler
 {
-    Task OnCompletedAsync(CancellationToken cancellationToken);
+    Task OnCompletedAsync(CancellationToken cancellationToken = default);
 
-    Task OnCompletedAsync<TResult>(TResult result, CancellationToken cancellationToken);
+    Task OnCompletedAsync<TResult>(TResult result, CancellationToken cancellationToken = default);
 }

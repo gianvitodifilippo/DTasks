@@ -83,5 +83,25 @@ public sealed class JsonDTaskConverter(
         }
     }
 
+    public ReadOnlyMemory<byte> Serialize<T>(ref JsonFlowHeap heap, T value)
+    {
+        JsonSerializer.Serialize(heap.Writer, value, options);
+
+        return heap.GetWrittenMemoryAndAdvance();
+    }
+
+    public T Deserialize<TFlowId, T>(TFlowId flowId, ref JsonFlowHeap heap, ReadOnlySpan<byte> bytes)
+        where TFlowId : notnull
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<T>(bytes, options)!;
+        }
+        catch (JsonException ex)
+        {
+            throw new CorruptedDFlowException(flowId, ex);
+        }
+    }
+
     public static StateMachineInspector CreateInspector() => StateMachineInspector.Create(typeof(DTaskSuspender<>), typeof(DTaskResumer));
 }

@@ -57,20 +57,20 @@ public partial class DAsyncFlowTests
             return DTask.Factory.Suspend<DateTime>((id, ct) => Task.CompletedTask);
         }
 
-        var suspensionScope = Substitute.For<IDTaskScope>();
-        var resumptionScope = Substitute.For<IDTaskScope>();
+        var scope = Substitute.For<IDTaskScope>();
         string flowId = "flowId";
+        var context = new TestFlowContext();
         DateTime date = DateTime.Now;
         DTask task = ProcessFileDAsync("http://dtasks.com");
 
         // Act
         var awaiter = task.GetDAwaiter();
         await awaiter.IsCompletedAsync();
-        await _sut.SuspendAsync(flowId, suspensionScope, awaiter);
+        await _sut.SuspendAsync(flowId, context, scope, awaiter);
 
-        await _sut.ResumeAsync(flowId, resumptionScope);
-        await _sut.ResumeAsync(flowId, resumptionScope, date);
-        await _sut.ResumeAsync(flowId, resumptionScope);
+        await _sut.ResumeAsync(flowId, scope);
+        await _sut.ResumeAsync(flowId, scope, date);
+        await _sut.ResumeAsync(flowId, scope);
 
         // Assert
         await _sut.Received().OnDelayAsync_Public(flowId, TimeSpan.FromSeconds(1), Arg.Any<CancellationToken>());
@@ -78,6 +78,7 @@ public partial class DAsyncFlowTests
         await _sut.Received().OnYieldAsync_Public(flowId, Arg.Any<CancellationToken>());
         await _sut.Received().OnCompletedAsync_Public(
             flowId,
+            context,
             Arg.Is<FileData>(data => data.FeatureCount == 27 && data.Signature == "signed with mytoken" && data.Date == date),
             Arg.Any<CancellationToken>());
     }

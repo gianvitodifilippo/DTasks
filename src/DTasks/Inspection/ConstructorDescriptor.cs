@@ -78,7 +78,7 @@ internal sealed class ConstructorDescriptor : IConstructorDescriptor
             if (!secondParam.ParameterType.IsByRef)
                 continue;
 
-            handleFieldSpecializedMethods.Add(secondParam.ParameterType.GetElementType(), method);
+            handleFieldSpecializedMethods.Add(secondParam.ParameterType.GetElementType()!, method);
         }
 
         MethodInfo? handleStateMethod = deconstructorType.GetMethod(
@@ -91,7 +91,7 @@ internal sealed class ConstructorDescriptor : IConstructorDescriptor
             handleStateMethod = null;
         }
 
-        handleStateMethod ??= handleFieldSpecializedMethods.TryGetValue(typeof(int), out MethodInfo onIntField)
+        handleStateMethod ??= handleFieldSpecializedMethods.TryGetValue(typeof(int), out MethodInfo? onIntField)
             ? onIntField
             : handleFieldMethod.MakeGenericMethod(typeof(int));
 
