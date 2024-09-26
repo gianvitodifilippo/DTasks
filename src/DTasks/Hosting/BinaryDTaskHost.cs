@@ -7,14 +7,9 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowI
     where TFlowId : notnull
     where TStack : IFlowStack
 {
-    private readonly IDTaskStorage<TStack> _storage;
-    private readonly IDTaskConverter<THeap> _converter;
+    protected abstract IDTaskStorage<TStack> Storage { get; }
 
-    public BinaryDTaskHost(IDTaskStorage<TStack> storage, IDTaskConverter<THeap> converter)
-    {
-        _storage = storage;
-        _converter = converter;
-    }
+    protected abstract IDTaskConverter<THeap> Converter { get; }
 
     protected abstract Task OnSuspendedAsync(TFlowId flowId, ISuspensionCallback callback, CancellationToken cancellationToken);
 
@@ -45,26 +40,26 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowI
 
         public async Task SuspendAsync(IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
         {
-            _stack = host._storage.CreateStack();
-            _heap = host._converter.CreateHeap(scope);
+            _stack = host.Storage.CreateStack();
+            _heap = host.Converter.CreateHeap(scope);
 
             awaiter.SaveState(ref this);
 
-            ReadOnlyMemory<byte> bytes = host._converter.SerializeHeap(ref _heap);
+            ReadOnlyMemory<byte> bytes = host.Converter.SerializeHeap(ref _heap);
             _stack.Push(bytes);
 
-            await host._storage.SaveStackAsync(flowId, ref _stack, cancellationToken);
+            await host.Storage.SaveStackAsync(flowId, ref _stack, cancellationToken);
             await awaiter.SuspendAsync(ref this, cancellationToken);
         }
 
         public async Task ResumeAsync(IDTaskScope scope, DTask resultTask, CancellationToken cancellationToken)
         {
-            _stack = await host._storage.LoadStackAsync(flowId, cancellationToken);
+            _stack = await host.Storage.LoadStackAsync(flowId, cancellationToken);
             ReadOnlyMemory<byte> heapBytes = await _stack.PopAsync(cancellationToken);
             if (heapBytes.IsEmpty)
                 throw new CorruptedDFlowException(flowId, $"Data relative to d-async flow '{flowId}' was missing or corrupted.");
 
-            _heap = host._converter.DeserializeHeap(flowId, scope, heapBytes.Span);
+            _heap = host.Converter.DeserializeHeap(flowId, scope, heapBytes.Span);
 
             DTask.DAwaiter awaiter = default;
             bool hasAwaiter = false;
@@ -75,21 +70,20 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowI
                 {
                     if (!hasAwaiter)
                         throw new CorruptedDFlowException(flowId, $"Data relative to d-async flow '{flowId}' was missing or corrupted.");
-
                     break;
                 }
 
-                resultTask = host._converter.DeserializeStateMachine(flowId, ref _heap, stateMachineBytes.Span, resultTask);
+                resultTask = host.Converter.DeserializeStateMachine(flowId, ref _heap, stateMachineBytes.Span, resultTask);
                 awaiter = resultTask.GetDAwaiter();
 
                 if (!await awaiter.IsCompletedAsync())
                 {
                     awaiter.SaveState(ref this);
 
-                    ReadOnlyMemory<byte> bytes = host._converter.SerializeHeap(ref _heap);
+                    ReadOnlyMemory<byte> bytes = host.Converter.SerializeHeap(ref _heap);
                     _stack.Push(bytes);
 
-                    await host._storage.SaveStackAsync(flowId, ref _stack, cancellationToken);
+                    await host.Storage.SaveStackAsync(flowId, ref _stack, cancellationToken);
                     await awaiter.SuspendAsync(ref this, cancellationToken);
                     return;
                 }
@@ -102,7 +96,7 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowI
 
         void IStateHandler.SaveStateMachine<TStateMachine>(ref TStateMachine stateMachine, IStateMachineInfo info)
         {
-            ReadOnlyMemory<byte> bytes = host._converter.SerializeStateMachine(ref _heap, ref stateMachine, info);
+            ReadOnlyMemory<byte> bytes = host.Converter.SerializeStateMachine(ref _heap, ref stateMachine, info);
             _stack.Push(bytes);
         }
 

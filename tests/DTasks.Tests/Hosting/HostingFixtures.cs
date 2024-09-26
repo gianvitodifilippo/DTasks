@@ -6,8 +6,12 @@ namespace DTasks.Hosting;
 public static class HostingFixtures
 {
     // The purpose of this class is to forward calls to public methods, which can be verified
-    public abstract class TestBinaryDTaskHost(TestDTaskStorage storage, TestDTaskConverter converter) : BinaryDTaskHost<string, TestFlowStack, TestFlowHeap>(storage, converter)
+    public abstract class TestBinaryDTaskHost(TestDTaskStorage storage, TestDTaskConverter converter) : BinaryDTaskHost<string, TestFlowStack, TestFlowHeap>
     {
+        protected sealed override IDTaskStorage<TestFlowStack> Storage => storage;
+
+        protected sealed override IDTaskConverter<TestFlowHeap> Converter => converter;
+
         public abstract Task OnDelayAsync_Public(string flowId, TimeSpan delay, CancellationToken cancellationToken);
         public abstract Task OnCompletedAsync_Public(string flowId, CancellationToken cancellationToken);
         public abstract Task OnCompletedAsync_Public<TResult>(string flowId, TResult result, CancellationToken cancellationToken);
