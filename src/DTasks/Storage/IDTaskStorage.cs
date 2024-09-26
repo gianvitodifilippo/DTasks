@@ -10,4 +10,7 @@ public interface IDTaskStorage<TStack>
 
     Task SaveStackAsync<TFlowId>(TFlowId flowId, ref TStack stack, CancellationToken cancellationToken = default)
         where TFlowId : notnull;
+
+    Task ClearStackAsync<TFlowId>(TFlowId flowId, ref TStack stack, CancellationToken cancellationToken = default)
+        where TFlowId : notnull;
 }

@@ -1,5 +1,6 @@
 ﻿using DTasks.Inspection;
 using System.Runtime.InteropServices;
+using System.Text;
 using Xunit.Sdk;
 using static DTasks.Hosting.HostingFixtures;
 
@@ -30,8 +31,6 @@ public partial class DAsyncFlowTests
     {
         private readonly Dictionary<object, TestFlowStack> _stacks = [];
 
-        public IReadOnlyDictionary<object, TestFlowStack> Stacks => _stacks;
-
         public override TestFlowStack CreateStack()
         {
             return new FakeFlowStack();
@@ -47,14 +46,24 @@ public partial class DAsyncFlowTests
             _stacks[flowId] = stack;
             return Task.CompletedTask;
         }
+
+        public override Task ClearStackAsync<TFlowId>(TFlowId flowId, ref TestFlowStack stack, CancellationToken cancellationToken = default)
+        {
+            bool exists = _stacks.Remove(flowId);
+            if (!exists)
+                FailException.ForFailure("Invalid flow id");
+
+            return Task.CompletedTask;
+        }
     }
 
     public class FakeDTaskConverter : TestDTaskConverter
     {
-        private static readonly EquatableArray<byte> s_heapBytes = new byte[] { 0 };
+        private static readonly EquatableArray<byte> s_heapBytes = Encoding.UTF8.GetBytes("heap");
 
         private readonly StateMachineInspector _inspector = StateMachineInspector.Create(typeof(TestSuspender<>), typeof(TestResumer));
         private readonly Dictionary<int, Dictionary<string, object?>> _stateMachines = [];
+        private readonly Dictionary<int, object?> _values = [];
         private int _counter = 0;
 
         public override TestFlowHeap CreateHeap(IDTaskScope scope)
@@ -83,6 +92,15 @@ public partial class DAsyncFlowTests
             return resumer(resultTask, constructor);
         }
 
+        public override T Deserialize<TFlowId, T>(TFlowId flowId, ref TestFlowHeap heap, EquatableArray<byte> bytes)
+        {
+            int id = MemoryMarshal.Read<int>(bytes);
+            if (!_values.Remove(id, out object? value))
+                throw FailException.ForFailure("Invalid value bytes.");
+
+            return (T)value!;
+        }
+
         public override EquatableArray<byte> SerializeHeap(ref TestFlowHeap heap)
         {
             return s_heapBytes;
@@ -100,6 +118,16 @@ public partial class DAsyncFlowTests
             byte[] bytes = new byte[4];
             MemoryMarshal.Write(bytes, id);
             _stateMachines.Add(id, stateMachineDictionary);
+
+            return bytes;
+        }
+
+        public override EquatableArray<byte> Serialize<T>(ref TestFlowHeap heap, T value)
+        {
+            int id = ++_counter;
+            byte[] bytes = new byte[4];
+            MemoryMarshal.Write(bytes, id);
+            _values.Add(id, value);
 
             return bytes;
         }

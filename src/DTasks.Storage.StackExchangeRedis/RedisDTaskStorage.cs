@@ -41,4 +41,10 @@ public sealed class RedisDTaskStorage(IDatabase database) : IDTaskStorage<RedisF
 
         return database.ListRightPushAsync(key, values);
     }
+
+    public Task ClearStackAsync<TFlowId>(TFlowId flowId, ref RedisFlowStack stack, CancellationToken cancellationToken = default) where TFlowId : notnull
+    {
+        RedisKey key = flowId.ToString();
+        return database.KeyDeleteAsync(key);
+    }
 }
