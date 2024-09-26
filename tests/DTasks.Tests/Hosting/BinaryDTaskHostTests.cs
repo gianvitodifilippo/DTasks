@@ -76,6 +76,10 @@ public class BinaryDTaskHostTests
             .DeserializeStateMachine(s_flowId, ref _heap, s_stateMachine1Bytes, Arg.Is<DTask>(task => task.IsCompleted))
             .Returns(suspendedTask);
 
+        _converter
+            .SerializeHeap(ref _heap)
+            .Returns(s_heapBytes);
+
         _storage
             .LoadStackAsync(s_flowId, Arg.Any<CancellationToken>())
             .Returns(_stack);
