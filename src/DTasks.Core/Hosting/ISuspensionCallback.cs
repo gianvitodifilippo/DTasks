@@ -2,6 +2,6 @@
 
 public interface ISuspensionCallback
 {
-    Task OnSuspendedAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken)
+    Task OnSuspendedAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken = default)
         where TFlowId : notnull;
 }

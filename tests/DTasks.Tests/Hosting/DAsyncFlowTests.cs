@@ -57,8 +57,7 @@ public partial class DAsyncFlowTests
             return DTask.Factory.Suspend<DateTime>((id, ct) => Task.CompletedTask);
         }
 
-        var suspensionScope = Substitute.For<IDTaskScope>();
-        var resumptionScope = Substitute.For<IDTaskScope>();
+        var scope = Substitute.For<IDTaskScope>();
         string flowId = "flowId";
         DateTime date = DateTime.Now;
         DTask task = ProcessFileDAsync("http://dtasks.com");
@@ -66,11 +65,11 @@ public partial class DAsyncFlowTests
         // Act
         var awaiter = task.GetDAwaiter();
         await awaiter.IsCompletedAsync();
-        await _sut.SuspendAsync(flowId, suspensionScope, awaiter);
+        await _sut.SuspendAsync(flowId, scope, awaiter);
 
-        await _sut.ResumeAsync(flowId, resumptionScope);
-        await _sut.ResumeAsync(flowId, resumptionScope, date);
-        await _sut.ResumeAsync(flowId, resumptionScope);
+        await _sut.ResumeAsync(flowId, scope);
+        await _sut.ResumeAsync(flowId, scope, date);
+        await _sut.ResumeAsync(flowId, scope);
 
         // Assert
         await _sut.Received().OnDelayAsync_Public(flowId, TimeSpan.FromSeconds(1), Arg.Any<CancellationToken>());

@@ -3,7 +3,6 @@
 namespace DTasks.Serialization;
 
 public interface IDTaskConverter<THeap>
-    where THeap : IFlowHeap
 {
     THeap CreateHeap(IDTaskScope scope);
 

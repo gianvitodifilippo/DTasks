@@ -6,7 +6,6 @@ namespace DTasks.Hosting;
 public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowId>
     where TFlowId : notnull
     where TStack : IFlowStack
-    where THeap : IFlowHeap
 {
     private readonly IDTaskStorage<TStack> _storage;
     private readonly IDTaskConverter<THeap> _converter;
@@ -52,7 +51,7 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowI
             awaiter.SaveState(ref this);
 
             ReadOnlyMemory<byte> bytes = host._converter.SerializeHeap(ref _heap);
-            _stack.PushHeap(bytes);
+            _stack.Push(bytes);
 
             await host._storage.SaveStackAsync(flowId, ref _stack, cancellationToken);
             await awaiter.SuspendAsync(ref this, cancellationToken);
@@ -61,25 +60,42 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowI
         public async Task ResumeAsync(IDTaskScope scope, DTask resultTask, CancellationToken cancellationToken)
         {
             _stack = await host._storage.LoadStackAsync(flowId, cancellationToken);
-            ReadOnlySpan<byte> heapBytes = _stack.PopHeap();
-            _heap = host._converter.DeserializeHeap(flowId, scope, heapBytes);
+            ReadOnlyMemory<byte> heapBytes = await _stack.PopAsync(cancellationToken);
+            if (heapBytes.IsEmpty)
+                throw new CorruptedDFlowException(flowId, $"Data relative to d-async flow '{flowId}' was missing or corrupted.");
 
-            DTask.DAwaiter awaiter;
-            bool hasNext;
-            do
+            _heap = host._converter.DeserializeHeap(flowId, scope, heapBytes.Span);
+
+            DTask.DAwaiter awaiter = default;
+            bool hasAwaiter = false;
+            while (true)
             {
-                ReadOnlySpan<byte> stateMachineBytes = _stack.PopStateMachine(out hasNext);
-                resultTask = host._converter.DeserializeStateMachine(flowId, ref _heap, stateMachineBytes, resultTask);
+                ReadOnlyMemory<byte> stateMachineBytes = await _stack.PopAsync(cancellationToken);
+                if (stateMachineBytes.IsEmpty)
+                {
+                    if (!hasAwaiter)
+                        throw new CorruptedDFlowException(flowId, $"Data relative to d-async flow '{flowId}' was missing or corrupted.");
+
+                    break;
+                }
+
+                resultTask = host._converter.DeserializeStateMachine(flowId, ref _heap, stateMachineBytes.Span, resultTask);
                 awaiter = resultTask.GetDAwaiter();
 
                 if (!await awaiter.IsCompletedAsync())
                 {
                     awaiter.SaveState(ref this);
+                    
+                    ReadOnlyMemory<byte> bytes = host._converter.SerializeHeap(ref _heap);
+                    _stack.Push(bytes);
+
+                    await host._storage.SaveStackAsync(flowId, ref _stack, cancellationToken);
                     await awaiter.SuspendAsync(ref this, cancellationToken);
                     return;
                 }
+
+                hasAwaiter = true;
             }
-            while (hasNext);
 
             await awaiter.CompleteAsync(ref this, cancellationToken);
         }
@@ -87,7 +103,7 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowI
         void IStateHandler.SaveStateMachine<TStateMachine>(ref TStateMachine stateMachine, IStateMachineInfo info)
         {
             ReadOnlyMemory<byte> bytes = host._converter.SerializeStateMachine(ref _heap, ref stateMachine, info);
-            _stack.PushStateMachine(bytes);
+            _stack.Push(bytes);
         }
 
         readonly Task ISuspensionHandler.OnDelayAsync(TimeSpan delay, CancellationToken cancellationToken)

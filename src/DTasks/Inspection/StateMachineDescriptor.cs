@@ -22,7 +22,7 @@ internal readonly struct StateMachineDescriptor
 
     public ConstructorInfo? Constructor { get; }
 
-    [MemberNotNullWhen(true, nameof(Constructor))]
+    [MemberNotNullWhen(false, nameof(Constructor))]
     public bool IsValueType => Type.IsValueType;
 
     public IEnumerable<FieldInfo> UserFields => _fields.Where(IsUserField);

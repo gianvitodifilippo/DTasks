@@ -50,6 +50,10 @@ public static class HostingFixtures
 
         public override int GetHashCode() => _array.Length;
 
+        public static bool operator ==(EquatableArray<T> left, EquatableArray<T> right) => left.Equals(right);
+
+        public static bool operator !=(EquatableArray<T> left, EquatableArray<T> right) => !(left == right);
+
         public static implicit operator EquatableArray<T>(ReadOnlySpan<T> span) => new(span.ToArray());
 
         public static implicit operator EquatableArray<T>(ReadOnlyMemory<T> memory) => new(memory.ToArray());
@@ -63,30 +67,24 @@ public static class HostingFixtures
 
     public abstract class TestFlowStack : IFlowStack
     {
-        public abstract EquatableArray<byte> PopHeap();
+        public abstract ValueTask<EquatableArray<byte>> PopAsync(CancellationToken cancellationToken);
 
-        public abstract EquatableArray<byte> PopStateMachine(out bool hasNext);
+        public abstract void Push(EquatableArray<byte> bytes);
 
-        public abstract void PushHeap(EquatableArray<byte> bytes);
+        async ValueTask<ReadOnlyMemory<byte>> IFlowStack.PopAsync(CancellationToken cancellationToken)
+            => await PopAsync(cancellationToken);
 
-        public abstract void PushStateMachine(EquatableArray<byte> bytes);
-
-        ReadOnlySpan<byte> IFlowStack.PopHeap() => PopHeap();
-
-        ReadOnlySpan<byte> IFlowStack.PopStateMachine(out bool hasNext) => PopStateMachine(out hasNext);
-
-        void IFlowStack.PushHeap(ReadOnlyMemory<byte> bytes) => PushHeap(bytes);
-
-        void IFlowStack.PushStateMachine(ReadOnlyMemory<byte> bytes) => PushStateMachine(bytes);
+        void IFlowStack.Push(ReadOnlyMemory<byte> bytes)
+            => Push(bytes);
     }
 
-    public abstract class TestFlowHeap : IFlowHeap;
+    public abstract class TestFlowHeap;
 
     public abstract class TestDTaskStorage : IDTaskStorage<TestFlowStack>
     {
         public abstract TestFlowStack CreateStack();
 
-        public abstract Task<TestFlowStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken)
+        public abstract ValueTask<TestFlowStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken)
             where TFlowId : notnull;
 
         public abstract Task SaveStackAsync<TFlowId>(TFlowId flowId, ref TestFlowStack stack, CancellationToken cancellationToken)

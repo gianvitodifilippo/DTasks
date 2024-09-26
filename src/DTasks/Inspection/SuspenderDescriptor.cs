@@ -50,7 +50,7 @@ internal sealed class SuspenderDescriptor : ISuspenderDescriptor
         Type deconstructorType = deconstructorParameter.ParameterType;
         if (deconstructorType.IsByRef)
         {
-            deconstructorType = deconstructorType.GetElementType();
+            deconstructorType = deconstructorType.GetElementType()!;
         }
 
         if (!Inspection.DeconstructorDescriptor.TryCreate(deconstructorType, out DeconstructorDescriptor? deconstructorDescriptor))

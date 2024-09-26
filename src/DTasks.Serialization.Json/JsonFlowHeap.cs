@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace DTasks.Serialization.Json;
 
-public struct JsonFlowHeap : IFlowHeap
+public struct JsonFlowHeap
 {
     private readonly ArrayBufferWriter<byte> _buffer;
     private int _startIndex;
