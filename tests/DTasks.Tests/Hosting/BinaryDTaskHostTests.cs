@@ -1,5 +1,4 @@
-﻿using Xunit.Sdk;
-using static DTasks.Hosting.HostingFixtures;
+﻿using static DTasks.Hosting.HostingFixtures;
 
 namespace DTasks.Hosting;
 

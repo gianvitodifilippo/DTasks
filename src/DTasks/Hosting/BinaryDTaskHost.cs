@@ -85,7 +85,7 @@ public abstract class BinaryDTaskHost<TFlowId, TStack, THeap> : DTaskHost<TFlowI
                 if (!await awaiter.IsCompletedAsync())
                 {
                     awaiter.SaveState(ref this);
-                    
+
                     ReadOnlyMemory<byte> bytes = host._converter.SerializeHeap(ref _heap);
                     _stack.Push(bytes);
 
