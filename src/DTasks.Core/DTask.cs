@@ -149,7 +149,7 @@ public abstract class DTask
             _task = task;
         }
 
-        public Task<bool> IsCompletedAsync() // TODO: Split into two methods
+        public Task<bool> IsCompletedAsync()
         {
             return _task.UnderlyingTask;
         }
