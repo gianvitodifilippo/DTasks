@@ -100,6 +100,8 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
             _stateMachine.SetStateMachine(this);
         }
 
+        internal override bool IsStateful => true;
+
         internal override void SaveState<THandler>(ref THandler handler)
         {
             Debug.Assert(_childTask is not null, "The d-async method was not suspended.");

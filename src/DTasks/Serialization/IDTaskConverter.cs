@@ -6,19 +6,16 @@ public interface IDTaskConverter<THeap>
 {
     THeap CreateHeap(IDTaskScope scope);
 
-    THeap DeserializeHeap<TFlowId>(TFlowId flowId, IDTaskScope scope, ReadOnlySpan<byte> bytes)
-        where TFlowId : notnull;
+    THeap DeserializeHeap(IDTaskScope scope, ReadOnlySpan<byte> bytes);
 
-    DTask DeserializeStateMachine<TFlowId>(TFlowId flowId, ref THeap heap, ReadOnlySpan<byte> bytes, DTask resultTask)
-        where TFlowId : notnull;
+    DTask DeserializeStateMachine(ref THeap heap, ReadOnlySpan<byte> bytes, DTask resultTask);
 
-    T Deserialize<TFlowId, T>(TFlowId flowId, ref THeap heap, ReadOnlySpan<byte> bytes)
-        where TFlowId : notnull;
+    T Deserialize<T>(ReadOnlySpan<byte> bytes);
 
     ReadOnlyMemory<byte> SerializeHeap(ref THeap heap);
 
     ReadOnlyMemory<byte> SerializeStateMachine<TStateMachine>(ref THeap heap, ref TStateMachine stateMachine, IStateMachineInfo info)
         where TStateMachine : notnull;
 
-    ReadOnlyMemory<byte> Serialize<T>(ref THeap heap, T value);
+    ReadOnlyMemory<byte> Serialize<T>(T value);
 }

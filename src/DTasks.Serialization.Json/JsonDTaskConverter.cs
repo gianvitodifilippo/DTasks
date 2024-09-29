@@ -21,8 +21,7 @@ public sealed class JsonDTaskConverter(
         return heap.GetWrittenMemoryAndAdvance();
     }
 
-    public JsonFlowHeap DeserializeHeap<TFlowId>(TFlowId flowId, IDTaskScope scope, ReadOnlySpan<byte> bytes)
-        where TFlowId : notnull
+    public JsonFlowHeap DeserializeHeap(IDTaskScope scope, ReadOnlySpan<byte> bytes)
     {
         JsonFlowHeap heap = JsonFlowHeap.Create(scope, options);
 
@@ -33,7 +32,7 @@ public sealed class JsonDTaskConverter(
         }
         catch (JsonException ex)
         {
-            throw new CorruptedDFlowException(flowId, ex);
+            throw AsRethrowable(ex);
         }
 
         return heap;
@@ -58,8 +57,7 @@ public sealed class JsonDTaskConverter(
         return heap.GetWrittenMemoryAndAdvance();
     }
 
-    public DTask DeserializeStateMachine<TFlowId>(TFlowId flowId, ref JsonFlowHeap heap, ReadOnlySpan<byte> bytes, DTask resultTask)
-        where TFlowId : notnull
+    public DTask DeserializeStateMachine(ref JsonFlowHeap heap, ReadOnlySpan<byte> bytes, DTask resultTask)
     {
         var constructor = new StateMachineConstructor(bytes, ref heap);
 
@@ -79,19 +77,16 @@ public sealed class JsonDTaskConverter(
         }
         catch (JsonException ex)
         {
-            throw new CorruptedDFlowException(flowId, ex);
+            throw AsRethrowable(ex);
         }
     }
 
-    public ReadOnlyMemory<byte> Serialize<T>(ref JsonFlowHeap heap, T value)
+    public ReadOnlyMemory<byte> Serialize<T>(T value)
     {
-        JsonSerializer.Serialize(heap.Writer, value, options);
-
-        return heap.GetWrittenMemoryAndAdvance();
+        return JsonSerializer.SerializeToUtf8Bytes(value, options);
     }
 
-    public T Deserialize<TFlowId, T>(TFlowId flowId, ref JsonFlowHeap heap, ReadOnlySpan<byte> bytes)
-        where TFlowId : notnull
+    public T Deserialize<T>(ReadOnlySpan<byte> bytes)
     {
         try
         {
@@ -99,9 +94,14 @@ public sealed class JsonDTaskConverter(
         }
         catch (JsonException ex)
         {
-            throw new CorruptedDFlowException(flowId, ex);
+            throw AsRethrowable(ex);
         }
     }
+
+    private static Exception AsRethrowable(Exception ex) => new InvalidOperationException(string.Empty, ex)
+    {
+        Source = CorruptedDFlowException.RethrowableSource
+    };
 
     public static StateMachineInspector CreateInspector() => StateMachineInspector.Create(typeof(DTaskSuspender<>), typeof(DTaskResumer));
 }

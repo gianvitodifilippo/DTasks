@@ -7,7 +7,7 @@ namespace DTasks.Hosting;
 public static class HostingFixtures
 {
     // The purpose of this class is to forward calls to public methods, which can be verified
-    public abstract class TestBinaryDTaskHost(TestDTaskStorage storage, TestDTaskConverter converter) : BinaryDTaskHost<string, TestFlowContext, TestFlowStack, TestFlowHeap>
+    public abstract class TestBinaryDTaskHost(TestDTaskStorage storage, TestDTaskConverter converter) : BinaryDTaskHost<TestFlowContext, TestFlowStack, TestFlowHeap>
     {
         private static readonly byte[] s_contextBytes = Encoding.UTF8.GetBytes("context");
 
@@ -15,17 +15,17 @@ public static class HostingFixtures
 
         protected sealed override IDTaskConverter<TestFlowHeap> Converter => converter;
 
-        public abstract Task OnDelayAsync_Public(string flowId, TimeSpan delay, CancellationToken cancellationToken);
-        public abstract Task OnCompletedAsync_Public(string flowId, TestFlowContext context, CancellationToken cancellationToken);
-        public abstract Task OnCompletedAsync_Public<TResult>(string flowId, TestFlowContext context, TResult result, CancellationToken cancellationToken);
-        public abstract Task OnSuspendedAsync_Public(string flowId, ISuspensionCallback callback, CancellationToken cancellationToken);
-        public abstract Task OnYieldAsync_Public(string flowId, CancellationToken cancellationToken);
+        public abstract Task OnDelayAsync_Public(FlowId flowId, TimeSpan delay, CancellationToken cancellationToken);
+        public abstract Task OnCompletedAsync_Public(FlowId flowId, TestFlowContext context, CancellationToken cancellationToken);
+        public abstract Task OnCompletedAsync_Public<TResult>(FlowId flowId, TestFlowContext context, TResult result, CancellationToken cancellationToken);
+        public abstract Task OnSuspendedAsync_Public(FlowId flowId, ISuspensionCallback callback, CancellationToken cancellationToken);
+        public abstract Task OnYieldAsync_Public(FlowId flowId, CancellationToken cancellationToken);
 
-        protected sealed override Task OnDelayAsync(string flowId, TimeSpan delay, CancellationToken cancellationToken) => OnDelayAsync_Public(flowId, delay, cancellationToken);
-        protected sealed override Task OnCompletedAsync(string flowId, TestFlowContext context, CancellationToken cancellationToken) => OnCompletedAsync_Public(flowId, context, cancellationToken);
-        protected sealed override Task OnCompletedAsync<TResult>(string flowId, TestFlowContext context, TResult result, CancellationToken cancellationToken) => OnCompletedAsync_Public(flowId, context, result, cancellationToken);
-        protected sealed override Task OnSuspendedAsync(string flowId, ISuspensionCallback callback, CancellationToken cancellationToken) => OnSuspendedAsync_Public(flowId, callback, cancellationToken);
-        protected sealed override Task OnYieldAsync(string flowId, CancellationToken cancellationToken) => OnYieldAsync_Public(flowId, cancellationToken);
+        protected sealed override Task OnDelayAsync(FlowId flowId, TimeSpan delay, CancellationToken cancellationToken) => OnDelayAsync_Public(flowId, delay, cancellationToken);
+        protected sealed override Task OnCompletedAsync(FlowId flowId, TestFlowContext context, CancellationToken cancellationToken) => OnCompletedAsync_Public(flowId, context, cancellationToken);
+        protected sealed override Task OnCompletedAsync<TResult>(FlowId flowId, TestFlowContext context, TResult result, CancellationToken cancellationToken) => OnCompletedAsync_Public(flowId, context, result, cancellationToken);
+        protected sealed override Task OnCallbackAsync(FlowId flowId, ISuspensionCallback callback, CancellationToken cancellationToken) => OnSuspendedAsync_Public(flowId, callback, cancellationToken);
+        protected sealed override Task OnYieldAsync(FlowId flowId, CancellationToken cancellationToken) => OnYieldAsync_Public(flowId, cancellationToken);
     }
 
     // The following classes are preconfigured for tests but also allow creating a substitute for to verify method calls.

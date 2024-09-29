@@ -2,8 +2,7 @@
 
 namespace DTasks;
 
-internal sealed class SuspendedDTask<TResult, TCallback>(TCallback callback) : DTask<TResult>
-    where TCallback : ISuspensionCallback
+internal sealed class DelegateSuspendedDTask<TResult>(SuspensionCallback callback) : DTask<TResult>, ISuspensionCallback
 {
     internal override DTaskStatus Status => DTaskStatus.Suspended;
 
@@ -20,12 +19,16 @@ internal sealed class SuspendedDTask<TResult, TCallback>(TCallback callback) : D
 
     internal override Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
     {
-        return handler.OnCallbackAsync(callback, cancellationToken);
+        return handler.OnCallbackAsync(this, cancellationToken);
+    }
+
+    Task ISuspensionCallback.OnSuspendedAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken)
+    {
+        return callback(flowId, cancellationToken);
     }
 }
 
-internal sealed class SuspendedDTask<TResult, TState, TCallback>(TState state, TCallback callback) : DTask<TResult>
-    where TCallback : ISuspensionCallback<TState>
+internal sealed class DelegateSuspendedDTask<TResult, TState>(TState state, SuspensionCallback<TState> callback) : DTask<TResult>, ISuspensionCallback
 {
     internal override DTaskStatus Status => DTaskStatus.Suspended;
 
@@ -42,6 +45,11 @@ internal sealed class SuspendedDTask<TResult, TState, TCallback>(TState state, T
 
     internal override Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
     {
-        return handler.OnCallbackAsync(state, callback, cancellationToken);
+        return handler.OnCallbackAsync(this, cancellationToken);
+    }
+
+    Task ISuspensionCallback.OnSuspendedAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken)
+    {
+        return callback(flowId, state, cancellationToken);
     }
 }

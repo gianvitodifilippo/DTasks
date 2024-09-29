@@ -1,16 +1,21 @@
-﻿namespace DTasks.Storage;
+﻿using DTasks.Hosting;
+
+namespace DTasks.Storage;
 
 public interface IDTaskStorage<TStack>
     where TStack : IFlowStack
 {
     TStack CreateStack();
 
-    ValueTask<TStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken = default)
-        where TFlowId : notnull;
+    ValueTask<TStack> LoadStackAsync(FlowId flowId, CancellationToken cancellationToken = default);
 
-    Task SaveStackAsync<TFlowId>(TFlowId flowId, ref TStack stack, CancellationToken cancellationToken = default)
-        where TFlowId : notnull;
+    Task SaveStackAsync(FlowId flowId, ref TStack stack, CancellationToken cancellationToken = default);
 
-    Task ClearStackAsync<TFlowId>(TFlowId flowId, ref TStack stack, CancellationToken cancellationToken = default)
-        where TFlowId : notnull;
+    Task ClearStackAsync(FlowId flowId, ref TStack stack, CancellationToken cancellationToken = default);
+
+    ValueTask<ReadOnlyMemory<byte>> LoadValueAsync(FlowId flowId, CancellationToken cancellationToken = default);
+
+    Task SaveValueAsync(FlowId flowId, ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default);
+
+    Task ClearValueAsync(FlowId flowId, CancellationToken cancellationToken = default);
 }

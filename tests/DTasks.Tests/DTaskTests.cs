@@ -47,7 +47,7 @@ public class DTaskTests
         await sut.SuspendAsync(ref handler, CancellationToken.None);
 
         // Assert
-        await handler.Received().OnSuspendedAsync(callback, CancellationToken.None);
+        await handler.Received().OnCallbackAsync(callback, CancellationToken.None);
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class DTaskTests
         await sut.SuspendAsync(ref handler, CancellationToken.None);
 
         // Assert
-        await handler.Received().OnSuspendedAsync(callback, CancellationToken.None);
+        await handler.Received().OnCallbackAsync(callback, CancellationToken.None);
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class DTaskTests
         object flowId = new object();
         var callback = Substitute.For<SuspensionCallback>();
         var handler = Substitute.For<ISuspensionHandler>();
-        handler.OnSuspendedAsync(Arg.Any<ISuspensionCallback>(), Arg.Any<CancellationToken>())
+        handler.OnCallbackAsync(Arg.Any<ISuspensionCallback>(), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask)
             .AndDoes(call => call.ArgAt<ISuspensionCallback>(0).OnSuspendedAsync(flowId));
 
@@ -93,7 +93,7 @@ public class DTaskTests
         object flowId = new object();
         var callback = Substitute.For<SuspensionCallback>();
         var handler = Substitute.For<ISuspensionHandler>();
-        handler.OnSuspendedAsync(Arg.Any<ISuspensionCallback>(), Arg.Any<CancellationToken>())
+        handler.OnCallbackAsync(Arg.Any<ISuspensionCallback>(), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask)
             .AndDoes(call => call.ArgAt<ISuspensionCallback>(0).OnSuspendedAsync(flowId));
 

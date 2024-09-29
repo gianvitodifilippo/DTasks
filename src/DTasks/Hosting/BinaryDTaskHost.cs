@@ -1,157 +1,376 @@
 ﻿using DTasks.Serialization;
 using DTasks.Storage;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace DTasks.Hosting;
 
-public abstract class BinaryDTaskHost<TFlowId, TContext, TStack, THeap> : DTaskHost<TFlowId, TContext>
-    where TFlowId : notnull
+public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TContext>
     where TStack : IFlowStack
+    where THeap : IDTaskHeap
 {
     protected abstract IDTaskStorage<TStack> Storage { get; }
 
     protected abstract IDTaskConverter<THeap> Converter { get; }
 
-    protected abstract Task OnSuspendedAsync(TFlowId flowId, ISuspensionCallback callback, CancellationToken cancellationToken);
+    protected abstract IDistributedLockProvider LockProvider { get; }
 
-    protected abstract Task OnDelayAsync(TFlowId flowId, TimeSpan delay, CancellationToken cancellationToken);
-
-    protected abstract Task OnYieldAsync(TFlowId flowId, CancellationToken cancellationToken);
-
-    protected abstract Task OnCompletedAsync(TFlowId flowId, TContext context, CancellationToken cancellationToken);
-
-    protected abstract Task OnCompletedAsync<TResult>(TFlowId flowId, TContext context, TResult result, CancellationToken cancellationToken);
-
-    protected sealed override Task SuspendCoreAsync(TFlowId flowId, TContext context, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
+    protected sealed override async Task OnWhenAllAsync(FlowId id, IDTaskScope scope, IEnumerable<DTask> tasks, CancellationToken cancellationToken)
     {
-        FlowHandler handler = new(flowId, this);
-        return handler.SuspendAsync(scope, context, awaiter, cancellationToken);
-    }
+        byte remainingToComplete = 0;
+        FlowId mainId = FlowId.NewAggregate(FlowKind.WhenAll);
 
-    protected sealed override Task ResumeCoreAsync(TFlowId flowId, IDTaskScope scope, DTask resultTask, CancellationToken cancellationToken)
-    {
-        FlowHandler handler = new(flowId, this);
-        return handler.ResumeAsync(scope, resultTask, cancellationToken);
-    }
-
-    private struct FlowHandler(TFlowId flowId, BinaryDTaskHost<TFlowId, TContext, TStack, THeap> host) : IStateHandler, ISuspensionHandler, ICompletionHandler
-    {
-        private TStack _stack;
-        private THeap _heap;
-        private TContext _context;
-
-        public async Task SuspendAsync(IDTaskScope scope, TContext context, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
+        foreach (DTask task in tasks)
         {
-            _stack = host.Storage.CreateStack();
-            _heap = host.Converter.CreateHeap(scope);
+            DTask.DAwaiter awaiter = task.GetDAwaiter();
+            if (await awaiter.IsCompletedAsync())
+                continue;
 
-            awaiter.SaveState(ref this);
+            FlowId branchId = mainId.GetBranchId(remainingToComplete);
+            await SuspendBranchAsync(branchId, scope, Unsafe.As<DTask.DAwaiter, DTaskSuspender>(ref awaiter), cancellationToken);
 
-            ReadOnlyMemory<byte> heapBytes = host.Converter.SerializeHeap(ref _heap);
-            EnsureNotEmptyOnSerialize(heapBytes);
-            _stack.Push(heapBytes);
-
-            ReadOnlyMemory<byte> contextBytes = host.Converter.Serialize(ref _heap, context);
-            EnsureNotEmptyOnSerialize(heapBytes);
-            _stack.Push(contextBytes);
-
-            await host.Storage.SaveStackAsync(flowId, ref _stack, cancellationToken);
-            await awaiter.SuspendAsync(ref this, cancellationToken);
+            Debug.Assert(remainingToComplete < byte.MaxValue, "Aggregate task index overflow."); // TODO: support more than 255 tasks
+            remainingToComplete++;
         }
 
-        public async Task ResumeAsync(IDTaskScope scope, DTask resultTask, CancellationToken cancellationToken)
+        var context = new WhenAllContext(remainingToComplete, id);
+        ReadOnlyMemory<byte> contextBytes = Converter.Serialize(context);
+        EnsureNotEmptyOnSerialize(contextBytes);
+
+        await Storage.SaveValueAsync(mainId, contextBytes, cancellationToken);
+    }
+
+    protected sealed override async Task SuspendCoreAsync(TContext context, IDTaskScope scope, DTaskSuspender suspender, CancellationToken cancellationToken)
+    {
+        BinaryStateHandler stateHandler = new(this);
+        stateHandler.Heap = Converter.CreateHeap(scope);
+
+        ReadOnlyMemory<byte> contextBytes = Converter.Serialize(context);
+        EnsureNotEmptyOnSerialize(contextBytes);
+
+        bool isStateful = suspender.IsStateful;
+        FlowId id = FlowId.NewHosted(isStateful);
+
+        if (isStateful)
         {
-            _stack = await host.Storage.LoadStackAsync(flowId, cancellationToken);
+            stateHandler.Stack = Storage.CreateStack();
+            stateHandler.Stack.Push(contextBytes);
 
-            ReadOnlyMemory<byte> contextBytes = await _stack.PopAsync(cancellationToken);
-            EnsureNotEmptyOnDeserialize(contextBytes);
+            suspender.SaveState(ref stateHandler);
+            Debug.Assert(stateHandler.StackCount > 0, "Expected the stack to contain at least one item in a stateful flow.");
 
-            ReadOnlyMemory<byte> heapBytes = await _stack.PopAsync(cancellationToken);
-            EnsureNotEmptyOnDeserialize(heapBytes);
+            stateHandler.Heap.StackCount = stateHandler.StackCount;
+            ReadOnlyMemory<byte> heapBytes = Converter.SerializeHeap(ref stateHandler.Heap);
+            EnsureNotEmptyOnSerialize(heapBytes);
+            stateHandler.Stack.Push(heapBytes);
 
-            _heap = host.Converter.DeserializeHeap(flowId, scope, heapBytes.Span);
+            await Storage.SaveStackAsync(id, ref stateHandler.Stack, cancellationToken);
+        }
+        else
+        {
+            await Storage.SaveValueAsync(id, contextBytes, cancellationToken);
+        }
 
-            DTask.DAwaiter awaiter = default;
-            bool hasAwaiter = false;
-            while (true)
+        await OnSuspendedAsync(id, scope, suspender, cancellationToken);
+    }
+
+    protected sealed override Task ResumeCoreAsync(FlowId id, IDTaskScope scope, CancellationToken cancellationToken)
+    {
+        if (id.IsStateful)
+            return ResumeStatefulAsync(id, scope, DTask.CompletedTask, cancellationToken);
+
+        return id.Kind switch
+        {
+            FlowKind.Hosted => CompleteHostedAsync(id, cancellationToken),
+            FlowKind.WhenAll => CompleteWhenAllAsync(id, scope, cancellationToken),
+            _ => throw new NotSupportedException() // TODO: Message
+        };
+    }
+
+    protected sealed override Task ResumeCoreAsync<TResult>(FlowId id, IDTaskScope scope, TResult result, CancellationToken cancellationToken)
+    {
+        if (id.IsStateful)
+            return ResumeStatefulAsync(id, scope, DTask.FromResult(result), cancellationToken);
+
+        return id.Kind switch
+        {
+            FlowKind.Hosted => CompleteHostedAsync(id, result, cancellationToken),
+            FlowKind.WhenAll => CompleteWhenAllAsync(id, scope, result, cancellationToken),
+            _ => throw new NotSupportedException() // TODO: Message
+        };
+    }
+
+    private async Task ResumeStatefulAsync(FlowId id, IDTaskScope scope, DTask resultTask, CancellationToken cancellationToken)
+    {
+        BinaryStateHandler stateHandler = new(this);
+        stateHandler.Stack = await stateHandler.Storage.LoadStackAsync(id, cancellationToken);
+
+        try
+        {
+            ReadOnlyMemory<byte> heapBytes = await stateHandler.Stack.PopAsync(cancellationToken);
+            EnsureNotEmptyOnDeserialize(id, heapBytes);
+            stateHandler.Heap = stateHandler.Converter.DeserializeHeap(scope, heapBytes.Span);
+        }
+        catch (Exception ex)
+        {
+            CorruptedDFlowException.ThrowIfRethrowable(id, ex);
+            throw;
+        }
+
+        DTask.DAwaiter awaiter = default;
+        stateHandler.StackCount = stateHandler.Heap.StackCount;
+        if (stateHandler.StackCount == 0)
+            throw new CorruptedDFlowException(id);
+
+        while (stateHandler.StackCount > 0)
+        {
+            try
             {
-                ReadOnlyMemory<byte> stateMachineBytes = await _stack.PopAsync(cancellationToken);
-                if (stateMachineBytes.IsEmpty)
-                    break;
-
-                resultTask = host.Converter.DeserializeStateMachine(flowId, ref _heap, stateMachineBytes.Span, resultTask);
-                awaiter = resultTask.GetDAwaiter();
-
-                if (!await awaiter.IsCompletedAsync())
-                {
-                    awaiter.SaveState(ref this);
-
-                    ReadOnlyMemory<byte> bytes = host.Converter.SerializeHeap(ref _heap);
-                    EnsureNotEmptyOnSerialize(bytes);
-                    _stack.Push(bytes);
-
-                    _stack.Push(contextBytes);
-
-                    await host.Storage.SaveStackAsync(flowId, ref _stack, cancellationToken);
-                    await awaiter.SuspendAsync(ref this, cancellationToken);
-                    return;
-                }
-
-                hasAwaiter = true;
+                ReadOnlyMemory<byte> stateMachineBytes = await stateHandler.Stack.PopAsync(cancellationToken);
+                EnsureNotEmptyOnDeserialize(id, stateMachineBytes);
+                resultTask = stateHandler.Converter.DeserializeStateMachine(ref stateHandler.Heap, stateMachineBytes.Span, resultTask);
+            }
+            catch (Exception ex)
+            {
+                CorruptedDFlowException.ThrowIfRethrowable(id, ex);
+                throw;
             }
 
-            if (!hasAwaiter)
-                throw CorruptedFlowData();
+            stateHandler.StackCount--;
+            awaiter = resultTask.GetDAwaiter();
 
-            _context = host.Converter.Deserialize<TFlowId, TContext>(flowId, ref _heap, contextBytes.Span);
+            if (!await awaiter.IsCompletedAsync())
+            {
+                awaiter.SaveState(ref stateHandler);
 
-            await awaiter.CompleteAsync(ref this, cancellationToken);
-            await host.Storage.ClearStackAsync(flowId, ref _stack, cancellationToken);
+                stateHandler.Heap.StackCount = stateHandler.StackCount;
+                ReadOnlyMemory<byte> bytes = stateHandler.Converter.SerializeHeap(ref stateHandler.Heap);
+                EnsureNotEmptyOnSerialize(bytes);
+                stateHandler.Stack.Push(bytes);
+
+                await stateHandler.Storage.SaveStackAsync(id, ref stateHandler.Stack, cancellationToken);
+                await stateHandler.Host.OnSuspendedAsync(id, scope, awaiter, cancellationToken);
+                return;
+            }
         }
+
+        ReadOnlyMemory<byte> contextBytes;
+        switch (id.Kind)
+        {
+            case FlowKind.Hosted:
+                TContext hostContext;
+                try
+                {
+                    contextBytes = await stateHandler.Stack.PopAsync(cancellationToken);
+                    EnsureNotEmptyOnDeserialize(id, contextBytes);
+                    hostContext = stateHandler.Converter.Deserialize<TContext>(contextBytes.Span);
+                }
+                catch (Exception ex)
+                {
+                    CorruptedDFlowException.ThrowIfRethrowable(id, ex);
+                    throw;
+                }
+
+                await stateHandler.Host.OnHostedCompletedAsync(id, hostContext, awaiter, cancellationToken);
+                break;
+
+            case FlowKind.WhenAll:
+                FlowId mainId = id.GetMainId();
+                WhenAllContext whenAllContext;
+
+                await using (await stateHandler.LockProvider.LockAsync(mainId, cancellationToken))
+                {
+                    try
+                    {
+                        contextBytes = await stateHandler.Storage.LoadValueAsync(mainId, cancellationToken);
+                        EnsureNotEmptyOnDeserialize(mainId, contextBytes);
+                        whenAllContext = stateHandler.Converter.Deserialize<WhenAllContext>(contextBytes.Span);
+                    }
+                    catch (Exception ex)
+                    {
+                        CorruptedDFlowException.ThrowIfRethrowable(mainId, ex);
+                        throw;
+                    }
+
+                    if (--whenAllContext.RemainingToComplete != 0)
+                    {
+                        contextBytes = stateHandler.Converter.Serialize(whenAllContext);
+                        EnsureNotEmptyOnSerialize(contextBytes);
+
+                        await stateHandler.Storage.SaveValueAsync(mainId, contextBytes, cancellationToken);
+                        return;
+                    }
+                }
+
+                await OnAggregateCompletedAsync(whenAllContext.ParentFlowId, scope, awaiter, cancellationToken);
+                await stateHandler.Storage.ClearValueAsync(mainId, cancellationToken);
+                break;
+
+            default:
+                throw new NotSupportedException(); // TODO: Message
+        }
+
+        await stateHandler.Storage.ClearStackAsync(id, ref stateHandler.Stack, cancellationToken);
+    }
+
+    private async Task CompleteHostedAsync(FlowId id, CancellationToken cancellationToken)
+    {
+        TContext context;
+        try
+        {
+            ReadOnlyMemory<byte> contextBytes = await Storage.LoadValueAsync(id, cancellationToken);
+            EnsureNotEmptyOnDeserialize(id, contextBytes);
+            context = Converter.Deserialize<TContext>(contextBytes.Span);
+        }
+        catch (Exception ex)
+        {
+            CorruptedDFlowException.ThrowIfRethrowable(id, ex);
+            throw;
+        }
+
+        await Storage.ClearValueAsync(id, cancellationToken);
+        await OnCompletedAsync(id, context, cancellationToken);
+    }
+
+    private async Task CompleteHostedAsync<TResult>(FlowId id, TResult result, CancellationToken cancellationToken)
+    {
+        TContext context;
+        try
+        {
+            ReadOnlyMemory<byte> contextBytes = await Storage.LoadValueAsync(id, cancellationToken);
+            EnsureNotEmptyOnDeserialize(id, contextBytes);
+            context = Converter.Deserialize<TContext>(contextBytes.Span);
+        }
+        catch (Exception ex)
+        {
+            CorruptedDFlowException.ThrowIfRethrowable(id, ex);
+            throw;
+        }
+
+        await Storage.ClearValueAsync(id, cancellationToken);
+        await OnCompletedAsync(id, context, result, cancellationToken);
+    }
+
+    private async Task CompleteWhenAllAsync(FlowId id, IDTaskScope scope, CancellationToken cancellationToken)
+    {
+        FlowId mainId = id.GetMainId();
+        WhenAllContext context;
+
+        await using (await LockProvider.LockAsync(mainId, cancellationToken))
+        {
+            ReadOnlyMemory<byte> contextBytes;
+            try
+            {
+                contextBytes = await Storage.LoadValueAsync(mainId, cancellationToken);
+                EnsureNotEmptyOnDeserialize(mainId, contextBytes);
+                context = Converter.Deserialize<WhenAllContext>(contextBytes.Span);
+            }
+            catch (Exception ex)
+            {
+                CorruptedDFlowException.ThrowIfRethrowable(mainId, ex);
+                throw;
+            }
+
+            if (--context.RemainingToComplete != 0)
+            {
+                contextBytes = Converter.Serialize(context);
+                EnsureNotEmptyOnSerialize(contextBytes);
+
+                await Storage.SaveValueAsync(mainId, contextBytes, cancellationToken);
+                return;
+            }
+        }
+
+        await ResumeAsync(context.ParentFlowId, scope, cancellationToken);
+        await Storage.ClearValueAsync(mainId, cancellationToken);
+    }
+
+    private async Task CompleteWhenAllAsync<TResult>(FlowId id, IDTaskScope scope, TResult result, CancellationToken cancellationToken)
+    {
+        FlowId mainId = id.GetMainId();
+        WhenAllContext context;
+
+        await using (await LockProvider.LockAsync(mainId, cancellationToken))
+        {
+            ReadOnlyMemory<byte> contextBytes;
+            try
+            {
+                contextBytes = await Storage.LoadValueAsync(mainId, cancellationToken);
+                EnsureNotEmptyOnDeserialize(mainId, contextBytes);
+                context = Converter.Deserialize<WhenAllContext>(contextBytes.Span);
+            }
+            catch (Exception ex)
+            {
+                CorruptedDFlowException.ThrowIfRethrowable(mainId, ex);
+                throw;
+            }
+
+            if (--context.RemainingToComplete != 0)
+            {
+                contextBytes = Converter.Serialize(context);
+                EnsureNotEmptyOnSerialize(contextBytes);
+
+                await Storage.SaveValueAsync(mainId, contextBytes, cancellationToken);
+                return;
+            }
+        }
+
+        await ResumeAsync(context.ParentFlowId, scope, result, cancellationToken);
+        await Storage.ClearValueAsync(mainId, cancellationToken);
+    }
+
+    private async Task SuspendBranchAsync(FlowId branchId, IDTaskScope scope, DTaskSuspender suspender, CancellationToken cancellationToken)
+    {
+        BinaryStateHandler stateHandler = new(this);
+        stateHandler.Stack = Storage.CreateStack();
+        stateHandler.Heap = Converter.CreateHeap(scope);
+
+        suspender.SaveState(ref stateHandler);
+
+        bool isStateful = stateHandler.Heap.StackCount != 0;
+        if (isStateful)
+        {
+            ReadOnlyMemory<byte> heapBytes = stateHandler.Converter.SerializeHeap(ref stateHandler.Heap);
+            EnsureNotEmptyOnSerialize(heapBytes);
+            stateHandler.Stack.Push(heapBytes);
+        }
+
+        await Storage.SaveStackAsync(branchId, ref stateHandler.Stack, cancellationToken);
+        await OnSuspendedAsync(branchId, scope, suspender, cancellationToken);
+    }
+
+    private static void EnsureNotEmptyOnSerialize(ReadOnlyMemory<byte> bytes)
+    {
+        if (bytes.IsEmpty)
+            throw new InvalidOperationException("Serialization produced an empty sequence of bytes.");
+    }
+
+    private static void EnsureNotEmptyOnDeserialize(FlowId id, ReadOnlyMemory<byte> bytes)
+    {
+        if (bytes.IsEmpty)
+            throw new CorruptedDFlowException(id);
+    }
+
+    private struct BinaryStateHandler(BinaryDTaskHost<TContext, TStack, THeap> host) : IStateHandler
+    {
+        public BinaryDTaskHost<TContext, TStack, THeap> Host = host;
+        public uint StackCount;
+        public TStack Stack;
+        public THeap Heap;
+
+        public readonly IDTaskStorage<TStack> Storage => Host.Storage;
+
+        public readonly IDTaskConverter<THeap> Converter => Host.Converter;
+
+        public readonly IDistributedLockProvider LockProvider => Host.LockProvider;
 
         void IStateHandler.SaveStateMachine<TStateMachine>(ref TStateMachine stateMachine, IStateMachineInfo info)
         {
-            ReadOnlyMemory<byte> bytes = host.Converter.SerializeStateMachine(ref _heap, ref stateMachine, info);
-            EnsureNotEmptyOnDeserialize(bytes);
-            _stack.Push(bytes);
-        }
+            ReadOnlyMemory<byte> bytes = Host.Converter.SerializeStateMachine(ref Heap, ref stateMachine, info);
+            EnsureNotEmptyOnSerialize(bytes);
 
-        readonly Task ISuspensionHandler.OnDelayAsync(TimeSpan delay, CancellationToken cancellationToken)
-        {
-            return host.OnDelayAsync(flowId, delay, cancellationToken);
-        }
-
-        readonly Task ISuspensionHandler.OnYieldAsync(CancellationToken cancellationToken)
-        {
-            return host.OnYieldAsync(flowId, cancellationToken);
-        }
-
-        readonly Task ISuspensionHandler.OnSuspendedAsync(ISuspensionCallback callback, CancellationToken cancellationToken)
-        {
-            return host.OnSuspendedAsync(flowId, callback, cancellationToken);
-        }
-
-        readonly Task ICompletionHandler.OnCompletedAsync(CancellationToken cancellationToken)
-        {
-            return host.OnCompletedAsync(flowId, _context, cancellationToken);
-        }
-
-        readonly Task ICompletionHandler.OnCompletedAsync<TResult>(TResult result, CancellationToken cancellationToken)
-        {
-            return host.OnCompletedAsync(flowId, _context, result, cancellationToken);
-        }
-
-        private readonly CorruptedDFlowException CorruptedFlowData() => new CorruptedDFlowException(flowId, $"Data relative to d-async flow '{flowId}' was missing or corrupted.");
-
-        private readonly void EnsureNotEmptyOnDeserialize(ReadOnlyMemory<byte> bytes)
-        {
-            if (bytes.IsEmpty)
-                throw CorruptedFlowData();
-        }
-
-        private static void EnsureNotEmptyOnSerialize(ReadOnlyMemory<byte> bytes)
-        {
-            if (bytes.IsEmpty)
-                throw new InvalidOperationException("Serialization produced an empty sequence of bytes.");
+            Stack.Push(bytes);
+            StackCount++;
         }
     }
 }
