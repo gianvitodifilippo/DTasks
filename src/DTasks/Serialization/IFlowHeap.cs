@@ -1,6 +1,6 @@
 ﻿namespace DTasks.Serialization;
 
-public interface IDTaskHeap
+public interface IFlowHeap
 {
     uint StackCount { get; set; }
 }

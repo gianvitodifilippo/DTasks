@@ -7,7 +7,7 @@ namespace DTasks.Hosting;
 
 public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TContext>
     where TStack : IFlowStack
-    where THeap : IDTaskHeap
+    where THeap : IFlowHeap
 {
     protected abstract IDTaskStorage<TStack> Storage { get; }
 

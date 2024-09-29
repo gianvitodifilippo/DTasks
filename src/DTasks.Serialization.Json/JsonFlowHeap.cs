@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace DTasks.Serialization.Json;
 
-public struct JsonFlowHeap : IDTaskHeap
+public struct JsonFlowHeap : IFlowHeap
 {
     private readonly ArrayBufferWriter<byte> _buffer;
     private int _startIndex;
@@ -28,7 +28,7 @@ public struct JsonFlowHeap : IDTaskHeap
 
     internal JsonSerializerOptions Options { get; }
 
-    uint IDTaskHeap.StackCount { get; set; }
+    uint IFlowHeap.StackCount { get; set; }
 
     internal ReadOnlyMemory<byte> GetWrittenMemoryAndAdvance()
     {
