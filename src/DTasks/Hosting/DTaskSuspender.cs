@@ -2,7 +2,7 @@
 
 namespace DTasks.Hosting;
 
-public readonly struct DTaskSuspender
+internal readonly struct DTaskSuspender
 {
     private readonly DTask _task;
 
@@ -11,12 +11,12 @@ public readonly struct DTaskSuspender
         Justification = "This struct is only instantiated via Unsafe.As"
 #endif
     )]
-    internal DTaskSuspender(DTask task)
+    public DTaskSuspender(DTask task)
     {
         _task = task;
     }
 
-    internal bool IsStateful => _task.IsStateful;
+    public bool IsStateful => _task.IsStateful;
 
     public void SaveState<THandler>(ref THandler handler)
         where THandler : IStateHandler

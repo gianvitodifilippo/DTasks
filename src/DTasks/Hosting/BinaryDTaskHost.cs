@@ -40,7 +40,17 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
         await Storage.SaveValueAsync(mainId, contextBytes, cancellationToken);
     }
 
-    protected sealed override async Task SuspendCoreAsync(TContext context, IDTaskScope scope, DTaskSuspender suspender, CancellationToken cancellationToken)
+    protected sealed override Task SuspendCoreAsync(TContext context, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
+    {
+        return SuspendCoreAsync(context, scope, Unsafe.As<DTask.DAwaiter, DTaskSuspender>(ref awaiter), cancellationToken);
+    }
+
+    protected sealed override Task SuspendCoreAsync<TResult>(TContext context, IDTaskScope scope, DTask<TResult>.DAwaiter awaiter, CancellationToken cancellationToken)
+    {
+        return SuspendCoreAsync(context, scope, Unsafe.As<DTask<TResult>.DAwaiter, DTaskSuspender>(ref awaiter), cancellationToken);
+    }
+
+    private async Task SuspendCoreAsync(TContext context, IDTaskScope scope, DTaskSuspender suspender, CancellationToken cancellationToken)
     {
         BinaryStateHandler stateHandler = new(this);
         stateHandler.Heap = Converter.CreateHeap(scope);

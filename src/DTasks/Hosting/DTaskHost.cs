@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 namespace DTasks.Hosting;
 
@@ -7,12 +6,12 @@ public abstract class DTaskHost<TContext>
 {
     public Task SuspendAsync(TContext context, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken = default)
     {
-        return SuspendCoreAsync(context, scope, Unsafe.As<DTask.DAwaiter, DTaskSuspender>(ref awaiter), cancellationToken);
+        return SuspendCoreAsync(context, scope, awaiter, cancellationToken);
     }
 
     public Task SuspendAsync<TResult>(TContext context, IDTaskScope scope, DTask<TResult>.DAwaiter awaiter, CancellationToken cancellationToken = default)
     {
-        return SuspendCoreAsync(context, scope, Unsafe.As<DTask<TResult>.DAwaiter, DTaskSuspender>(ref awaiter), cancellationToken);
+        return SuspendCoreAsync(context, scope, awaiter, cancellationToken);
     }
 
     public Task ResumeAsync(FlowId id, IDTaskScope scope, CancellationToken cancellationToken = default)
@@ -56,7 +55,9 @@ public abstract class DTaskHost<TContext>
 
     protected abstract Task OnCompletedAsync<TResult>(FlowId id, TContext context, TResult result, CancellationToken cancellationToken);
 
-    protected abstract Task SuspendCoreAsync(TContext context, IDTaskScope scope, DTaskSuspender suspender, CancellationToken cancellationToken);
+    protected abstract Task SuspendCoreAsync(TContext context, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken);
+
+    protected abstract Task SuspendCoreAsync<TResult>(TContext context, IDTaskScope scope, DTask<TResult>.DAwaiter awaiter, CancellationToken cancellationToken);
 
     protected abstract Task ResumeCoreAsync(FlowId id, IDTaskScope scope, CancellationToken cancellationToken);
 
@@ -79,7 +80,7 @@ public abstract class DTaskHost<TContext>
         return awaiter.CompleteAsync(ref handler, cancellationToken);
     }
 
-    protected Task OnSuspendedAsync(FlowId id, IDTaskScope scope, DTaskSuspender suspender, CancellationToken cancellationToken)
+    private protected Task OnSuspendedAsync(FlowId id, IDTaskScope scope, DTaskSuspender suspender, CancellationToken cancellationToken)
     {
         SuspensionHandler handler = new(id, scope, this);
         return suspender.SuspendAsync(ref handler, cancellationToken);
