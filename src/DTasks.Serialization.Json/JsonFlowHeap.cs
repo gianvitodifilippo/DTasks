@@ -28,7 +28,7 @@ public struct JsonFlowHeap : IFlowHeap
 
     internal JsonSerializerOptions Options { get; }
 
-    uint IFlowHeap.StackCount { get; set; }
+    public uint StackCount { get; set; }
 
     internal ReadOnlyMemory<byte> GetWrittenMemoryAndAdvance()
     {

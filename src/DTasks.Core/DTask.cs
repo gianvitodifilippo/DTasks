@@ -52,10 +52,7 @@ public abstract class DTask
 
     public static DTask Delay(TimeSpan delay) => new DelayDTask(delay);
 
-    public static DTask WhenAll(IEnumerable<DTask> tasks)
-    {
-        throw new NotImplementedException();
-    }
+    public static DTask WhenAll(IEnumerable<DTask> tasks) => new WhenAllDTask(tasks);
 
     public static DTask Suspend(SuspensionCallback callback) => new DelegateSuspendedDTask<VoidDTaskResult>(callback);
 

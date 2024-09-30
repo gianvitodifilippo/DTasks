@@ -80,12 +80,6 @@ public abstract class DTaskHost<TContext>
         return awaiter.CompleteAsync(ref handler, cancellationToken);
     }
 
-    private protected Task OnSuspendedAsync(FlowId id, IDTaskScope scope, DTaskSuspender suspender, CancellationToken cancellationToken)
-    {
-        SuspensionHandler handler = new(id, scope, this);
-        return suspender.SuspendAsync(ref handler, cancellationToken);
-    }
-
     protected Task OnSuspendedAsync(FlowId id, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
     {
         SuspensionHandler handler = new(id, scope, this);

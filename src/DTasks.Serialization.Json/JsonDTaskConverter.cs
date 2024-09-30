@@ -16,7 +16,7 @@ public sealed class JsonDTaskConverter(
 
     public ReadOnlyMemory<byte> SerializeHeap(ref JsonFlowHeap heap)
     {
-        heap.ReferenceResolver.Serialize(heap.Writer, heap.Options);
+        heap.ReferenceResolver.Serialize(ref heap);
 
         return heap.GetWrittenMemoryAndAdvance();
     }
@@ -28,7 +28,7 @@ public sealed class JsonDTaskConverter(
         Utf8JsonReader reader = new(bytes);
         try
         {
-            heap.ReferenceResolver.Deserialize(ref reader, heap.Options);
+            heap.ReferenceResolver.Deserialize(ref reader, ref heap, heap.Options);
         }
         catch (JsonException ex)
         {

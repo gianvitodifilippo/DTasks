@@ -8,6 +8,8 @@ namespace DTasks.Serialization.Json;
 
 internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOptions rootOptions) : ReferenceResolver
 {
+    private static ReadOnlySpan<byte> StackCountKeyUtf8 => "s_count"u8;
+    private static ReadOnlySpan<byte> HeapKeyUtf8 => "heap"u8;
     private static ReadOnlySpan<byte> TypeKeyUtf8 => "type"u8;
     private static ReadOnlySpan<byte> IdKeyUtf8 => "id"u8;
     private static ReadOnlySpan<byte> ValueKeyUtf8 => "value"u8;
@@ -18,11 +20,20 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
 
     public ReferenceHandler CreateHandler() => new DTaskReferenceHandler(this);
 
-    public void Serialize(Utf8JsonWriter writer, JsonSerializerOptions options)
+    public void Serialize(ref JsonFlowHeap heap)
     {
+        Utf8JsonWriter writer = heap.Writer;
+        JsonSerializerOptions options = heap.Options;
+
         _isSerializing = true;
         try
         {
+            writer.WriteStartObject();
+
+            writer.WriteNumber(StackCountKeyUtf8, heap.StackCount);
+
+            writer.WritePropertyName(HeapKeyUtf8);
+
             writer.WriteStartArray();
 
             foreach ((object reference, string id) in _referencesToIds)
@@ -50,6 +61,8 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
             }
 
             writer.WriteEndArray();
+
+            writer.WriteEndObject();
         }
         finally
         {
@@ -57,8 +70,25 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
         }
     }
 
-    public void Deserialize(ref Utf8JsonReader reader, JsonSerializerOptions options)
+    public void Deserialize(ref Utf8JsonReader reader, ref JsonFlowHeap heap, JsonSerializerOptions options)
     {
+        reader.MoveNext();
+        reader.ExpectType(JsonTokenType.StartObject);
+
+        reader.MoveNext();
+        reader.ExpectType(JsonTokenType.PropertyName);
+        if (!reader.ValueTextEquals(StackCountKeyUtf8))
+            throw InvalidJsonHeap();
+
+        reader.MoveNext();
+        reader.ExpectType(JsonTokenType.Number);
+        heap.StackCount = reader.GetUInt32();
+
+        reader.MoveNext();
+        reader.ExpectType(JsonTokenType.PropertyName);
+        if (!reader.ValueTextEquals(HeapKeyUtf8))
+            throw InvalidJsonHeap();
+
         reader.MoveNext();
         reader.ExpectType(JsonTokenType.StartArray);
 
@@ -101,6 +131,9 @@ internal sealed class DTaskReferenceResolver(IDTaskScope scope, JsonSerializerOp
             reader.MoveNext();
             reader.ExpectType(JsonTokenType.EndObject);
         }
+
+        reader.MoveNext();
+        reader.ExpectType(JsonTokenType.EndObject);
 
         reader.ExpectEnd();
 

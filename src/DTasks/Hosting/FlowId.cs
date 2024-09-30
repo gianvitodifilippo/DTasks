@@ -64,18 +64,30 @@ public readonly struct FlowId : IEquatable<FlowId>
         }
     }
 
+    internal byte BranchIndex
+    {
+        get
+        {
+            Debug.Assert(!IsMainId);
+            return _b0;
+        }
+    }
+
     internal FlowId GetMainId()
     {
-        Debug.Assert(Kind.IsAggregate() && !IsMainId);
+        Debug.Assert(!IsMainId);
 
         return new(s_mainIndex, _b1, _b2, _b3, _b4, _b5, _b6, _b7);
     }
 
-    internal FlowId GetBranchId(byte index)
+    internal FlowId GetBranchId(byte index, bool isStateful)
     {
-        Debug.Assert(Kind.IsAggregate() && IsMainId);
+        Debug.Assert(IsMainId);
 
-        return new(index, _b1, _b2, _b3, _b4, _b5, _b6, _b7);
+        byte b7 = _b7;
+        SetResultFlag(ref b7, isStateful);
+
+        return new(index, _b1, _b2, _b3, _b4, _b5, _b6, b7);
     }
 
     public byte[] ToByteArray()
@@ -156,7 +168,7 @@ public readonly struct FlowId : IEquatable<FlowId>
         Span<byte> bytes = stackalloc byte[8];
         Randomize(bytes);
         SetKind(ref bytes[7], kind);
-        SetResultFlag(ref bytes[7], true);
+        SetResultFlag(ref bytes[7], false);
         bytes[0] = s_mainIndex;
 
         return new FlowId(bytes);

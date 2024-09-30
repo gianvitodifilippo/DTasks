@@ -1,6 +1,7 @@
 ﻿using DTasks.Serialization;
 using DTasks.Storage;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace DTasks.Hosting;
@@ -15,9 +16,9 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
 
     protected abstract IDistributedLockProvider LockProvider { get; }
 
-    protected sealed override async Task OnWhenAllAsync(FlowId id, IDTaskScope scope, IEnumerable<DTask> tasks, CancellationToken cancellationToken)
+    protected override async Task OnWhenAllAsync(FlowId id, IDTaskScope scope, IEnumerable<DTask> tasks, CancellationToken cancellationToken)
     {
-        byte remainingToComplete = 0;
+        byte branchIndex = 0;
         FlowId mainId = FlowId.NewAggregate(FlowKind.WhenAll);
 
         foreach (DTask task in tasks)
@@ -26,14 +27,20 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
             if (await awaiter.IsCompletedAsync())
                 continue;
 
-            FlowId branchId = mainId.GetBranchId(remainingToComplete);
+            FlowId branchId = mainId.GetBranchId(branchIndex, task.IsStateful);
             await SuspendBranchAsync(branchId, scope, Unsafe.As<DTask.DAwaiter, DTaskSuspender>(ref awaiter), cancellationToken);
 
-            Debug.Assert(remainingToComplete < byte.MaxValue, "Aggregate task index overflow."); // TODO: support more than 255 tasks
-            remainingToComplete++;
+            Debug.Assert(branchIndex < byte.MaxValue, "Aggregate task index overflow."); // TODO: support more than 255 tasks
+            branchIndex++;
         }
 
-        var context = new WhenAllContext(remainingToComplete, id);
+        HashSet<byte> branchIndexes = new(branchIndex);
+        for (byte i = 0; i < branchIndex; i++)
+        {
+            branchIndexes.Add(i);
+        }
+
+        var context = new WhenAllContext(branchIndexes, id);
         ReadOnlyMemory<byte> contextBytes = Converter.Serialize(context);
         EnsureNotEmptyOnSerialize(contextBytes);
 
@@ -67,7 +74,6 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
             stateHandler.Stack.Push(contextBytes);
 
             suspender.SaveState(ref stateHandler);
-            Debug.Assert(stateHandler.StackCount > 0, "Expected the stack to contain at least one item in a stateful flow.");
 
             stateHandler.Heap.StackCount = stateHandler.StackCount;
             ReadOnlyMemory<byte> heapBytes = Converter.SerializeHeap(ref stateHandler.Heap);
@@ -81,7 +87,7 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
             await Storage.SaveValueAsync(id, contextBytes, cancellationToken);
         }
 
-        await OnSuspendedAsync(id, scope, suspender, cancellationToken);
+        await OnSuspendedAsync(id, scope, Unsafe.As<DTaskSuspender, DTask.DAwaiter>(ref suspender), cancellationToken);
     }
 
     protected sealed override Task ResumeCoreAsync(FlowId id, IDTaskScope scope, CancellationToken cancellationToken)
@@ -202,7 +208,14 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
                         throw;
                     }
 
-                    if (--whenAllContext.RemainingToComplete != 0)
+                    if (whenAllContext.BranchIndexes is null)
+                        throw new CorruptedDFlowException(mainId);
+
+                    byte branchIndex = id.BranchIndex;
+                    if (!whenAllContext.BranchIndexes.Remove(branchIndex))
+                        throw new InvalidFlowIdException(id);
+
+                    if (whenAllContext.BranchIndexes.Count != 0)
                     {
                         contextBytes = stateHandler.Converter.Serialize(whenAllContext);
                         EnsureNotEmptyOnSerialize(contextBytes);
@@ -281,7 +294,14 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
                 throw;
             }
 
-            if (--context.RemainingToComplete != 0)
+            if (context.BranchIndexes is null)
+                throw new CorruptedDFlowException(mainId);
+
+            byte branchIndex = id.BranchIndex;
+            if (!context.BranchIndexes.Remove(branchIndex))
+                throw new InvalidFlowIdException(id);
+
+            if (context.BranchIndexes.Count != 0)
             {
                 contextBytes = Converter.Serialize(context);
                 EnsureNotEmptyOnSerialize(contextBytes);
@@ -315,7 +335,14 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
                 throw;
             }
 
-            if (--context.RemainingToComplete != 0)
+            if (context.BranchIndexes is null)
+                throw new CorruptedDFlowException(mainId);
+
+            byte branchIndex = id.BranchIndex;
+            if (!context.BranchIndexes.Remove(branchIndex))
+                throw new InvalidFlowIdException(id);
+
+            if (context.BranchIndexes.Count != 0)
             {
                 contextBytes = Converter.Serialize(context);
                 EnsureNotEmptyOnSerialize(contextBytes);
@@ -332,21 +359,22 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
     private async Task SuspendBranchAsync(FlowId branchId, IDTaskScope scope, DTaskSuspender suspender, CancellationToken cancellationToken)
     {
         BinaryStateHandler stateHandler = new(this);
-        stateHandler.Stack = Storage.CreateStack();
-        stateHandler.Heap = Converter.CreateHeap(scope);
 
-        suspender.SaveState(ref stateHandler);
-
-        bool isStateful = stateHandler.Heap.StackCount != 0;
-        if (isStateful)
+        if (branchId.IsStateful)
         {
+            stateHandler.Stack = Storage.CreateStack();
+            stateHandler.Heap = Converter.CreateHeap(scope);
+
+            suspender.SaveState(ref stateHandler);
+
             ReadOnlyMemory<byte> heapBytes = stateHandler.Converter.SerializeHeap(ref stateHandler.Heap);
             EnsureNotEmptyOnSerialize(heapBytes);
             stateHandler.Stack.Push(heapBytes);
+
+            await Storage.SaveStackAsync(branchId, ref stateHandler.Stack, cancellationToken);
         }
 
-        await Storage.SaveStackAsync(branchId, ref stateHandler.Stack, cancellationToken);
-        await OnSuspendedAsync(branchId, scope, suspender, cancellationToken);
+        await OnSuspendedAsync(branchId, scope, Unsafe.As<DTaskSuspender, DTask.DAwaiter>(ref suspender), cancellationToken);
     }
 
     private static void EnsureNotEmptyOnSerialize(ReadOnlyMemory<byte> bytes)
@@ -383,4 +411,29 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
             StackCount++;
         }
     }
+
+    [method: ExcludeFromCodeCoverage(
+#if NET8_0_OR_GREATER
+            Justification = "This struct is only instantiated via Unsafe.As"
+#endif
+        )]
+    private readonly struct DTaskSuspender(DTask task)
+    {
+        public bool IsStateful => task.IsStateful;
+
+        public void SaveState(ref BinaryStateHandler handler)
+        {
+            task.AssertNotRunning();
+            task.SaveState(ref handler);
+            Debug.Assert(handler.StackCount > 0, "Expected the stack to contain at least one item in a stateful flow.");
+        }
+
+        public Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
+            where THandler : ISuspensionHandler
+        {
+            task.AssertSuspended();
+            return task.SuspendAsync(ref handler, cancellationToken);
+        }
+    }
+
 }

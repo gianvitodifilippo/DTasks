@@ -6,13 +6,13 @@ internal class WhenAllContext
     {
     }
 
-    public WhenAllContext(byte remainingToComplete, FlowId parentFlowId)
+    public WhenAllContext(HashSet<byte> branchIndexes, FlowId parentFlowId)
     {
-        RemainingToComplete = remainingToComplete;
+        BranchIndexes = branchIndexes;
         ParentFlowId = parentFlowId;
     }
 
-    public byte RemainingToComplete { get; set; }
+    public HashSet<byte>? BranchIndexes { get; set; }
 
     public FlowId ParentFlowId { get; set; }
 }

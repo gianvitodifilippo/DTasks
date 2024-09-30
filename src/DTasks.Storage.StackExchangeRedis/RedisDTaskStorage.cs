@@ -38,7 +38,7 @@ public sealed class RedisDTaskStorage(IDatabase database) : IDTaskStorage<RedisF
             values[i] = items.Pop();
         }
 
-        return database.ListRightPushAsync(key, values);
+        return database.ListLeftPushAsync(key, values);
     }
 
     public Task ClearStackAsync(FlowId flowId, ref RedisFlowStack stack, CancellationToken cancellationToken = default)

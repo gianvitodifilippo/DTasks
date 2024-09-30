@@ -1,15 +1,13 @@
 ﻿namespace DTasks;
 
-internal class WhenAllDTask<TResult> : DTask<TResult>
+internal class WhenAllDTask(IEnumerable<DTask> tasks) : DTask
 {
-    internal override TResult Result => throw new NotImplementedException();
+    internal override DTaskStatus Status => DTaskStatus.Suspended; // TODO: Support local completion
 
-    internal override Task<bool> UnderlyingTask => throw new NotImplementedException();
-
-    internal override DTaskStatus Status => throw new NotImplementedException();
+    internal override Task<bool> UnderlyingTask => Task.FromResult(false);
 
     internal override Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        return handler.OnWhenAllAsync(tasks, cancellationToken);
     }
 }
