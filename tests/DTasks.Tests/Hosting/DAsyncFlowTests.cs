@@ -61,26 +61,28 @@ public partial class DAsyncFlowTests
         var context = new TestFlowContext();
         DateTime date = DateTime.Now;
         DTask task = ProcessFileDAsync("http://dtasks.com");
-        FlowId flowId = default;
+        FlowId id1 = default;
+        FlowId id2 = default;
+        FlowId id3 = default;
 
         _sut.OnDelayAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
-                flowId = call.Arg<FlowId>();
+                id1 = call.Arg<FlowId>();
                 return Task.CompletedTask;
             });
 
         _sut.OnCallbackAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<ISuspensionCallback>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
-                flowId = call.Arg<FlowId>();
+                id2 = call.Arg<FlowId>();
                 return Task.CompletedTask;
             });
 
         _sut.OnYieldAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<CancellationToken>())
             .Returns(call =>
             {
-                flowId = call.Arg<FlowId>();
+                id3 = call.Arg<FlowId>();
                 return Task.CompletedTask;
             });
 
@@ -89,18 +91,80 @@ public partial class DAsyncFlowTests
         await awaiter.IsCompletedAsync();
         await _sut.SuspendAsync(context, scope, awaiter);
 
-        await _sut.ResumeAsync(flowId, scope);
-        await _sut.ResumeAsync(flowId, scope, date);
-        await _sut.ResumeAsync(flowId, scope);
+        await _sut.ResumeAsync(id1, scope);
+        await _sut.ResumeAsync(id2, scope, date);
+        await _sut.ResumeAsync(id3, scope);
 
         // Assert
-        await _sut.Received().OnDelayAsync_Public(flowId, scope, TimeSpan.FromSeconds(1), Arg.Any<CancellationToken>());
-        await _sut.Received().OnCallbackAsync_Public(flowId, scope, Arg.Any<ISuspensionCallback>(), Arg.Any<CancellationToken>());
-        await _sut.Received().OnYieldAsync_Public(flowId, scope, Arg.Any<CancellationToken>());
+        await _sut.Received().OnDelayAsync_Public(id1, scope, TimeSpan.FromSeconds(1), Arg.Any<CancellationToken>());
+        await _sut.Received().OnCallbackAsync_Public(id2, scope, Arg.Any<ISuspensionCallback>(), Arg.Any<CancellationToken>());
+        await _sut.Received().OnYieldAsync_Public(id3, scope, Arg.Any<CancellationToken>());
         await _sut.Received().OnCompletedAsync_Public(
-            flowId,
+            id3,
             context,
             Arg.Is<FileData>(data => data.FeatureCount == 27 && data.Signature == "signed with mytoken" && data.Date == date),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DAsyncFlow_SuspendsWhenAll()
+    {
+        // Arrange
+        async DTask<string> WorkflowDAsync()
+        {
+            DTask[] tasks = [
+                DTask.Delay(TimeSpan.FromSeconds(1)),
+                DTask.Yield()
+            ];
+
+            await DTask.WhenAll(tasks);
+
+            return $"{tasks.Length} d-tasks were executed in parallel";
+        }
+
+        var scope = Substitute.For<IDTaskScope>();
+        var context = new TestFlowContext();
+        DTask task = WorkflowDAsync();
+        FlowId id = default;
+        FlowId branchId1 = default;
+        FlowId branchId2 = default;
+
+        _sut.OnDelayAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                branchId1 = call.Arg<FlowId>();
+                return Task.CompletedTask;
+            });
+
+        _sut.OnYieldAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                branchId2 = call.Arg<FlowId>();
+                return Task.CompletedTask;
+            });
+
+        _sut.OnWhenAllAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<IEnumerable<DTask>>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                id = call.Arg<FlowId>();
+                return Task.CompletedTask;
+            });
+
+        // Act
+        var awaiter = task.GetDAwaiter();
+        await awaiter.IsCompletedAsync();
+        await _sut.SuspendAsync(context, scope, awaiter);
+
+        await _sut.ResumeAsync(branchId2, scope);
+        await _sut.ResumeAsync(branchId1, scope);
+
+        // Assert
+        await _sut.Received().OnDelayAsync_Public(branchId1, scope, TimeSpan.FromSeconds(1), Arg.Any<CancellationToken>());
+        await _sut.Received().OnYieldAsync_Public(branchId2, scope, Arg.Any<CancellationToken>());
+        await _sut.Received().OnCompletedAsync_Public(
+            id,
+            context,
+            "2 d-tasks were executed in parallel",
             Arg.Any<CancellationToken>());
     }
 

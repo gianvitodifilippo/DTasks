@@ -27,10 +27,13 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
                 continue;
 
             FlowId branchId = mainId.GetBranchId(branchIndex, task.IsStateful);
-            await SuspendBranchAsync(branchId, scope, Unsafe.As<DTask.DAwaiter, DTaskSuspender>(ref awaiter), cancellationToken);
+            await SuspendBranchAsync(branchId, scope, DTaskSuspender.FromDAwaiter(awaiter), cancellationToken);
 
             Debug.Assert(branchIndex < byte.MaxValue, "Aggregate task index overflow."); // TODO: support more than 255 tasks
-            branchIndex++;
+            checked
+            {
+                branchIndex++;
+            }
         }
 
         HashSet<byte> branchIndexes = new(branchIndex);
@@ -45,12 +48,12 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
 
     protected sealed override Task SuspendCoreAsync(TContext context, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
     {
-        return SuspendCoreAsync(context, scope, Unsafe.As<DTask.DAwaiter, DTaskSuspender>(ref awaiter), cancellationToken);
+        return SuspendCoreAsync(context, scope, DTaskSuspender.FromDAwaiter(awaiter), cancellationToken);
     }
 
     protected sealed override Task SuspendCoreAsync<TResult>(TContext context, IDTaskScope scope, DTask<TResult>.DAwaiter awaiter, CancellationToken cancellationToken)
     {
-        return SuspendCoreAsync(context, scope, Unsafe.As<DTask<TResult>.DAwaiter, DTaskSuspender>(ref awaiter), cancellationToken);
+        return SuspendCoreAsync(context, scope, DTaskSuspender.FromDAwaiter(awaiter), cancellationToken);
     }
 
     private async Task SuspendCoreAsync(TContext context, IDTaskScope scope, DTaskSuspender suspender, CancellationToken cancellationToken)
@@ -83,7 +86,7 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
             await SaveValueAsync(id, context, cancellationToken);
         }
 
-        await OnSuspendedAsync(id, scope, Unsafe.As<DTaskSuspender, DTask.DAwaiter>(ref suspender), cancellationToken);
+        await OnSuspendedAsync(id, scope, suspender, cancellationToken);
     }
 
     protected sealed override Task ResumeCoreAsync(FlowId id, IDTaskScope scope, CancellationToken cancellationToken)
@@ -267,7 +270,7 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
             await Storage.SaveStackAsync(branchId, ref stateHandler.Stack, cancellationToken);
         }
 
-        await OnSuspendedAsync(branchId, scope, Unsafe.As<DTaskSuspender, DTask.DAwaiter>(ref suspender), cancellationToken);
+        await OnSuspendedAsync(branchId, scope, suspender, cancellationToken);
     }
 
     private async Task<T> LoadValueAsync<T>(FlowId id, CancellationToken cancellationToken)
@@ -314,21 +317,29 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
 
     private readonly struct DTaskSuspender(DTask task)
     {
-        public bool IsStateful => task.IsStateful;
+        private readonly DTask _task = task;
+
+        public bool IsStateful => _task.IsStateful;
 
         public void SaveState(ref BinaryStateHandler handler)
         {
-            task.AssertNotRunning();
-            task.SaveState(ref handler);
+            _task.AssertNotRunning();
+            _task.SaveState(ref handler);
             Debug.Assert(handler.StackCount > 0, "Expected the stack to contain at least one item in a stateful flow.");
         }
 
         public Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
             where THandler : ISuspensionHandler
         {
-            task.AssertSuspended();
-            return task.SuspendAsync(ref handler, cancellationToken);
+            _task.AssertSuspended();
+            return _task.SuspendAsync(ref handler, cancellationToken);
         }
+
+        public static implicit operator DTask.DAwaiter(DTaskSuspender suspender) => new(suspender._task);
+
+        public static DTaskSuspender FromDAwaiter(DTask.DAwaiter awaiter) => Unsafe.As<DTask.DAwaiter, DTaskSuspender>(ref awaiter);
+
+        public static DTaskSuspender FromDAwaiter<TResult>(DTask<TResult>.DAwaiter awaiter) => Unsafe.As<DTask<TResult>.DAwaiter, DTaskSuspender>(ref awaiter);
     }
 
     private interface ICompletionAction // enables allocation-free delegates
