@@ -1,10 +1,10 @@
-﻿using StackExchange.Redis;
+﻿using DTasks.Hosting;
+using StackExchange.Redis;
 
 namespace DTasks.Storage.StackExchangeRedis;
 
 public class RedisDTaskStorageTests
 {
-    private static readonly string s_flowId = "flowId";
     private static readonly ReadOnlyMemory<byte> s_bytes1 = new byte[] { 1, 2, 3 };
     private static readonly ReadOnlyMemory<byte> s_bytes2 = new byte[] { 4, 5, 6 };
 
@@ -33,12 +33,14 @@ public class RedisDTaskStorageTests
     public async Task LoadStackAsync_ShouldReturnStackWithItemsFromDatabase()
     {
         // Arrange
+        var flowId = FlowId.New(FlowKind.Hosted);
+
         _database
-            .ListRangeAsync(s_flowId)
+            .ListRangeAsync(flowId.ToString())
             .Returns([s_bytes1, s_bytes2]);
 
         // Act
-        RedisFlowStack stack = await _sut.LoadStackAsync(s_flowId);
+        RedisFlowStack stack = await _sut.LoadStackAsync(flowId);
 
         // Assert
         stack.Items.Should().HaveCount(2).And.ContainInConsecutiveOrder(s_bytes2, s_bytes1);
@@ -48,14 +50,15 @@ public class RedisDTaskStorageTests
     public async Task SaveStackAsync_ShouldSaveStackToDatabaseAndClearItems()
     {
         // Arrange
+        var flowId = FlowId.New(FlowKind.Hosted);
         Stack<ReadOnlyMemory<byte>> items = new([s_bytes1, s_bytes2]);
         RedisFlowStack stack = new(items);
 
         // Act
-        await _sut.SaveStackAsync(s_flowId, ref stack);
+        await _sut.SaveStackAsync(flowId, ref stack);
 
         // Assert
-        await _database.Received(1).ListRightPushAsync(s_flowId, Arg.Is<RedisValue[]>(values => values.SequenceEqual(new RedisValue[] { s_bytes2, s_bytes1 })), When.Always, Arg.Any<CommandFlags>());
+        await _database.Received(1).ListLeftPushAsync(flowId.ToString(), Arg.Is<RedisValue[]>(values => values.SequenceEqual(new RedisValue[] { s_bytes2, s_bytes1 })), When.Always, Arg.Any<CommandFlags>());
         stack.Items.Should().BeEmpty();
     }
 }

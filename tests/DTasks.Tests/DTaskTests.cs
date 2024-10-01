@@ -41,7 +41,7 @@ public class DTaskTests
         var callback = Substitute.For<ISuspensionCallback>();
         var handler = Substitute.For<ISuspensionHandler>();
 
-        DTask sut = DTask.Factory.Suspend(callback);
+        DTask sut = DTask.Suspend(callback);
 
         // Act
         await sut.SuspendAsync(ref handler, CancellationToken.None);
@@ -57,7 +57,7 @@ public class DTaskTests
         var callback = Substitute.For<ISuspensionCallback>();
         var handler = Substitute.For<ISuspensionHandler>();
 
-        DTask<int> sut = DTask.Factory.Suspend<int>(callback);
+        DTask<int> sut = DTask<int>.Suspend(callback);
 
         // Act
         await sut.SuspendAsync(ref handler, CancellationToken.None);
@@ -77,7 +77,7 @@ public class DTaskTests
             .Returns(Task.CompletedTask)
             .AndDoes(call => call.ArgAt<ISuspensionCallback>(0).OnSuspendedAsync(flowId));
 
-        DTask sut = DTask.Factory.Suspend(callback);
+        DTask sut = DTask.Suspend(callback);
 
         // Act
         await sut.SuspendAsync(ref handler, CancellationToken.None);
@@ -97,7 +97,7 @@ public class DTaskTests
             .Returns(Task.CompletedTask)
             .AndDoes(call => call.ArgAt<ISuspensionCallback>(0).OnSuspendedAsync(flowId));
 
-        DTask<int> sut = DTask.Factory.Suspend<int>(callback);
+        DTask<int> sut = DTask<int>.Suspend(callback);
 
         // Act
         await sut.SuspendAsync(ref handler, CancellationToken.None);

@@ -54,28 +54,49 @@ public partial class DAsyncFlowTests
 
         static DTask<DateTime> GetDateDAsync()
         {
-            return DTask.Factory.Suspend<DateTime>((id, ct) => Task.CompletedTask);
+            return DTask<DateTime>.Suspend((id, ct) => Task.CompletedTask);
         }
 
         var scope = Substitute.For<IDTaskScope>();
-        string flowId = "flowId";
         var context = new TestFlowContext();
         DateTime date = DateTime.Now;
         DTask task = ProcessFileDAsync("http://dtasks.com");
+        FlowId flowId = default;
+
+        _sut.OnDelayAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                flowId = call.Arg<FlowId>();
+                return Task.CompletedTask;
+            });
+
+        _sut.OnCallbackAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<ISuspensionCallback>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                flowId = call.Arg<FlowId>();
+                return Task.CompletedTask;
+            });
+
+        _sut.OnYieldAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                flowId = call.Arg<FlowId>();
+                return Task.CompletedTask;
+            });
 
         // Act
         var awaiter = task.GetDAwaiter();
         await awaiter.IsCompletedAsync();
-        await _sut.SuspendAsync(flowId, context, scope, awaiter);
+        await _sut.SuspendAsync(context, scope, awaiter);
 
         await _sut.ResumeAsync(flowId, scope);
         await _sut.ResumeAsync(flowId, scope, date);
         await _sut.ResumeAsync(flowId, scope);
 
         // Assert
-        await _sut.Received().OnDelayAsync_Public(flowId, TimeSpan.FromSeconds(1), Arg.Any<CancellationToken>());
-        await _sut.Received().OnSuspendedAsync_Public(flowId, Arg.Any<ISuspensionCallback>(), Arg.Any<CancellationToken>());
-        await _sut.Received().OnYieldAsync_Public(flowId, Arg.Any<CancellationToken>());
+        await _sut.Received().OnDelayAsync_Public(flowId, scope, TimeSpan.FromSeconds(1), Arg.Any<CancellationToken>());
+        await _sut.Received().OnCallbackAsync_Public(flowId, scope, Arg.Any<ISuspensionCallback>(), Arg.Any<CancellationToken>());
+        await _sut.Received().OnYieldAsync_Public(flowId, scope, Arg.Any<CancellationToken>());
         await _sut.Received().OnCompletedAsync_Public(
             flowId,
             context,

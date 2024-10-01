@@ -203,50 +203,53 @@ public partial class JsonDTaskConverterTests
                 """;
 
             string heapJson = $$"""
-                [
-                  {
-                    "id": "0",
-                    "type": "{{typeof(string).AssemblyQualifiedName}}",
-                    "value": "{{token1}}"
-                  },
-                  {
-                    "type": "{{typeof(SerializableType1).AssemblyQualifiedName}}",
-                    "value": {
-                      "$id": "1",
-                      "Value1": "{{string1}}",
-                      "Value2": {{int1}}
-                    }
-                  },
-                  {
-                    "id": "2",
-                    "type": "{{typeof(string).AssemblyQualifiedName}}",
-                    "value": "{{token2}}"
-                  },
-                  {
-                    "type": "{{typeof(SerializableType2).AssemblyQualifiedName}}",
-                    "value": {
-                      "$id": "3",
-                      "Reference": {
-                        "$ref": "1"
-                      },
-                      "Value1": "{{string2}}",
-                      "PolymorphicReference": {
-                        "$id": "4",
-                        "$type": "{{PolymorphicType2.TypeDiscriminator}}",
-                        "Value": {{int2}}
+                {
+                  "s_count": 2,
+                  "heap": [
+                    {
+                      "id": "0",
+                      "type": "{{typeof(string).AssemblyQualifiedName}}",
+                      "value": "{{token1}}"
+                    },
+                    {
+                      "type": "{{typeof(SerializableType1).AssemblyQualifiedName}}",
+                      "value": {
+                        "$id": "1",
+                        "Value1": "{{string1}}",
+                        "Value2": {{int1}}
+                      }
+                    },
+                    {
+                      "id": "2",
+                      "type": "{{typeof(string).AssemblyQualifiedName}}",
+                      "value": "{{token2}}"
+                    },
+                    {
+                      "type": "{{typeof(SerializableType2).AssemblyQualifiedName}}",
+                      "value": {
+                        "$id": "3",
+                        "Reference": {
+                          "$ref": "1"
+                        },
+                        "Value1": "{{string2}}",
+                        "PolymorphicReference": {
+                          "$id": "4",
+                          "$type": "{{PolymorphicType2.TypeDiscriminator}}",
+                          "Value": {{int2}}
+                        }
+                      }
+                    },
+                    {
+                      "type": "{{typeof(SerializableType2).AssemblyQualifiedName}}",
+                      "value": {
+                        "$id": "5",
+                        "PolymorphicReference": {
+                          "$ref": "4"
+                        }
                       }
                     }
-                  },
-                  {
-                    "type": "{{typeof(SerializableType2).AssemblyQualifiedName}}",
-                    "value": {
-                      "$id": "5",
-                      "PolymorphicReference": {
-                        "$ref": "4"
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
                 """;
 
             return new(

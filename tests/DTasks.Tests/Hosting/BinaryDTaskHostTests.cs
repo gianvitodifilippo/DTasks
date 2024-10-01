@@ -5,7 +5,6 @@ namespace DTasks.Hosting;
 
 public class BinaryDTaskHostTests
 {
-    private static readonly string s_flowId = "flowId";
     private static readonly byte[] s_heapBytes = Encoding.UTF8.GetBytes("heap");
     private static readonly byte[] s_stateMachine1Bytes = Encoding.UTF8.GetBytes("SM1");
     private static readonly byte[] s_stateMachine2Bytes = Encoding.UTF8.GetBytes("SM2");
@@ -34,7 +33,7 @@ public class BinaryDTaskHostTests
             .Returns(s_heapBytes);
 
         _converter
-            .DeserializeHeap(s_flowId, Arg.Any<IDTaskScope>(), s_heapBytes)
+            .DeserializeHeap(Arg.Any<IDTaskScope>(), s_heapBytes)
             .Returns(_heap);
 
         _storage
@@ -45,65 +44,76 @@ public class BinaryDTaskHostTests
     }
 
     [Fact]
-    public async Task SuspendAsync_ShouldSaveStackAndHeap()
+    public async Task SuspendAsync_ShouldSaveContextAndStackAndHeap()
     {
         // Arrange
         var scope = Substitute.For<IDTaskScope>();
-        var suspendedTask = Substitute.For<TestSuspendedDTask>();
+        var suspendedTask = Substitute.For<TestSuspendedDTask>(true);
         var context = new TestFlowContext();
 
         _converter
-            .Serialize(ref _heap, context)
+            .Serialize(context)
             .Returns(s_contextBytes);
 
+        _converter
+            .SerializeStateMachine(ref _heap, ref Arg.Any<Arg.AnyType>(), Arg.Any<IStateMachineInfo>())
+            .Returns(s_stateMachine1Bytes);
+
+        _heap.StackCount.Returns(1u);
+
         // Act
-        await _sut.SuspendAsync(s_flowId, context, scope, suspendedTask.GetDAwaiter());
+        await _sut.SuspendAsync(context, scope, suspendedTask.GetDAwaiter());
 
         // Assert
         _converter.Received(1).CreateHeap(scope);
         _converter.Received(1).SerializeHeap(ref _heap);
         _storage.Received(1).CreateStack();
         _stack.Received(1).Push(s_contextBytes);
+        _stack.Received(1).Push(s_stateMachine1Bytes);
         _stack.Received(1).Push(s_heapBytes);
-        await _storage.Received(1).SaveStackAsync(s_flowId, ref _stack, Arg.Any<CancellationToken>());
-        // await task.Received(1).SuspendAsync(ref Arg.Any<ISuspensionHandler>(), Arg.Any<CancellationToken>()); https://github.com/nsubstitute/NSubstitute/issues/787
-        suspendedTask.ReceivedCalls()
-            .Where(call => call.GetMethodInfo().Name == nameof(DTask.SuspendAsync))
-            .Should()
-            .HaveCount(1);
+        await _storage.Received(1).SaveStackAsync(Arg.Any<FlowId>(), ref _stack, Arg.Any<CancellationToken>());
+        suspendedTask.Received().SaveState_Public(Arg.Any<IStateHandler>());
+        await suspendedTask.Received().SuspendAsync_Public(Arg.Any<ISuspensionHandler>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task ResumeAsync_ShouldSuspend_WhenFlowIsSuspended()
     {
         // Arrange
-        var suspendedTask = Substitute.For<TestSuspendedDTask>();
+        var suspendedTask = Substitute.For<TestSuspendedDTask>(true);
         var scope = Substitute.For<IDTaskScope>();
+        var flowId = FlowId.New(FlowKind.Hosted);
 
         _converter
-            .DeserializeStateMachine(s_flowId, ref _heap, s_stateMachine1Bytes, Arg.Is<DTask>(task => task.IsCompleted))
+            .DeserializeStateMachine(ref _heap, s_stateMachine1Bytes, Arg.Is<DTask>(task => task.IsCompleted))
             .Returns(suspendedTask);
 
+        _converter
+            .SerializeStateMachine(ref _heap, ref Arg.Any<Arg.AnyType>(), Arg.Any<IStateMachineInfo>())
+            .Returns(s_stateMachine1Bytes);
+
+        _converter
+            .DeserializeHeap(scope, s_heapBytes)
+            .Returns(_heap);
+
         _storage
-            .LoadStackAsync(s_flowId, Arg.Any<CancellationToken>())
+            .LoadStackAsync(flowId, Arg.Any<CancellationToken>())
             .Returns(_stack);
 
         _stack
             .PopAsync(Arg.Any<CancellationToken>())
-            .Returns(s_contextBytes, s_heapBytes, s_stateMachine1Bytes, s_emptyBytes);
+            .Returns(s_heapBytes, s_stateMachine1Bytes, s_contextBytes, s_emptyBytes);
+
+        _heap.StackCount.Returns(1u);
 
         // Act
-        await _sut.ResumeAsync(s_flowId, scope);
+        await _sut.ResumeAsync(flowId, scope);
 
         // Assert
-        _converter.Received(1).DeserializeHeap(s_flowId, scope, s_heapBytes);
-        _ = _converter.Received(1).DeserializeStateMachine(s_flowId, ref _heap, s_stateMachine1Bytes, Arg.Is<DTask>(task => task.IsCompleted));
-        suspendedTask.ReceivedCalls()
-            .Should()
-            .ContainSingle(call => call.GetMethodInfo().Name == nameof(DTask.SaveState)); // suspendedTask.Received().SaveState(ref Arg.Any<IStateHandler>());
-        suspendedTask.ReceivedCalls()
-            .Should()
-            .ContainSingle(call => call.GetMethodInfo().Name == nameof(DTask.SuspendAsync)); // await suspendedTask.Received().SuspendAsync(ref Arg.Any<ISuspensionHandler>(), Arg.Any<CancellationToken>());
+        _converter.Received(1).DeserializeHeap(scope, s_heapBytes);
+        _ = _converter.Received(1).DeserializeStateMachine(ref _heap, s_stateMachine1Bytes, Arg.Is<DTask>(task => task.IsCompleted));
+        suspendedTask.Received().SaveState_Public(Arg.Any<IStateHandler>());
+        await suspendedTask.Received().SuspendAsync_Public(Arg.Any<ISuspensionHandler>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -112,30 +122,35 @@ public class BinaryDTaskHostTests
         // Arrange
         var completedTask = Substitute.For<TestCompletedDTask>();
         var scope = Substitute.For<IDTaskScope>();
+        var flowId = FlowId.New(FlowKind.Hosted);
 
         _converter
-            .DeserializeStateMachine(s_flowId, ref _heap, s_stateMachine1Bytes, Arg.Is<DTask>(task => task.IsCompleted))
+            .DeserializeStateMachine(ref _heap, s_stateMachine1Bytes, Arg.Is<DTask>(task => task.IsCompleted))
             .Returns(completedTask);
 
+        _converter
+            .DeserializeHeap(scope, s_heapBytes)
+            .Returns(_heap);
+
         _storage
-            .LoadStackAsync(s_flowId, Arg.Any<CancellationToken>())
+            .LoadStackAsync(flowId, Arg.Any<CancellationToken>())
             .Returns(_stack);
 
         _stack
             .PopAsync(Arg.Any<CancellationToken>())
-            .Returns(s_contextBytes, s_heapBytes, s_stateMachine1Bytes, s_emptyBytes);
+            .Returns(s_heapBytes, s_stateMachine1Bytes, s_contextBytes, s_emptyBytes);
+
+        _heap.StackCount.Returns(1u);
 
         // Act
-        await _sut.ResumeAsync(s_flowId, scope);
+        await _sut.ResumeAsync(flowId, scope);
 
         // Assert
-        _converter.Received(1).DeserializeHeap(s_flowId, scope, s_heapBytes);
-        _converter.Received(1).Deserialize<string, TestFlowContext>(s_flowId, ref _heap, s_contextBytes);
-        _ = _converter.Received(1).DeserializeStateMachine(s_flowId, ref _heap, s_stateMachine1Bytes, Arg.Is<DTask>(task => task.IsCompleted));
-        await _storage.Received(1).ClearStackAsync(s_flowId, ref _stack, Arg.Any<CancellationToken>());
-        completedTask.ReceivedCalls()
-            .Should()
-            .ContainSingle(call => call.GetMethodInfo().Name == nameof(DTask.CompleteAsync));
+        _converter.Received(1).DeserializeHeap(scope, s_heapBytes);
+        _converter.Received(1).Deserialize<TestFlowContext>(s_contextBytes);
+        _ = _converter.Received(1).DeserializeStateMachine(ref _heap, s_stateMachine1Bytes, Arg.Is<DTask>(task => task.IsCompleted));
+        await _storage.Received(1).ClearStackAsync(flowId, ref _stack, Arg.Any<CancellationToken>());
+        await completedTask.Received().CompleteAsync_Public(Arg.Any<ICompletionHandler>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -144,27 +159,34 @@ public class BinaryDTaskHostTests
         // Arrange
         var completedTask = Substitute.For<TestCompletedDTask>();
         var scope = Substitute.For<IDTaskScope>();
+        var flowId = FlowId.New(FlowKind.Hosted);
 
         _storage
-            .LoadStackAsync(s_flowId, Arg.Any<CancellationToken>())
+            .LoadStackAsync(flowId, Arg.Any<CancellationToken>())
             .Returns(_stack);
 
         _converter
-            .DeserializeStateMachine(s_flowId, ref _heap, s_stateMachine1Bytes, Arg.Is<DTask>(task => task.IsCompleted))
+            .DeserializeStateMachine(ref _heap, s_stateMachine1Bytes, Arg.Is<DTask>(task => task.IsCompleted))
             .Returns(completedTask);
 
         _converter
-            .DeserializeStateMachine(s_flowId, ref _heap, s_stateMachine2Bytes, completedTask)
+            .DeserializeHeap(scope, s_heapBytes)
+            .Returns(_heap);
+
+        _converter
+            .DeserializeStateMachine(ref _heap, s_stateMachine2Bytes, completedTask)
             .Returns(completedTask);
 
         _stack
             .PopAsync(Arg.Any<CancellationToken>())
-            .Returns(s_contextBytes, s_heapBytes, s_stateMachine1Bytes, s_stateMachine2Bytes, s_emptyBytes);
+            .Returns(s_heapBytes, s_stateMachine1Bytes, s_stateMachine2Bytes, s_contextBytes, s_emptyBytes);
+
+        _heap.StackCount.Returns(2u);
 
         // Act
-        await _sut.ResumeAsync(s_flowId, scope);
+        await _sut.ResumeAsync(flowId, scope);
 
         // Assert
-        await _stack.Received(5).PopAsync(Arg.Any<CancellationToken>());
+        await _stack.Received(4).PopAsync(Arg.Any<CancellationToken>());
     }
 }
