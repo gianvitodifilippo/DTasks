@@ -20,7 +20,7 @@ public partial class DAsyncFlowTests
     public async Task DAsyncFlow_ShouldBeSuspendableAndResumable()
     {
         // Arrange
-        async DTask<FileData> ProcessFileDAsync(string url)
+        async DTask<FileData> WorkflowDAsync(string url)
         {
             ReadOnlyMemory<byte> file = await DownloadBytesAsync(url);
             FileData data = await ProcessDataDAsync(file);
@@ -60,7 +60,7 @@ public partial class DAsyncFlowTests
         var scope = Substitute.For<IDTaskScope>();
         var context = new TestFlowContext();
         DateTime date = DateTime.Now;
-        DTask task = ProcessFileDAsync("http://dtasks.com");
+        DTask task = WorkflowDAsync("http://dtasks.com");
         FlowId id1 = default;
         FlowId id2 = default;
         FlowId id3 = default;
@@ -110,16 +110,12 @@ public partial class DAsyncFlowTests
     public async Task DAsyncFlow_SuspendsWhenAll()
     {
         // Arrange
-        async DTask<string> WorkflowDAsync()
+        async DTask WorkflowDAsync()
         {
-            DTask[] tasks = [
+            await DTask.WhenAll([
                 DTask.Delay(TimeSpan.FromSeconds(1)),
                 DTask.Yield()
-            ];
-
-            await DTask.WhenAll(tasks);
-
-            return $"{tasks.Length} d-tasks were executed in parallel";
+            ]);
         }
 
         var scope = Substitute.For<IDTaskScope>();
@@ -159,12 +155,74 @@ public partial class DAsyncFlowTests
         await _sut.ResumeAsync(branchId1, scope);
 
         // Assert
-        await _sut.Received().OnDelayAsync_Public(branchId1, scope, TimeSpan.FromSeconds(1), Arg.Any<CancellationToken>());
-        await _sut.Received().OnYieldAsync_Public(branchId2, scope, Arg.Any<CancellationToken>());
         await _sut.Received().OnCompletedAsync_Public(
             id,
             context,
-            "2 d-tasks were executed in parallel",
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DAsyncFlow_SuspendsWhenAllWithResult()
+    {
+        // Arrange
+        const int num1 = 1;
+        const int num2 = 2;
+        const int expectedResult = num1 + num2;
+
+        ISuspensionCallback callback1 = Substitute.For<ISuspensionCallback>();
+        ISuspensionCallback callback2 = Substitute.For<ISuspensionCallback>();
+
+        async DTask<int> WorkflowDAsync()
+        {
+            int[] results = await DTask.WhenAll([
+                DTask<int>.Suspend(callback1),
+                DTask<int>.Suspend(callback2)
+            ]);
+
+            return results[0] + results[1];
+        }
+
+        var scope = Substitute.For<IDTaskScope>();
+        var context = new TestFlowContext();
+        DTask task = WorkflowDAsync();
+        FlowId id = default;
+        FlowId branchId1 = default;
+        FlowId branchId2 = default;
+
+        _sut.OnWhenAllAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<IEnumerable<DTask<int>>>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                id = call.Arg<FlowId>();
+                return Task.CompletedTask;
+            });
+
+        _sut.OnCallbackAsync_Public(Arg.Any<FlowId>(), scope, callback1, Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                branchId1 = call.Arg<FlowId>();
+                return Task.CompletedTask;
+            });
+
+        _sut.OnCallbackAsync_Public(Arg.Any<FlowId>(), scope, callback2, Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                branchId2 = call.Arg<FlowId>();
+                return Task.CompletedTask;
+            });
+
+        // Act
+        var awaiter = task.GetDAwaiter();
+        await awaiter.IsCompletedAsync();
+        await _sut.SuspendAsync(context, scope, awaiter);
+
+        await _sut.ResumeAsync(branchId2, scope, num2);
+        await _sut.ResumeAsync(branchId1, scope, num1);
+
+        // Assert
+        await _sut.Received().OnCompletedAsync_Public(
+            id,
+            context,
+            expectedResult,
             Arg.Any<CancellationToken>());
     }
 

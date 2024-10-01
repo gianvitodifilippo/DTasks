@@ -54,6 +54,8 @@ public abstract class DTask
 
     public static DTask WhenAll(IEnumerable<DTask> tasks) => new WhenAllDTask(tasks);
 
+    public static DTask<TResult[]> WhenAll<TResult>(IEnumerable<DTask<TResult>> tasks) => new WhenAllDTask<TResult>(tasks);
+
     public static DTask Suspend(SuspensionCallback callback) => new DelegateSuspendedDTask<VoidDTaskResult>(callback);
 
     public static DTask Suspend<TState>(TState state, SuspensionCallback<TState> callback) => new DelegateSuspendedDTask<VoidDTaskResult, TState>(state, callback);

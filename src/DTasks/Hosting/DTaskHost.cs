@@ -86,6 +86,11 @@ public abstract class DTaskHost<TContext>
         throw new NotSupportedException("The current DTask host does not support 'DTask.WhenAll'.");
     }
 
+    protected virtual Task OnWhenAllAsync<TResult>(FlowId id, IDTaskScope scope, IEnumerable<DTask<TResult>> tasks, CancellationToken cancellationToken)
+    {
+        throw new NotSupportedException("The current DTask host does not support 'DTask.WhenAll<TResult>'.");
+    }
+
     protected abstract Task OnCompletedAsync(FlowId id, TContext context, CancellationToken cancellationToken);
 
     protected abstract Task OnCompletedAsync<TResult>(FlowId id, TContext context, TResult result, CancellationToken cancellationToken);
@@ -177,6 +182,11 @@ public abstract class DTaskHost<TContext>
         }
 
         Task ISuspensionHandler.OnWhenAllAsync(IEnumerable<DTask> tasks, CancellationToken cancellationToken)
+        {
+            return host.OnWhenAllAsync(id, scope, tasks, cancellationToken);
+        }
+
+        Task ISuspensionHandler.OnWhenAllAsync<TResult>(IEnumerable<DTask<TResult>> tasks, CancellationToken cancellationToken)
         {
             return host.OnWhenAllAsync(id, scope, tasks, cancellationToken);
         }

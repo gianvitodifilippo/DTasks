@@ -43,6 +43,12 @@ public static class HostingFixtures
             await base.OnWhenAllAsync(id, scope, tasks, cancellationToken);
         }
 
+        protected sealed override async Task OnWhenAllAsync<TResult>(FlowId id, IDTaskScope scope, IEnumerable<DTask<TResult>> tasks, CancellationToken cancellationToken)
+        {
+            await OnWhenAllAsync_Public(id, scope, tasks, cancellationToken);
+            await base.OnWhenAllAsync(id, scope, tasks, cancellationToken);
+        }
+
         // Verifiable methods
 
         public abstract Task OnCallbackAsync_Public<TCallback>(FlowId id, IDTaskScope scope, TCallback callback, CancellationToken cancellationToken)
@@ -56,6 +62,8 @@ public static class HostingFixtures
         public abstract Task OnYieldAsync_Public(FlowId id, IDTaskScope scope, CancellationToken cancellationToken);
 
         public abstract Task OnWhenAllAsync_Public(FlowId id, IDTaskScope scope, IEnumerable<DTask> tasks, CancellationToken cancellationToken);
+
+        public abstract Task OnWhenAllAsync_Public<TResult>(FlowId id, IDTaskScope scope, IEnumerable<DTask<TResult>> tasks, CancellationToken cancellationToken);
 
         public abstract Task OnCompletedAsync_Public(FlowId id, TestFlowContext context, CancellationToken cancellationToken);
 

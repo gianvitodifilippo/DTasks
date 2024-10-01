@@ -237,6 +237,6 @@ public readonly struct FlowId : IEquatable<FlowId>
     private static bool IsValidKind(byte b7)
     {
         b7 &= s_kindMask;
-        return b7 is >= (byte)FlowKind.Hosted and <= (byte)FlowKind.WhenAny;
+        return b7 is >= (byte)FlowKind.Hosted and <= (byte)FlowKind.WhenAnyResult;
     }
 }

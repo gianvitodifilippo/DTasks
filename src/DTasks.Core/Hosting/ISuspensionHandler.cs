@@ -14,5 +14,5 @@ public interface ISuspensionHandler
 
     Task OnWhenAllAsync(IEnumerable<DTask> tasks, CancellationToken cancellationToken = default);
 
-    // TODO: Support tasks passed as spans, typed WhenAll, and WhenAny.
+    Task OnWhenAllAsync<TResult>(IEnumerable<DTask<TResult>> tasks, CancellationToken cancellationToken = default);
 }

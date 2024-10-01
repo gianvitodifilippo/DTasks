@@ -13,7 +13,7 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
 
     protected abstract IDTaskConverter<THeap> Converter { get; }
 
-    protected abstract IDistributedLockProvider LockProvider { get; }
+    protected virtual IDistributedLockProvider LockProvider => NullDistributedLockProvider.Instance;
 
     protected override async Task OnWhenAllAsync(FlowId id, IDTaskScope scope, IEnumerable<DTask> tasks, CancellationToken cancellationToken)
     {
@@ -36,13 +36,43 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
             }
         }
 
-        HashSet<byte> branchIndexes = new(branchIndex);
+        HashSet<byte> branches = new(branchIndex);
         for (byte i = 0; i < branchIndex; i++)
         {
-            branchIndexes.Add(i);
+            branches.Add(i);
         }
 
-        var context = new WhenAllContext(branchIndexes, id);
+        var context = new WhenAllContext(id, branches);
+        await SaveValueAsync(mainId, context, cancellationToken);
+    }
+
+    protected override async Task OnWhenAllAsync<TResult>(FlowId id, IDTaskScope scope, IEnumerable<DTask<TResult>> tasks, CancellationToken cancellationToken)
+    {
+        byte branchIndex = 0;
+        Dictionary<byte, TResult> branches = [];
+        FlowId mainId = FlowId.NewAggregate(FlowKind.WhenAllResult);
+
+        foreach (DTask<TResult> task in tasks)
+        {
+            DTask<TResult>.DAwaiter awaiter = task.GetDAwaiter();
+            if (await awaiter.IsCompletedAsync())
+            {
+                branches[branchIndex] = awaiter.GetResult();
+            }
+            else
+            {
+                FlowId branchId = mainId.GetBranchId(branchIndex, task.IsStateful);
+                await SuspendBranchAsync(branchId, scope, DTaskSuspender.FromDAwaiter(awaiter), cancellationToken);
+            }
+
+            Debug.Assert(branchIndex < byte.MaxValue, "Aggregate task index overflow."); // TODO: support more than 255 tasks
+            checked
+            {
+                branchIndex++;
+            }
+        }
+
+        var context = new WhenAllContext<TResult>(id, branches, branchIndex);
         await SaveValueAsync(mainId, context, cancellationToken);
     }
 
@@ -109,9 +139,10 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
 
         return id.Kind switch
         {
-            FlowKind.Hosted => CompleteStatelessHostedAsync(id, result, cancellationToken),
-            FlowKind.WhenAll => CompleteWhenAllAsync(id, scope, result, cancellationToken),
-            _ => throw new NotSupportedException() // TODO: Message
+            FlowKind.Hosted        => CompleteStatelessHostedAsync(id, result, cancellationToken),
+            FlowKind.WhenAll       => CompleteWhenAllAsync(id, scope, cancellationToken),
+            FlowKind.WhenAllResult => CompleteWhenAllAsync(id, scope, result, cancellationToken),
+            _                      => throw new NotSupportedException() // TODO: Message
         };
     }
 
@@ -165,6 +196,11 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
                 break;
 
             case FlowKind.WhenAll:
+                awaiter.GetResult(); // Ensure the task is completed successfully
+                await CompleteWhenAllAsync(id, scope, cancellationToken);
+                break;
+
+            case FlowKind.WhenAllResult:
                 await CompleteWhenAllAsync(id, scope, awaiter, cancellationToken);
                 break;
 
@@ -189,28 +225,9 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
         await Storage.ClearValueAsync(id, cancellationToken);
     }
 
-    private Task CompleteWhenAllAsync(FlowId id, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
+    private async Task CompleteWhenAllAsync(FlowId branchId, IDTaskScope scope, CancellationToken cancellationToken)
     {
-        DAwaiterChildCompletionAction action = new(awaiter);
-        return CompleteWhenAllCoreAsync(id, scope, action, cancellationToken);
-    }
-
-    private Task CompleteWhenAllAsync(FlowId id, IDTaskScope scope, CancellationToken cancellationToken)
-    {
-        VoidChildCompletionAction action = new();
-        return CompleteWhenAllCoreAsync(id, scope, action, cancellationToken);
-    }
-
-    private Task CompleteWhenAllAsync<TResult>(FlowId id, IDTaskScope scope, TResult result, CancellationToken cancellationToken)
-    {
-        ResultChildCompletionAction<TResult> action = new(result);
-        return CompleteWhenAllCoreAsync(id, scope, action, cancellationToken);
-    }
-
-    private async Task CompleteWhenAllCoreAsync<TAction>(FlowId id, IDTaskScope scope, TAction action, CancellationToken cancellationToken)
-        where TAction : ICompletionAction
-    {
-        FlowId mainId = id.GetMainId();
+        FlowId mainId = branchId.GetMainId();
         WhenAllContext context;
 
         try
@@ -219,14 +236,14 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
             {
                 context = await LoadValueAsync<WhenAllContext>(mainId, cancellationToken);
 
-                if (context.BranchIndexes is null)
+                if (context.Branches is null)
                     throw new CorruptedDFlowException(mainId);
 
-                byte branchIndex = id.BranchIndex;
-                if (!context.BranchIndexes.Remove(branchIndex))
-                    throw new InvalidFlowIdException(id);
+                byte branchIndex = branchId.BranchIndex;
+                if (!context.Branches.Remove(branchIndex))
+                    throw new InvalidFlowIdException(branchId);
 
-                if (context.BranchIndexes.Count != 0)
+                if (context.Branches.Count != 0)
                 {
                     await SaveValueAsync(mainId, context, cancellationToken);
                     return;
@@ -239,7 +256,58 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
             throw;
         }
 
-        await action.CompleteAsync(this, context.ParentFlowId, scope, cancellationToken);
+        await OnChildCompletedAsync(context.ParentFlowId, scope, cancellationToken);
+
+        try
+        {
+            await Storage.ClearValueAsync(mainId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            CorruptedDFlowException.ThrowIfRethrowable(mainId, ex);
+            throw;
+        }
+    }
+
+    private Task CompleteWhenAllAsync(FlowId branchId, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
+    {
+        BranchResultCompletionHandler handler = new(this, branchId, scope);
+        return awaiter.CompleteAsync(ref handler, cancellationToken);
+    }
+
+    private async Task CompleteWhenAllAsync<TResult>(FlowId branchId, IDTaskScope scope, TResult result, CancellationToken cancellationToken)
+    {
+        FlowId mainId = branchId.GetMainId();
+        WhenAllContext<TResult> context;
+
+        try
+        {
+            await using (await LockProvider.LockAsync(mainId, cancellationToken))
+            {
+                context = await LoadValueAsync<WhenAllContext<TResult>>(mainId, cancellationToken);
+
+                if (context.Branches is null)
+                    throw new CorruptedDFlowException(mainId);
+
+                byte branchIndex = branchId.BranchIndex;
+                if (!context.Branches.TryAdd(branchIndex, result))
+                    throw new InvalidFlowIdException(branchId);
+
+                if (context.Branches.Count != context.BranchCount)
+                {
+                    await SaveValueAsync(mainId, context, cancellationToken);
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            CorruptedDFlowException.ThrowIfRethrowable(mainId, ex);
+            throw;
+        }
+
+        TResult[] results = [.. context.Branches.Values];
+        await OnChildCompletedAsync(context.ParentFlowId, scope, results, cancellationToken);
 
         try
         {
@@ -342,26 +410,16 @@ public abstract class BinaryDTaskHost<TContext, TStack, THeap> : DTaskHost<TCont
         public static DTaskSuspender FromDAwaiter<TResult>(DTask<TResult>.DAwaiter awaiter) => Unsafe.As<DTask<TResult>.DAwaiter, DTaskSuspender>(ref awaiter);
     }
 
-    private interface ICompletionAction // enables allocation-free delegates
+    private readonly struct BranchResultCompletionHandler(BinaryDTaskHost<TContext, TStack, THeap> host, FlowId branchId, IDTaskScope scope) : ICompletionHandler
     {
-        Task CompleteAsync(BinaryDTaskHost<TContext, TStack, THeap> host, FlowId id, IDTaskScope scope, CancellationToken cancellationToken);
-    }
+        public Task OnCompletedAsync(CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("Expected a result.");
+        }
 
-    private readonly struct DAwaiterChildCompletionAction(DTask.DAwaiter awaiter) : ICompletionAction
-    {
-        Task ICompletionAction.CompleteAsync(BinaryDTaskHost<TContext, TStack, THeap> host, FlowId id, IDTaskScope scope, CancellationToken cancellationToken)
-            => host.OnChildCompletedAsync(id, scope, awaiter, cancellationToken);
-    }
-
-    private readonly struct VoidChildCompletionAction : ICompletionAction
-    {
-        Task ICompletionAction.CompleteAsync(BinaryDTaskHost<TContext, TStack, THeap> host, FlowId id, IDTaskScope scope, CancellationToken cancellationToken)
-            => host.OnChildCompletedAsync(id, scope, cancellationToken);
-    }
-
-    private readonly struct ResultChildCompletionAction<TResult>(TResult result) : ICompletionAction
-    {
-        Task ICompletionAction.CompleteAsync(BinaryDTaskHost<TContext, TStack, THeap> host, FlowId id, IDTaskScope scope, CancellationToken cancellationToken)
-            => host.OnChildCompletedAsync(id, scope, result, cancellationToken);
+        public Task OnCompletedAsync<TResult>(TResult result, CancellationToken cancellationToken = default)
+        {
+            return host.CompleteWhenAllAsync(branchId, scope, result, cancellationToken);
+        }
     }
 }
