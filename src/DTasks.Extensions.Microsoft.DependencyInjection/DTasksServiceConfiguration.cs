@@ -1,5 +1,7 @@
+using DTasks.Serialization;
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Frozen;
 using System.Reflection;
 
 namespace DTasks.Extensions.Microsoft.DependencyInjection;
@@ -67,15 +69,30 @@ internal class DTasksServiceConfiguration(IServiceCollection services) : IDTasks
 
     private bool IsDAsyncService(ServiceDescriptor descriptor)
     {
-        if (descriptor.IsKeyedService && _additionalKeyedServiceTypes.Contains((descriptor.ServiceType, descriptor.ServiceKey)))
+        Type serviceType = descriptor.ServiceType;
+
+        if (IsWellKnownNonDAsyncService(serviceType))
+            return false;
+
+        if (descriptor.IsKeyedService && _additionalKeyedServiceTypes.Contains((serviceType, descriptor.ServiceKey)))
             return true;
 
-        if (_additionalServiceTypes.Contains(descriptor.ServiceType))
+        if (_additionalServiceTypes.Contains(serviceType))
             return true;
 
-        return descriptor.ServiceType
+        return serviceType
             .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-            .Any(method => typeof(DTask).IsAssignableFrom(method.ReturnType));
+            .Any(method => typeof(DTask).IsAssignableFrom(method.ReturnType) && !method.IsDefined(typeof(NonDAsyncAttribute)));
+    }
+
+    private static bool IsWellKnownNonDAsyncService(Type serviceType)
+    {
+        return IsDTaskConverter(serviceType);
+
+        static bool IsDTaskConverter(Type serviceType) =>
+            serviceType.IsGenericType &&
+            !serviceType.ContainsGenericParameters &&
+            serviceType.GetGenericTypeDefinition() == typeof(IDTaskConverter<>);
     }
 
     private static NotSupportedException OpenGenericsNotSupported() => new("Usage of open generic services within d-async flows is not supported.");

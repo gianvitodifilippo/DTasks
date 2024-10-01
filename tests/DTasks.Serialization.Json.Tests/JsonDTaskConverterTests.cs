@@ -9,8 +9,6 @@ namespace DTasks.Serialization.Json;
 
 public partial class JsonDTaskConverterTests
 {
-    private static readonly string _flowId = "flowId";
-
     private readonly JsonDTaskConverterFixture _fixture;
     private readonly IStateMachineInspector _inspector;
     private readonly IStateMachineTypeResolver _typeResolver;
@@ -111,6 +109,7 @@ public partial class JsonDTaskConverterTests
         JsonFlowHeap heap = _sut.CreateHeap(_scope);
         ReadOnlyMemory<byte> stateMachine1Bytes = _sut.SerializeStateMachine(ref heap, ref stateMachine1, info);
         ReadOnlyMemory<byte> stateMachine2Bytes = _sut.SerializeStateMachine(ref heap, ref stateMachine2, info);
+        heap.StackCount = 2;
 
         Dictionary<string, object> idsToReferences = GetIdsToReferences(heap.ReferenceResolver);
         Dictionary<object, string> referencesToIds = GetReferencesToIds(heap.ReferenceResolver);
@@ -167,16 +166,17 @@ public partial class JsonDTaskConverterTests
             .Returns(resumer2);
 
         // Act
-        JsonFlowHeap heap = _sut.DeserializeHeap(_flowId, _scope, heapBytes);
+        JsonFlowHeap heap = _sut.DeserializeHeap(_scope, heapBytes);
 
         Dictionary<string, object> idsToReferences = GetIdsToReferences(heap.ReferenceResolver);
         Dictionary<object, string> referencesToIds = GetReferencesToIds(heap.ReferenceResolver);
 
-        _ = _sut.DeserializeStateMachine(_flowId, ref heap, stateMachine2Bytes, Substitute.For<DTask>());
-        _ = _sut.DeserializeStateMachine(_flowId, ref heap, stateMachine1Bytes, Substitute.For<DTask>());
+        _ = _sut.DeserializeStateMachine(ref heap, stateMachine2Bytes, Substitute.For<DTask>());
+        _ = _sut.DeserializeStateMachine(ref heap, stateMachine1Bytes, Substitute.For<DTask>());
 
         // Assert
         VerifyHeapState(idsToReferences, referencesToIds);
+        heap.StackCount.Should().Be(2);
 
         stateMachine1.__this.Should().Be(_fixture.Services.Service1);
         stateMachine1.local1.Should().BeEquivalentTo(_fixture.References.Reference1);

@@ -20,6 +20,8 @@ public abstract class DTask
 
     internal bool IsSuspended => Status is DTaskStatus.Suspended;
 
+    internal virtual bool IsStateful => false; // Allows internal optimizations
+
     [EditorBrowsable(EditorBrowsableState.Never)]
     public Awaiter GetAwaiter() => new Awaiter(this);
 
@@ -29,6 +31,7 @@ public abstract class DTask
     internal virtual void SaveState<THandler>(ref THandler handler)
         where THandler : IStateHandler
     {
+        Debug.Assert(!IsStateful, $"If a subclass of {nameof(DTask)} is declared as stateful, it should override the '{nameof(SaveState)}' method.");
     }
 
     internal abstract Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
@@ -43,13 +46,25 @@ public abstract class DTask
 
     public static DTask CompletedTask { get; } = new CompletedDTask<VoidDTaskResult>(default);
 
-    public static DTaskFactory Factory => DTaskFactory.Instance;
-
     public static DTask<TResult> FromResult<TResult>(TResult result) => new CompletedDTask<TResult>(result);
 
     public static DTask Yield() => YieldDTask.Instance;
 
     public static DTask Delay(TimeSpan delay) => new DelayDTask(delay);
+
+    public static DTask WhenAll(IEnumerable<DTask> tasks) => new WhenAllDTask(tasks);
+
+    public static DTask<TResult[]> WhenAll<TResult>(IEnumerable<DTask<TResult>> tasks) => new WhenAllDTask<TResult>(tasks);
+
+    public static DTask Suspend(SuspensionCallback callback) => new DelegateSuspendedDTask<VoidDTaskResult>(callback);
+
+    public static DTask Suspend<TState>(TState state, SuspensionCallback<TState> callback) => new DelegateSuspendedDTask<VoidDTaskResult, TState>(state, callback);
+
+    public static DTask Suspend<TCallback>(TCallback callback) where TCallback : ISuspensionCallback
+        => new SuspendedDTask<VoidDTaskResult, TCallback>(callback);
+
+    public static DTask Suspend<TState, TCallback>(TState state, TCallback callback) where TCallback : ISuspensionCallback<TState>
+        => new SuspendedDTask<VoidDTaskResult, TState, TCallback>(state, callback);
 
     private protected void EnsureCompleted()
     {
@@ -70,6 +85,18 @@ public abstract class DTask
     }
 
     [Conditional("DEBUG")]
+    internal void AssertNotRunning()
+    {
+        Debug.Assert(!IsRunning, "The DTask was still running.");
+    }
+
+    [Conditional("DEBUG")]
+    internal void AssertSuspended()
+    {
+        Debug.Assert(IsSuspended, $"The DTask was not suspended (it was '{Status}').");
+    }
+
+    [Conditional("DEBUG")]
     private protected void VerifyStatus(DTaskStatus expectedStatus)
     {
         Debug.Assert(Status == expectedStatus, $"The DTask was not '{expectedStatus}'.");
@@ -87,6 +114,7 @@ public abstract class DTask
         throw new InvalidOperationException("DTasks may be awaited in d-async methods only.");
     }
 
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public readonly struct Awaiter : ICriticalNotifyCompletion, IDTaskAwaiter
     {
         private readonly DTask _task;
@@ -110,6 +138,7 @@ public abstract class DTask
         public void UnsafeOnCompleted(Action continuation) => InvalidAwait();
     }
 
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public readonly struct DAwaiter
     {
         private readonly DTask _task;
@@ -167,12 +196,23 @@ public abstract class DTask<TResult> : DTask
         return handler.OnCompletedAsync(Result, cancellationToken);
     }
 
+    public new static DTask<TResult> Suspend(SuspensionCallback callback) => new DelegateSuspendedDTask<TResult>(callback);
+
+    public new static DTask<TResult> Suspend<TState>(TState state, SuspensionCallback<TState> callback) => new DelegateSuspendedDTask<TResult, TState>(state, callback);
+
+    public new static DTask<TResult> Suspend<TCallback>(TCallback callback) where TCallback : ISuspensionCallback
+        => new SuspendedDTask<TResult, TCallback>(callback);
+
+    public new static DTask<TResult> Suspend<TState, TCallback>(TState state, TCallback callback) where TCallback : ISuspensionCallback<TState>
+        => new SuspendedDTask<TResult, TState, TCallback>(state, callback);
+
     [EditorBrowsable(EditorBrowsableState.Never)]
     public new Awaiter GetAwaiter() => new Awaiter(this);
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     public new DAwaiter GetDAwaiter() => new DAwaiter(this);
 
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public new readonly struct Awaiter : ICriticalNotifyCompletion, IDTaskAwaiter
     {
         private readonly DTask<TResult> _task;
@@ -197,6 +237,7 @@ public abstract class DTask<TResult> : DTask
         public void UnsafeOnCompleted(Action continuation) => InvalidAwait();
     }
 
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public new readonly struct DAwaiter
     {
         private readonly DTask<TResult> _task;

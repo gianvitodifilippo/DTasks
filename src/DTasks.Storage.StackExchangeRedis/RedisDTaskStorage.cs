@@ -1,4 +1,5 @@
-﻿using StackExchange.Redis;
+﻿using DTasks.Hosting;
+using StackExchange.Redis;
 
 namespace DTasks.Storage.StackExchangeRedis;
 
@@ -10,8 +11,7 @@ public sealed class RedisDTaskStorage(IDatabase database) : IDTaskStorage<RedisF
         return new RedisFlowStack(items);
     }
 
-    public async ValueTask<RedisFlowStack> LoadStackAsync<TFlowId>(TFlowId flowId, CancellationToken cancellationToken = default)
-        where TFlowId : notnull
+    public async ValueTask<RedisFlowStack> LoadStackAsync(FlowId flowId, CancellationToken cancellationToken = default)
     {
         RedisKey key = flowId.ToString();
         RedisValue[] values = await database.ListRangeAsync(key);
@@ -25,8 +25,7 @@ public sealed class RedisDTaskStorage(IDatabase database) : IDTaskStorage<RedisF
         return new RedisFlowStack(items);
     }
 
-    public Task SaveStackAsync<TFlowId>(TFlowId flowId, ref RedisFlowStack stack, CancellationToken cancellationToken = default)
-        where TFlowId : notnull
+    public Task SaveStackAsync(FlowId flowId, ref RedisFlowStack stack, CancellationToken cancellationToken = default)
     {
         Stack<ReadOnlyMemory<byte>> items = stack.Items;
         int count = items.Count;
@@ -39,10 +38,34 @@ public sealed class RedisDTaskStorage(IDatabase database) : IDTaskStorage<RedisF
             values[i] = items.Pop();
         }
 
-        return database.ListRightPushAsync(key, values);
+        return database.ListLeftPushAsync(key, values);
     }
 
-    public Task ClearStackAsync<TFlowId>(TFlowId flowId, ref RedisFlowStack stack, CancellationToken cancellationToken = default) where TFlowId : notnull
+    public Task ClearStackAsync(FlowId flowId, ref RedisFlowStack stack, CancellationToken cancellationToken = default)
+    {
+        return KeyDeleteAsync(flowId);
+    }
+
+    public async ValueTask<ReadOnlyMemory<byte>> LoadValueAsync(FlowId flowId, CancellationToken cancellationToken = default)
+    {
+        RedisKey key = flowId.ToString();
+        RedisValue value = await database.StringGetAsync(key);
+
+        return value;
+    }
+
+    public async Task SaveValueAsync(FlowId flowId, ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default)
+    {
+        RedisKey key = flowId.ToString();
+        await database.StringSetAsync(key, bytes);
+    }
+
+    public Task ClearValueAsync(FlowId flowId, CancellationToken cancellationToken = default)
+    {
+        return KeyDeleteAsync(flowId);
+    }
+
+    private Task KeyDeleteAsync(FlowId flowId)
     {
         RedisKey key = flowId.ToString();
         return database.KeyDeleteAsync(key);
