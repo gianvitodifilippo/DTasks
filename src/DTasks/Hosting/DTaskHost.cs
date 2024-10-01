@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using DTasks.Utils;
+using System.Diagnostics;
 
 namespace DTasks.Hosting;
 
@@ -6,22 +7,56 @@ public abstract class DTaskHost<TContext>
 {
     public Task SuspendAsync(TContext context, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken = default)
     {
+        ThrowHelper.ThrowIfNull(scope);
+
         return SuspendCoreAsync(context, scope, awaiter, cancellationToken);
     }
 
     public Task SuspendAsync<TResult>(TContext context, IDTaskScope scope, DTask<TResult>.DAwaiter awaiter, CancellationToken cancellationToken = default)
     {
+        ThrowHelper.ThrowIfNull(scope);
+
         return SuspendCoreAsync(context, scope, awaiter, cancellationToken);
     }
 
     public Task ResumeAsync(FlowId id, IDTaskScope scope, CancellationToken cancellationToken = default)
     {
-        return ResumeCoreAsync(id, scope, cancellationToken);
+        ThrowHelper.ThrowIfNull(scope);
+
+        return SafeResumeAsync(id, scope, cancellationToken);
     }
 
     public Task ResumeAsync<TResult>(FlowId id, IDTaskScope scope, TResult result, CancellationToken cancellationToken = default)
     {
-        return ResumeCoreAsync(id, scope, result, cancellationToken);
+        ThrowHelper.ThrowIfNull(scope);
+
+        return SafeResumeAsync(id, scope, result, cancellationToken);
+    }
+
+    private async Task SafeResumeAsync(FlowId id, IDTaskScope scope, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ResumeCoreAsync(id, scope, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            CorruptedDFlowException.ThrowIfRethrowable(id, ex);
+            throw;
+        }
+    }
+
+    private async Task SafeResumeAsync<TResult>(FlowId id, IDTaskScope scope, TResult result, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ResumeCoreAsync(id, scope, result, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            CorruptedDFlowException.ThrowIfRethrowable(id, ex);
+            throw;
+        }
     }
 
     protected virtual Task OnCallbackAsync<TCallback>(FlowId id, IDTaskScope scope, TCallback callback, CancellationToken cancellationToken)
@@ -63,7 +98,7 @@ public abstract class DTaskHost<TContext>
 
     protected abstract Task ResumeCoreAsync<TResult>(FlowId id, IDTaskScope scope, TResult result, CancellationToken cancellationToken);
 
-    protected Task OnHostedCompletedAsync(FlowId id, TContext context, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
+    protected Task OnCompletedAsync(FlowId id, TContext context, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
     {
         Debug.Assert(id.Kind is FlowKind.Hosted, "Expected a hosted flow id.");
 
@@ -71,13 +106,20 @@ public abstract class DTaskHost<TContext>
         return awaiter.CompleteAsync(ref handler, cancellationToken);
     }
 
-    // TODO: Maybe we should call it differently to make clear that's a flow child of the one being resumed
-    protected Task OnAggregateCompletedAsync(FlowId id, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
+    protected Task OnChildCompletedAsync(FlowId parentId, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
     {
-        Debug.Assert(id.Kind.IsAggregate(), "Expected an aggregate flow id.");
-
-        AggregateFlowCompletionHandler handler = new(id, scope, this);
+        ChildFlowCompletionHandler handler = new(parentId, scope, this);
         return awaiter.CompleteAsync(ref handler, cancellationToken);
+    }
+
+    protected Task OnChildCompletedAsync(FlowId parentId, IDTaskScope scope, CancellationToken cancellationToken)
+    {
+        return SafeResumeAsync(parentId, scope, cancellationToken);
+    }
+
+    protected Task OnChildCompletedAsync<TResult>(FlowId parentId, IDTaskScope scope, TResult result, CancellationToken cancellationToken)
+    {
+        return SafeResumeAsync(parentId, scope, result, cancellationToken);
     }
 
     protected Task OnSuspendedAsync(FlowId id, IDTaskScope scope, DTask.DAwaiter awaiter, CancellationToken cancellationToken)
@@ -99,17 +141,16 @@ public abstract class DTaskHost<TContext>
         }
     }
 
-    // TODO: Maybe we should call it differently to make clear that's a flow child of the one being resumed
-    private readonly struct AggregateFlowCompletionHandler(FlowId id, IDTaskScope scope, DTaskHost<TContext> host) : ICompletionHandler
+    private readonly struct ChildFlowCompletionHandler(FlowId parentId, IDTaskScope scope, DTaskHost<TContext> host) : ICompletionHandler
     {
         Task ICompletionHandler.OnCompletedAsync(CancellationToken cancellationToken)
         {
-            return host.ResumeAsync(id, scope, cancellationToken);
+            return host.SafeResumeAsync(parentId, scope, cancellationToken);
         }
 
         Task ICompletionHandler.OnCompletedAsync<TResult>(TResult result, CancellationToken cancellationToken)
         {
-            return host.ResumeAsync(id, scope, result, cancellationToken);
+            return host.SafeResumeAsync(parentId, scope, result, cancellationToken);
         }
     }
 

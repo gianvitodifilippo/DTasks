@@ -35,10 +35,9 @@ public class CorruptedDFlowException : Exception
         return $"The state of distributed flow with id '{flowId}' was was corrupted.";
     }
 
-    // TODO: Add an internal set to FlowId and let the components throw themselves the exception, then catch it and set the id up in the call stack
-    internal static void ThrowIfRethrowable(FlowId id, Exception ex)
+    public static void ThrowIfRethrowable(FlowId id, Exception ex)
     {
-        if (ex.Source != RethrowableSource)
+        if (ex.Source != RethrowableSource || ex is CorruptedDFlowException)
             return;
 
         string? message = ex.Message;
