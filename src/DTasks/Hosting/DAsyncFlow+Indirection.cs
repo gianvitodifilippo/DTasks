@@ -4,7 +4,7 @@ namespace DTasks.Hosting;
 
 internal partial class DAsyncFlow
 {
-    private void RunIndirection(Continuation continuation)
+    private void RunIndirection(FlowContinuation continuation)
     {
         _continuation = continuation;
         _suspendingAwaiterOrType = typeof(HostIndirectionAwaiter);

@@ -1,7 +1,9 @@
 ﻿#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 
 using DTasks.Marshaling;
+using NSubstitute.Core;
 using System.Linq.Expressions;
+using Xunit.Sdk;
 
 namespace DTasks.Hosting;
 
@@ -558,6 +560,86 @@ public class DAsyncFlowTests
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
         await _host.Received(1).SucceedAsync(result);
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task YieldingTwiceSavesStateWithSameIdWithoutExposingIt()
+    {
+        // Arrange
+        static async DTask M1()
+        {
+            await DTask.Yield();
+            await DTask.Yield();
+        }
+
+        DAsyncId hostYieldId1 = default;
+        DAsyncId hostYieldId2 = default;
+        DAsyncId id1 = default;
+        DAsyncId id2 = default;
+        DAsyncId yieldId1 = default;
+        DAsyncId yieldId2 = default;
+
+        _host
+            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .Do(call =>
+            {
+                if (hostYieldId1 == default)
+                {
+                    hostYieldId1 = call.Arg<DAsyncId>();
+                    return;
+                }
+
+                if (hostYieldId2 == default)
+                {
+                    hostYieldId2 = call.Arg<DAsyncId>();
+                    return;
+                }
+
+                throw FailException.ForFailure("YieldAsync called too many times");
+            });
+        _stateManager.OnDehydrate(id =>
+        {
+            if (id1 == default)
+            {
+                id1 = id;
+                return;
+            }
+
+            if (yieldId1 == default)
+            {
+                yieldId1 = id;
+                return;
+            }
+
+            if (id2 == default)
+            {
+                id2 = id;
+                return;
+            }
+
+            if (yieldId2 == default)
+            {
+                yieldId2 = id;
+                return;
+            }
+
+            throw FailException.ForFailure("OnDehydrate called too many times");
+        });
+
+        DTask task = M1();
+
+        // Act
+        await _sut.StartAsync(_host, task);
+        await _sut.ResumeAsync(_host, hostYieldId1);
+        await _sut.ResumeAsync(_host, hostYieldId2);
+
+        // Assert
+        hostYieldId1.Should().Be(yieldId1);
+        hostYieldId2.Should().Be(yieldId2);
+        hostYieldId1.Should().NotBe(hostYieldId2);
+        id1.Should().Be(id2).And.NotBe(hostYieldId1).And.NotBe(hostYieldId2);
+        await _host.Received(2).YieldAsync(Arg.Any<DAsyncId>());
         _stateManager.Count.Should().Be(0);
     }
 
