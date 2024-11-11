@@ -45,7 +45,7 @@ public abstract class DTask : IDAsyncRunnable
         }
     }
 
-    public Exception ExceptionInternal
+    internal Exception ExceptionInternal
     {
         get
         {
@@ -54,7 +54,7 @@ public abstract class DTask : IDAsyncRunnable
         }
     }
 
-    protected virtual Exception ExceptionCore => throw new NotSupportedException($"If a DTask can be '{DTaskStatus.Faulted}' or '{DTaskStatus.Canceled}', then it should override {nameof(ExceptionCore)}.");
+    protected virtual Exception ExceptionCore => throw new NotImplementedException($"If a DTask can be '{DTaskStatus.Faulted}' or '{DTaskStatus.Canceled}', then it should override {nameof(ExceptionCore)}.");
 
     internal virtual TReturn Accept<TReturn>(IDTaskVisitor<TReturn> visitor) => visitor.Visit(this);
 
@@ -148,6 +148,7 @@ public abstract class DTask : IDAsyncRunnable
             if (_task.IsSucceeded)
                 return;
 
+            _task.AssertFailed();
             ExceptionDispatchInfo.Throw(_task.ExceptionInternal);
         }
 
@@ -194,7 +195,7 @@ public abstract class DTask<TResult> : DTask
         }
     }
 
-    protected virtual TResult ResultCore => throw new NotSupportedException($"If a DTask can be '{DTaskStatus.Succeeded}', then it should override {nameof(ResultCore)}.");
+    protected virtual TResult ResultCore => throw new NotImplementedException($"If a DTask can be '{DTaskStatus.Succeeded}', then it should override {nameof(ResultCore)}.");
 
     internal sealed override TReturn Accept<TReturn>(IDTaskVisitor<TReturn> visitor) => visitor.Visit(this);
 
@@ -225,6 +226,7 @@ public abstract class DTask<TResult> : DTask
             if (_task.IsSucceeded)
                 return _task.ResultCore;
 
+            _task.AssertFailed();
             ExceptionDispatchInfo.Throw(_task.ExceptionInternal);
             throw new UnreachableException();
         }

@@ -81,6 +81,7 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
             Debug.Assert(_status is DTaskStatus.Running, "The DTask should complete when running.");
 
             IDAsyncMethodBuilder builder = Builder;
+            _stateObject = null;
             _status = DTaskStatus.Succeeded;
             _result = result;
 
@@ -92,17 +93,17 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
             {
                 builder.SetResult(result);
             }
-            _stateObject = null;
         }
 
         public override void SetException(Exception exception)
         {
             IDAsyncMethodBuilder builder = Builder;
 
+            _stateObject = exception;
             _status = exception is OperationCanceledException
                 ? DTaskStatus.Canceled
                 : DTaskStatus.Faulted;
-            _stateObject = exception;
+
             builder.SetException(exception);
         }
 
@@ -137,8 +138,8 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
         {
             IDAsyncMethodBuilder builder = Builder;
             _stateObject = null;
-
             _status = DTaskStatus.Suspended;
+
             builder.SetState(ref StateMachine);
         }
 

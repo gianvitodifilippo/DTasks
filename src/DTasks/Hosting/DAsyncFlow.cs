@@ -164,25 +164,6 @@ internal partial class DAsyncFlow
         }
     }
 
-    private void Reset()
-    {
-        Debug.Assert(_suspendingAwaiterOrType is null);
-        Debug.Assert(_delay == default);
-        Debug.Assert(_callback is null);
-        Debug.Assert(_continuation is null);
-
-        _state = FlowState.Pending;
-        _valueTaskSource.Reset();
-        _cancellationToken = default;
-
-        _host = s_nullHost;
-        _marshaler = s_nullMarshaler;
-        _stateManager = s_nullStateManager;
-
-        _parentId = default;
-        _id = default;
-    }
-
     [DebuggerStepThrough]
     private T Consume<T>([MaybeNull] ref T value)
     {
