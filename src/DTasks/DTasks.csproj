@@ -15,19 +15,10 @@
 
     <ItemGroup>
         <ProjectReference Include="..\DTasks.Core\DTasks.Core.csproj" />
-        <ProjectReference Include="..\..\tests\DTask.Tests.Interceptors\DTask.Tests.Interceptors.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" Condition="'$(Configuration)|$(Platform)'=='Debug-Tests|AnyCPU' Or '$(Configuration)|$(Platform)'=='Release-Tests|AnyCPU'" />
+        <ProjectReference Include="..\DTasks.Inspection\DTasks.Inspection.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-            <_Parameter1>DTasks.Extensions.Microsoft.DependencyInjection</_Parameter1>
-        </AssemblyAttribute>
-        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-            <_Parameter1>DTasks.Serialization.Json.Tests</_Parameter1>
-        </AssemblyAttribute>
-        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-            <_Parameter1>DTasks.Storage.StackExchangeRedis</_Parameter1>
-        </AssemblyAttribute>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
             <_Parameter1>DTasks.Tests</_Parameter1>
         </AssemblyAttribute>
@@ -35,9 +26,5 @@
             <_Parameter1>DynamicProxyGenAssembly2</_Parameter1>
         </AssemblyAttribute>
     </ItemGroup>
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Tests|AnyCPU' Or '$(Configuration)|$(Platform)'=='Release-Tests|AnyCPU'">
-        <InterceptorsPreviewNamespaces>$(InterceptorsPreviewNamespaces);DTasks.Generated.Emit</InterceptorsPreviewNamespaces>
-    </PropertyGroup>
 
 </Project>

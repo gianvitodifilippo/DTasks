@@ -1,210 +1,162 @@
-﻿using DTasks.Hosting;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using DTasks.Hosting;
 
 namespace DTasks;
 
 internal abstract class DTaskBuilder<TResult> : DTask<TResult>
 {
-    private AsyncTaskMethodBuilder<bool> _underlyingTaskBuilder;
-    private TResult? _result;
-    private DTaskStatus _status;
-
-    private DTaskBuilder()
-    {
-        _underlyingTaskBuilder = AsyncTaskMethodBuilder<bool>.Create();
-        _status = DTaskStatus.Running;
-    }
-
-    internal sealed override DTaskStatus Status => _status;
-
-    internal sealed override TResult Result
-    {
-        get
-        {
-            VerifyStatus(expectedStatus: DTaskStatus.RanToCompletion);
-            return _result!;
-        }
-    }
-
-    internal sealed override Task<bool> UnderlyingTask => _underlyingTaskBuilder.Task;
-
-    // The native AsyncTaskMethodBuilder implementation is not bound to a particular state
-    // machine type, nor does it check whether their methods are passed the same state machine
-    // each time as argument. Since they only use the state machine that was passed first,
-    // passing different state machines to its methods leads to unexpected behavior.
-    // Since we do the same, let's ensure we (and potential advanced users) always pass the
-    // same state machine each time (in debug mode, the state machine is a reference type).
-    [Conditional("DEBUG")]
-    public abstract void EnsureSameStateMachine(IAsyncStateMachine stateMachine);
-
-    public abstract void Start();
-
     public abstract void AwaitOnCompleted<TAwaiter>(ref TAwaiter awaiter)
         where TAwaiter : INotifyCompletion;
 
     public abstract void AwaitUnsafeOnCompleted<TAwaiter>(ref TAwaiter awaiter)
         where TAwaiter : ICriticalNotifyCompletion;
 
-    public void SetResult(TResult result)
-    {
-        Debug.Assert(_status is DTaskStatus.Running, "The result of a DTask should be set when it is running.");
+    public abstract void SetResult(TResult result);
 
-        _status = DTaskStatus.RanToCompletion;
-        _result = result;
+    public abstract void SetException(Exception exception);
 
-        // The underlying task must be completed after changing the status, so its continuations find this instance in a consistent state.
-        _underlyingTaskBuilder.SetResult(true);
-    }
-
-    public void SetException(Exception exception)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void SetSuspended()
-    {
-        _status = DTaskStatus.Suspended;
-
-        // The underlying task must be completed after changing the status, so its continuations find this instance in a consistent state.
-        _underlyingTaskBuilder.SetResult(false);
-    }
-
-    public static DTaskBuilder<TResult> Create<TStateMachine>(ref TStateMachine stateMachine)
+    public static void Create<TStateMachine>(ref TStateMachine stateMachine, [NotNull] ref DTaskBuilder<TResult>? builderField)
         where TStateMachine : IAsyncStateMachine
     {
-        return new DAsyncStateMachineBox<TStateMachine>(ref stateMachine);
+        if (builderField is not null)
+            throw new InvalidOperationException("The builder was not properly initialized.");
+
+        var box = new DAsyncStateMachineBox<TStateMachine>();
+        builderField = box; // You know what's important here
+        box.StateMachine = stateMachine;
     }
 
-    private sealed class DAsyncStateMachineBox<TStateMachine> : DTaskBuilder<TResult>, IStateMachineInfo, IAsyncStateMachine
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]
+    private sealed class DAsyncStateMachineBox<TStateMachine> : DTaskBuilder<TResult>, IDAsyncStateMachine
         where TStateMachine : IAsyncStateMachine
     {
-        private TStateMachine _stateMachine;
-        private DTask? _childTask;
-        private Type? _suspendedAwaiterType;
+        private DTaskStatus _status;
+        private TResult? _result;
+        private object? _stateObject;
+        public TStateMachine StateMachine;
 
-        public DAsyncStateMachineBox(ref TStateMachine stateMachine)
+        public DAsyncStateMachineBox()
         {
-            _stateMachine = stateMachine;
-
-            // Since we box the state machine right from the start, all MoveNext() invocations will be performed
-            // on this copy, so we don't need the "mind-bending" procedure the native implementation does to
-            // efficiently set up the builder. Here, we just complete the initialization of our boxed copy by calling
-            // 'SetStateMachine' to ensure its AsyncDTaskMethodBuilder (which still has its default value) references
-            // the current instance as its '_builder' field.
-            // In release mode, this happens because the 'SetStateMachine' method on the generated state machine forwards
-            // the call to its builder, hence we will end up calling our 'AsyncDTaskMethodBuilder.SetStateMachine'.
-            // In debug mode, 'SetStateMachine' method on the generated state machine will do nothing, but that is not
-            // a problem, since TStateMachine is a class in that case.
-            _stateMachine.SetStateMachine(this);
+            _status = DTaskStatus.Pending;
+            StateMachine = default!;
         }
 
-        internal override bool IsStateful => true;
+        public override DTaskStatus Status => _status;
 
-        internal override void SaveState<THandler>(ref THandler handler)
+        protected override Exception ExceptionCore
         {
-            Debug.Assert(_childTask is not null, "The d-async method was not suspended.");
+            get
+            {
+                Debug.Assert(_stateObject is Exception);
 
-            handler.SaveStateMachine(ref _stateMachine, this);
-            _childTask.SaveState(ref handler);
+                return Unsafe.As<Exception>(_stateObject);
+            }
         }
 
-        internal override Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
-        {
-            Debug.Assert(_childTask is not null, "The d-async method was not suspended.");
+        protected override TResult ResultCore => _result!;
 
-            return _childTask.SuspendAsync(ref handler, cancellationToken);
+        private IDAsyncMethodBuilder Builder
+        {
+            get
+            {
+                Debug.Assert(IsRunning);
+                Debug.Assert(_stateObject is IDAsyncMethodBuilder);
+
+                return Unsafe.As<IDAsyncMethodBuilder>(_stateObject);
+            }
         }
 
-        public override void Start()
+        protected override void Run(IDAsyncFlow flow)
         {
-            DAsyncStateMachineBox<TStateMachine> box = this;
-            _underlyingTaskBuilder.Start(ref box);
+            if (!IsPending)
+                throw new InvalidOperationException("The DTask was already run.");
+
+            flow.Start(this);
+        }
+
+        public override void SetResult(TResult result)
+        {
+            Debug.Assert(_status is DTaskStatus.Running, "The DTask should complete when running.");
+
+            IDAsyncMethodBuilder builder = Builder;
+            _status = DTaskStatus.Succeeded;
+            _result = result;
+
+            if (typeof(TResult) == typeof(VoidDTaskResult))
+            {
+                builder.SetResult();
+            }
+            else
+            {
+                builder.SetResult(result);
+            }
+            _stateObject = null;
+        }
+
+        public override void SetException(Exception exception)
+        {
+            _status = exception is OperationCanceledException
+                ? DTaskStatus.Canceled
+                : DTaskStatus.Faulted;
+
+            IDAsyncMethodBuilder builder = Builder;
+            _stateObject = exception;
+            builder.SetException(exception);
         }
 
         public override void AwaitOnCompleted<TAwaiter>(ref TAwaiter awaiter)
         {
-            DAsyncStateMachineBox<TStateMachine> box = this;
+            if (!IsRunning)
+                throw new InvalidOperationException("The DTask is not running.");
 
-            if (awaiter is IDTaskAwaiter)
-            {
-                _childTask = ((IDTaskAwaiter)awaiter).Task;
-                _suspendedAwaiterType = typeof(TAwaiter);
-
-                TaskAwaiter<bool> underlyingTaskAwaiter = _childTask.UnderlyingTask.GetAwaiter();
-                _underlyingTaskBuilder.AwaitOnCompleted(ref underlyingTaskAwaiter, ref box);
-            }
-            else
-            {
-                _childTask = null;
-                _suspendedAwaiterType = null;
-                _underlyingTaskBuilder.AwaitOnCompleted(ref awaiter, ref box);
-            }
+            Builder.AwaitOnCompleted(ref awaiter);
         }
 
         public override void AwaitUnsafeOnCompleted<TAwaiter>(ref TAwaiter awaiter)
         {
-            DAsyncStateMachineBox<TStateMachine> box = this;
+            if (!IsRunning)
+                throw new InvalidOperationException("The DTask is not running.");
 
-            if (awaiter is IDTaskAwaiter)
-            {
-                _childTask = ((IDTaskAwaiter)awaiter).Task;
-                _suspendedAwaiterType = typeof(TAwaiter);
-
-                TaskAwaiter<bool> underlyingTaskAwaiter = _childTask.UnderlyingTask.GetAwaiter();
-                _underlyingTaskBuilder.AwaitUnsafeOnCompleted(ref underlyingTaskAwaiter, ref box);
-            }
-            else
-            {
-                _childTask = null;
-                _suspendedAwaiterType = null;
-
-                _underlyingTaskBuilder.AwaitUnsafeOnCompleted(ref awaiter, ref box);
-            }
+            Builder.AwaitUnsafeOnCompleted(ref awaiter);
         }
 
-        public override void EnsureSameStateMachine(IAsyncStateMachine stateMachine)
+        void IDAsyncStateMachine.Start(IDAsyncMethodBuilder builder)
         {
-            Debug.Assert(ReferenceEquals(stateMachine, _stateMachine), "All methods of the AsyncDTaskMethodBuilder must be passed the same state machine.");
+            _status = DTaskStatus.Running;
+            _stateObject = builder;
         }
 
-        #region IStateMachineInfo implementation
-
-        bool IStateMachineInfo.IsSuspended(Type awaiterType)
+        void IDAsyncStateMachine.MoveNext()
         {
-            Debug.Assert(_suspendedAwaiterType is not null, "The d-async method was not suspended.");
-
-            return _suspendedAwaiterType == awaiterType;
+            StateMachine.MoveNext();
         }
 
-        #endregion
-
-        #region IAsyncStateMachine implementation
-
-        void IAsyncStateMachine.MoveNext()
+        void IDAsyncStateMachine.Suspend()
         {
-            if (_childTask is not null && _childTask.IsSuspended)
+            IDAsyncMethodBuilder builder = Builder;
+            _stateObject = null;
+
+            _status = DTaskStatus.Suspended;
+            builder.SetState(ref StateMachine);
+        }
+
+        private string DebuggerDisplay
+        {
+            get
             {
-                // If the child awaitable is a d-awaitable and it is suspended, we must suspend our execution as well
-                SetSuspended();
-            }
-            else
-            {
-                // Otherwise, we have a result and can move on with the caller method
-                _stateMachine.MoveNext();
+                string stateMachineName = typeof(TStateMachine) != typeof(IAsyncStateMachine)
+                    ? typeof(TStateMachine).Name
+                    : StateMachine?.ToString() ?? nameof(IAsyncStateMachine);
+
+                if (typeof(TResult) == typeof(VoidDTaskResult))
+                    return $"DTask (Status = {Status}, Method = {stateMachineName})";
+
+                return IsSucceeded
+                    ? $"DTask<{typeof(TResult).Name}> (Status = {Status}, Method = {stateMachineName}, Result = {_result})"
+                    : $"DTask<{typeof(TResult).Name}> (Status = {Status}, Method = {stateMachineName})";
             }
         }
-
-        [ExcludeFromCodeCoverage]
-        void IAsyncStateMachine.SetStateMachine(IAsyncStateMachine stateMachine)
-        {
-            if (stateMachine is null)
-                throw new ArgumentNullException(nameof(stateMachine));
-
-            Debug.Fail("SetStateMachine should not be used.");
-        }
-
-        #endregion
     }
 }

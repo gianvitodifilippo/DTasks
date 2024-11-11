@@ -1,121 +1,135 @@
 ﻿using DTasks.CompilerServices;
 using DTasks.Hosting;
+using DTasks.Utils;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 
 namespace DTasks;
 
+[DebuggerDisplay("{DebuggerDisplay,nq}")]
 [AsyncMethodBuilder(typeof(AsyncDTaskMethodBuilder))]
-public abstract class DTask
+public abstract class DTask : IDAsyncRunnable
 {
-    internal abstract Task<bool> UnderlyingTask { get; }
+    public abstract DTaskStatus Status { get; }
 
-    internal abstract DTaskStatus Status { get; }
+    public bool IsPending => Status is DTaskStatus.Pending;
 
-    internal bool IsRunning => Status is DTaskStatus.Running;
+    public bool IsRunning => Status is DTaskStatus.Running;
 
-    internal bool IsCompleted => Status is DTaskStatus.RanToCompletion;
+    public bool IsSucceeded => Status is DTaskStatus.Succeeded;
 
-    internal bool IsSuspended => Status is DTaskStatus.Suspended;
+    public bool IsSuspended => Status is DTaskStatus.Suspended;
 
-    internal virtual bool IsStateful => false; // Allows internal optimizations
+    public bool IsCanceled => Status is DTaskStatus.Canceled;
+
+    public bool IsFaulted => Status is DTaskStatus.Faulted;
+
+    public bool IsCompleted => Status is
+        DTaskStatus.Succeeded or
+        DTaskStatus.Faulted or
+        DTaskStatus.Canceled;
+
+    public bool IsFailed => Status is
+        DTaskStatus.Faulted or
+        DTaskStatus.Canceled;
+
+    public Exception Exception
+    {
+        get
+        {
+            EnsureFailed();
+            return ExceptionCore;
+        }
+    }
+
+    public Exception ExceptionInternal
+    {
+        get
+        {
+            AssertFailed();
+            return ExceptionCore;
+        }
+    }
+
+    protected virtual Exception ExceptionCore => throw new NotSupportedException($"If a DTask can be '{DTaskStatus.Faulted}' or '{DTaskStatus.Canceled}', then it should override {nameof(ExceptionCore)}.");
+
+    internal virtual TReturn Accept<TReturn>(IDTaskVisitor<TReturn> visitor) => visitor.Visit(this);
+
+    void IDAsyncRunnable.Run(IDAsyncFlow flow) => Run(flow);
+
+    protected abstract void Run(IDAsyncFlow flow);
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     public Awaiter GetAwaiter() => new Awaiter(this);
 
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public DAwaiter GetDAwaiter() => new DAwaiter(this);
+    public static DTask CompletedDTask { get; } = new SucceededDTask();
 
-    internal virtual void SaveState<THandler>(ref THandler handler)
-        where THandler : IStateHandler
-    {
-        Debug.Assert(!IsStateful, $"If a subclass of {nameof(DTask)} is declared as stateful, it should override the '{nameof(SaveState)}' method.");
-    }
+    public static DTask<TResult> FromResult<TResult>(TResult result) => new SucceededDTask<TResult>(result);
 
-    internal abstract Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
-        where THandler : ISuspensionHandler;
-
-    internal virtual Task CompleteAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
-        where THandler : ICompletionHandler
-    {
-        VerifyStatus(expectedStatus: DTaskStatus.RanToCompletion);
-        return handler.OnCompletedAsync(cancellationToken);
-    }
-
-    public static DTask CompletedTask { get; } = new CompletedDTask<VoidDTaskResult>(default);
-
-    public static DTask<TResult> FromResult<TResult>(TResult result) => new CompletedDTask<TResult>(result);
-
-    public static DTask Yield() => YieldDTask.Instance;
+    public static YieldDAwaitable Yield() => default;
 
     public static DTask Delay(TimeSpan delay) => new DelayDTask(delay);
+
+    public static DTask FromException(Exception exception) => new FaultedDTask(exception);
 
     public static DTask WhenAll(IEnumerable<DTask> tasks) => new WhenAllDTask(tasks);
 
     public static DTask<TResult[]> WhenAll<TResult>(IEnumerable<DTask<TResult>> tasks) => new WhenAllDTask<TResult>(tasks);
 
-    public static DTask Suspend(SuspensionCallback callback) => new DelegateSuspendedDTask<VoidDTaskResult>(callback);
+    public static DTask<DTask> WhenAny(IEnumerable<DTask> tasks) => new WhenAnyDTask(tasks);
 
-    public static DTask Suspend<TState>(TState state, SuspensionCallback<TState> callback) => new DelegateSuspendedDTask<VoidDTaskResult, TState>(state, callback);
+    public static DTask<DTask<TResult>> WhenAny<TResult>(IEnumerable<DTask<TResult>> tasks) => new WhenAnyDTask<TResult>(tasks);
 
-    public static DTask Suspend<TCallback>(TCallback callback) where TCallback : ISuspensionCallback
-        => new SuspendedDTask<VoidDTaskResult, TCallback>(callback);
+    public static BackgroundDAwaitable Run(DTask task) => new(task);
 
-    public static DTask Suspend<TState, TCallback>(TState state, TCallback callback) where TCallback : ISuspensionCallback<TState>
-        => new SuspendedDTask<VoidDTaskResult, TState, TCallback>(state, callback);
+    public static BackgroundDAwaitable<TResult> Run<TResult>(DTask<TResult> task) => new(task);
 
-    private protected void EnsureCompleted()
+    public static DTaskFactory Factory { get; } = new();
+
+    internal void EnsureCompleted()
     {
-        if (!IsCompleted)
-            throw new InvalidOperationException("The DTask was not completed.");
+        Ensure(IsCompleted);
     }
 
-    private protected void EnsureNotRunning()
+    internal void EnsureSucceeded()
     {
-        if (IsRunning)
-            throw new InvalidOperationException("The DTask was still running.");
+        Ensure(IsSucceeded);
     }
 
-    private protected void EnsureSuspended()
+    internal void EnsureFailed()
     {
-        if (!IsSuspended)
-            throw new InvalidOperationException("The DTask was not suspended.");
+        Ensure(IsFailed);
     }
 
-    [Conditional("DEBUG")]
-    internal void AssertNotRunning()
+    private static void Ensure([DoesNotReturnIf(false)] bool statusFlag)
     {
-        Debug.Assert(!IsRunning, "The DTask was still running.");
+        if (!statusFlag)
+            throw new InvalidOperationException("The operation attempted on a DTask was invalid given its state.");
     }
 
     [Conditional("DEBUG")]
-    internal void AssertSuspended()
+    internal void AssertSucceeded()
     {
-        Debug.Assert(IsSuspended, $"The DTask was not suspended (it was '{Status}').");
+        Debug.Assert(IsSucceeded, $"The DTask was not succeeded (it was '{Status}').");
     }
 
     [Conditional("DEBUG")]
-    private protected void VerifyStatus(DTaskStatus expectedStatus)
+    internal void AssertFailed()
     {
-        Debug.Assert(Status == expectedStatus, $"The DTask was not '{expectedStatus}'.");
-    }
-
-    [Conditional("DEBUG")]
-    private protected static void InvalidStatus(DTaskStatus expectedStatus)
-    {
-        Debug.Fail($"The DTask was not '{expectedStatus}'.");
+        Debug.Assert(IsFailed, $"The DTask was not failed (it was '{Status}').");
     }
 
     [DoesNotReturn]
-    private protected static void InvalidAwait()
+    internal static void InvalidAwait()
     {
-        throw new InvalidOperationException("DTasks may be awaited in d-async methods only.");
+        throw new InvalidOperationException("D-awaitables may be awaited in d-async methods only.");
     }
 
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public readonly struct Awaiter : ICriticalNotifyCompletion, IDTaskAwaiter
+    public readonly struct Awaiter : ICriticalNotifyCompletion, IDAsyncAwaiter
     {
         private readonly DTask _task;
 
@@ -124,96 +138,75 @@ public abstract class DTask
             _task = task;
         }
 
-        DTask IDTaskAwaiter.Task => _task;
-
         public bool IsCompleted => false;
 
-        public void GetResult()
-        {
-            _task.EnsureCompleted();
-        }
-
-        public void OnCompleted(Action continuation) => InvalidAwait();
-
-        public void UnsafeOnCompleted(Action continuation) => InvalidAwait();
-    }
-
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public readonly struct DAwaiter
-    {
-        private readonly DTask _task;
-
-        internal DAwaiter(DTask task)
-        {
-            _task = task;
-        }
-
-        public Task<bool> IsCompletedAsync()
-        {
-            return _task.UnderlyingTask;
-        }
+        bool IDAsyncAwaiter.IsCompleted => _task.IsCompleted;
 
         public void GetResult()
         {
             _task.EnsureCompleted();
+            if (_task.IsSucceeded)
+                return;
+
+            ExceptionDispatchInfo.Throw(_task.ExceptionInternal);
         }
 
-        public void SaveState<THandler>(ref THandler handler)
-            where THandler : IStateHandler
+        public void Continue(IDAsyncFlow flow)
         {
-            _task.EnsureNotRunning();
-            _task.SaveState(ref handler);
+            _task.Run(flow);
         }
 
-        public Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
-            where THandler : ISuspensionHandler
+        public void OnCompleted(Action continuation)
         {
-            _task.EnsureSuspended();
-            return _task.SuspendAsync(ref handler, cancellationToken);
+            ThrowHelper.ThrowIfNull(continuation);
+            InvalidAwait();
         }
 
-        public Task CompleteAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
-            where THandler : ICompletionHandler
+        public void UnsafeOnCompleted(Action continuation)
         {
-            _task.EnsureCompleted();
-            return _task.CompleteAsync(ref handler, cancellationToken);
+            ThrowHelper.ThrowIfNull(continuation);
+            InvalidAwait();
         }
     }
+
+    private string DebuggerDisplay => $"DTask (Status = {Status})";
 }
 
+[DebuggerDisplay("{DebuggerDisplay,nq}")]
 [AsyncMethodBuilder(typeof(AsyncDTaskMethodBuilder<>))]
 public abstract class DTask<TResult> : DTask
 {
-    internal abstract TResult Result { get; }
-
-    internal override Task CompleteAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
+    public TResult Result
     {
-        VerifyStatus(expectedStatus: DTaskStatus.RanToCompletion);
-
-        if (typeof(TResult) == typeof(VoidDTaskResult))
-            return handler.OnCompletedAsync(cancellationToken);
-
-        return handler.OnCompletedAsync(Result, cancellationToken);
+        get
+        {
+            EnsureSucceeded();
+            return ResultCore;
+        }
     }
 
-    public new static DTask<TResult> Suspend(SuspensionCallback callback) => new DelegateSuspendedDTask<TResult>(callback);
+    internal TResult ResultInternal
+    {
+        get
+        {
+            AssertSucceeded();
+            return ResultCore;
+        }
+    }
 
-    public new static DTask<TResult> Suspend<TState>(TState state, SuspensionCallback<TState> callback) => new DelegateSuspendedDTask<TResult, TState>(state, callback);
+    protected virtual TResult ResultCore => throw new NotSupportedException($"If a DTask can be '{DTaskStatus.Succeeded}', then it should override {nameof(ResultCore)}.");
 
-    public new static DTask<TResult> Suspend<TCallback>(TCallback callback) where TCallback : ISuspensionCallback
-        => new SuspendedDTask<TResult, TCallback>(callback);
-
-    public new static DTask<TResult> Suspend<TState, TCallback>(TState state, TCallback callback) where TCallback : ISuspensionCallback<TState>
-        => new SuspendedDTask<TResult, TState, TCallback>(state, callback);
+    internal sealed override TReturn Accept<TReturn>(IDTaskVisitor<TReturn> visitor) => visitor.Visit(this);
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     public new Awaiter GetAwaiter() => new Awaiter(this);
 
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public new DAwaiter GetDAwaiter() => new DAwaiter(this);
+    public new static DTask<TResult> FromException(Exception exception) => new FaultedDTask<TResult>(exception);
+
+    public new static DTaskFactory<TResult> Factory { get; } = new();
 
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public new readonly struct Awaiter : ICriticalNotifyCompletion, IDTaskAwaiter
+    public new readonly struct Awaiter : ICriticalNotifyCompletion, IDAsyncAwaiter
     {
         private readonly DTask<TResult> _task;
 
@@ -224,59 +217,35 @@ public abstract class DTask<TResult> : DTask
 
         public bool IsCompleted => false;
 
-        DTask IDTaskAwaiter.Task => _task;
+        bool IDAsyncAwaiter.IsCompleted => _task.IsCompleted;
 
         public TResult GetResult()
         {
             _task.EnsureCompleted();
-            return _task.Result;
+            if (_task.IsSucceeded)
+                return _task.ResultCore;
+
+            ExceptionDispatchInfo.Throw(_task.ExceptionInternal);
+            throw new UnreachableException();
         }
 
-        public void OnCompleted(Action continuation) => InvalidAwait();
+        public void Continue(IDAsyncFlow flow)
+        {
+            _task.Run(flow);
+        }
 
-        public void UnsafeOnCompleted(Action continuation) => InvalidAwait();
+        public void OnCompleted(Action continuation)
+        {
+            ThrowHelper.ThrowIfNull(continuation);
+            InvalidAwait();
+        }
+
+        public void UnsafeOnCompleted(Action continuation)
+        {
+            ThrowHelper.ThrowIfNull(continuation);
+            InvalidAwait();
+        }
     }
 
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public new readonly struct DAwaiter
-    {
-        private readonly DTask<TResult> _task;
-
-        internal DAwaiter(DTask<TResult> task)
-        {
-            _task = task;
-        }
-
-        public Task<bool> IsCompletedAsync()
-        {
-            return _task.UnderlyingTask;
-        }
-
-        public TResult GetResult()
-        {
-            _task.EnsureCompleted();
-            return _task.Result;
-        }
-
-        public void SaveState<THandler>(ref THandler handler)
-            where THandler : IStateHandler
-        {
-            _task.EnsureNotRunning();
-            _task.SaveState(ref handler);
-        }
-
-        public Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
-            where THandler : ISuspensionHandler
-        {
-            _task.EnsureSuspended();
-            return _task.SuspendAsync(ref handler, cancellationToken);
-        }
-
-        public Task CompleteAsync<THandler>(ref THandler handler, CancellationToken cancellationToken = default)
-            where THandler : ICompletionHandler
-        {
-            _task.EnsureCompleted();
-            return _task.CompleteAsync(ref handler, cancellationToken);
-        }
-    }
+    private string DebuggerDisplay => $"DTask (Status = {Status})";
 }

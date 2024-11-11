@@ -1,235 +1,397 @@
-﻿using static DTasks.Hosting.HostingFixtures;
+﻿#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+using DTasks.Marshaling;
+using System.Linq.Expressions;
 
 namespace DTasks.Hosting;
 
-public partial class DAsyncFlowTests
+public class DAsyncFlowTests
 {
-    private readonly FakeDTaskStorage _storage;
-    private readonly FakeDTaskConverter _converter;
-    private readonly TestBinaryDTaskHost _sut;
+    private readonly IDAsyncHost _host;
+    private readonly FakeDAsyncStateManager _stateManager;
+    private readonly DAsyncFlow _sut;
 
     public DAsyncFlowTests()
     {
-        _storage = new FakeDTaskStorage();
-        _converter = new FakeDTaskConverter();
+        _host = Substitute.For<IDAsyncHost>();
+        _sut = new();
+        _stateManager = new(_sut);
 
-        _sut = Substitute.For<TestBinaryDTaskHost>(_storage, _converter);
+        _host
+            .CreateStateManager(Arg.Any<IDAsyncMarshaler>())
+            .Returns(_stateManager);
     }
 
     [Fact]
-    public async Task DAsyncFlow_ShouldBeSuspendableAndResumable()
+    public async Task RunsCompletedDTask()
     {
         // Arrange
-        async DTask<FileData> WorkflowDAsync(string url)
-        {
-            ReadOnlyMemory<byte> file = await DownloadBytesAsync(url);
-            FileData data = await ProcessDataDAsync(file);
-            data.Date = await GetDateDAsync();
-            await DTask.Yield();
-            return data;
-        }
-
-        static async Task<byte[]> DownloadBytesAsync(string url)
-        {
-            byte[] bytes = new byte[url.Length];
-            await Task.Delay(500);
-            Random.Shared.NextBytes(bytes);
-            return bytes;
-        }
-
-        static async DTask<FileData> ProcessDataDAsync(ReadOnlyMemory<byte> file)
-        {
-            var data = new FileData { FeatureCount = file.Length + 10 };
-            data = await SignDAsync(data, "mytoken");
-            return data;
-        }
-
-        static async DTask<FileData> SignDAsync(FileData data, string token)
-        {
-            string signature = "signed with ";
-            await DTask.Delay(TimeSpan.FromSeconds(1));
-            data.Signature = signature + token;
-            return data;
-        }
-
-        static DTask<DateTime> GetDateDAsync()
-        {
-            return DTask<DateTime>.Suspend((id, ct) => Task.CompletedTask);
-        }
-
-        var scope = Substitute.For<IDTaskScope>();
-        var context = new TestFlowContext();
-        DateTime date = DateTime.Now;
-        DTask task = WorkflowDAsync("http://dtasks.com");
-        FlowId id1 = default;
-        FlowId id2 = default;
-        FlowId id3 = default;
-
-        _sut.OnDelayAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
-            .Returns(call =>
-            {
-                id1 = call.Arg<FlowId>();
-                return Task.CompletedTask;
-            });
-
-        _sut.OnCallbackAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<ISuspensionCallback>(), Arg.Any<CancellationToken>())
-            .Returns(call =>
-            {
-                id2 = call.Arg<FlowId>();
-                return Task.CompletedTask;
-            });
-
-        _sut.OnYieldAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<CancellationToken>())
-            .Returns(call =>
-            {
-                id3 = call.Arg<FlowId>();
-                return Task.CompletedTask;
-            });
+        DTask task = DTask.CompletedDTask;
 
         // Act
-        var awaiter = task.GetDAwaiter();
-        await awaiter.IsCompletedAsync();
-        await _sut.SuspendAsync(context, scope, awaiter);
-
-        await _sut.ResumeAsync(id1, scope);
-        await _sut.ResumeAsync(id2, scope, date);
-        await _sut.ResumeAsync(id3, scope);
+        await _sut.StartAsync(_host, task);
 
         // Assert
-        await _sut.Received().OnDelayAsync_Public(id1, scope, TimeSpan.FromSeconds(1), Arg.Any<CancellationToken>());
-        await _sut.Received().OnCallbackAsync_Public(id2, scope, Arg.Any<ISuspensionCallback>(), Arg.Any<CancellationToken>());
-        await _sut.Received().OnYieldAsync_Public(id3, scope, Arg.Any<CancellationToken>());
-        await _sut.Received().OnCompletedAsync_Public(
-            id3,
-            context,
-            Arg.Is<FileData>(data => data.FeatureCount == 27 && data.Signature == "signed with mytoken" && data.Date == date),
-            Arg.Any<CancellationToken>());
+        await _host.Received(1).SucceedAsync();
     }
 
     [Fact]
-    public async Task DAsyncFlow_SuspendsWhenAll()
+    public async Task RunsFromResult()
     {
         // Arrange
-        async DTask WorkflowDAsync()
-        {
-            await DTask.WhenAll([
-                DTask.Delay(TimeSpan.FromSeconds(1)),
-                DTask.Yield()
-            ]);
-        }
-
-        var scope = Substitute.For<IDTaskScope>();
-        var context = new TestFlowContext();
-        DTask task = WorkflowDAsync();
-        FlowId id = default;
-        FlowId branchId1 = default;
-        FlowId branchId2 = default;
-
-        _sut.OnDelayAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
-            .Returns(call =>
-            {
-                branchId1 = call.Arg<FlowId>();
-                return Task.CompletedTask;
-            });
-
-        _sut.OnYieldAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<CancellationToken>())
-            .Returns(call =>
-            {
-                branchId2 = call.Arg<FlowId>();
-                return Task.CompletedTask;
-            });
-
-        _sut.OnWhenAllAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<IEnumerable<DTask>>(), Arg.Any<CancellationToken>())
-            .Returns(call =>
-            {
-                id = call.Arg<FlowId>();
-                return Task.CompletedTask;
-            });
+        const int result = 42;
+        DTask<int> task = DTask.FromResult(result);
 
         // Act
-        var awaiter = task.GetDAwaiter();
-        await awaiter.IsCompletedAsync();
-        await _sut.SuspendAsync(context, scope, awaiter);
-
-        await _sut.ResumeAsync(branchId2, scope);
-        await _sut.ResumeAsync(branchId1, scope);
+        await _sut.StartAsync(_host, task);
 
         // Assert
-        await _sut.Received().OnCompletedAsync_Public(
-            id,
-            context,
-            Arg.Any<CancellationToken>());
+        await _host.Received(1).SucceedAsync(result);
     }
 
     [Fact]
-    public async Task DAsyncFlow_SuspendsWhenAllWithResult()
+    public async Task RunsFromException()
     {
         // Arrange
-        const int num1 = 1;
-        const int num2 = 2;
-        const int expectedResult = num1 + num2;
-
-        ISuspensionCallback callback1 = Substitute.For<ISuspensionCallback>();
-        ISuspensionCallback callback2 = Substitute.For<ISuspensionCallback>();
-
-        async DTask<int> WorkflowDAsync()
-        {
-            int[] results = await DTask.WhenAll([
-                DTask<int>.Suspend(callback1),
-                DTask<int>.Suspend(callback2)
-            ]);
-
-            return results[0] + results[1];
-        }
-
-        var scope = Substitute.For<IDTaskScope>();
-        var context = new TestFlowContext();
-        DTask task = WorkflowDAsync();
-        FlowId id = default;
-        FlowId branchId1 = default;
-        FlowId branchId2 = default;
-
-        _sut.OnWhenAllAsync_Public(Arg.Any<FlowId>(), scope, Arg.Any<IEnumerable<DTask<int>>>(), Arg.Any<CancellationToken>())
-            .Returns(call =>
-            {
-                id = call.Arg<FlowId>();
-                return Task.CompletedTask;
-            });
-
-        _sut.OnCallbackAsync_Public(Arg.Any<FlowId>(), scope, callback1, Arg.Any<CancellationToken>())
-            .Returns(call =>
-            {
-                branchId1 = call.Arg<FlowId>();
-                return Task.CompletedTask;
-            });
-
-        _sut.OnCallbackAsync_Public(Arg.Any<FlowId>(), scope, callback2, Arg.Any<CancellationToken>())
-            .Returns(call =>
-            {
-                branchId2 = call.Arg<FlowId>();
-                return Task.CompletedTask;
-            });
+        Exception exception = new();
+        DTask task = DTask.FromException(exception);
 
         // Act
-        var awaiter = task.GetDAwaiter();
-        await awaiter.IsCompletedAsync();
-        await _sut.SuspendAsync(context, scope, awaiter);
-
-        await _sut.ResumeAsync(branchId2, scope, num2);
-        await _sut.ResumeAsync(branchId1, scope, num1);
+        await _sut.StartAsync(_host, task);
 
         // Assert
-        await _sut.Received().OnCompletedAsync_Public(
-            id,
-            context,
-            expectedResult,
-            Arg.Any<CancellationToken>());
+        await _host.Received(1).FailAsync(exception);
     }
 
-    private class FileData
+    [Fact]
+    public async Task RunsFromExceptionOfResult()
     {
-        public int FeatureCount { get; set; }
-        public string Signature { get; set; } = "";
-        public DateTime Date { get; set; }
+        // Arrange
+        Exception exception = new();
+        DTask<int> task = DTask<int>.FromException(exception);
+
+        // Act
+        await _sut.StartAsync(_host, task);
+
+        // Assert
+        await _host.Received(1).FailAsync(exception);
+    }
+
+    [Fact]
+    public async Task RunsYield()
+    {
+        // Arrange
+        YieldRunnable runnable = new();
+
+        DAsyncId id = default;
+        _host
+            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .Do(call => id = call.Arg<DAsyncId>());
+
+        // Act
+        await _sut.StartAsync(_host, runnable);
+        await _sut.ResumeAsync(_host, id);
+
+        // Assert
+        await _host.Received(1).YieldAsync(Arg.Is(NonReservedId));
+        await _host.Received(1).SucceedAsync();
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RunsDelay()
+    {
+        // Arrange
+        TimeSpan delay = TimeSpan.FromSeconds(42);
+        DTask task = DTask.Delay(delay);
+
+        DAsyncId id = default;
+        _host
+            .When(host => host.DelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>()))
+            .Do(call => id = call.Arg<DAsyncId>());
+
+        // Act
+        await _sut.StartAsync(_host, task);
+        await _sut.ResumeAsync(_host, id);
+
+        // Assert
+        await _host.Received(1).DelayAsync(Arg.Is(NonReservedId), delay);
+        await _host.Received(1).SucceedAsync();
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RunsCallback()
+    {
+        // Arrange
+        var callback = Substitute.For<ISuspensionCallback>();
+        DTask task = DTask.Factory.Callback(callback);
+
+        DAsyncId id = default;
+        callback
+            .When(callback => callback.InvokeAsync(Arg.Any<DAsyncId>()))
+            .Do(call => id = call.Arg<DAsyncId>());
+
+        // Act
+        await _sut.StartAsync(_host, task);
+        await _sut.ResumeAsync(_host, id);
+
+        // Assert
+        await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId));
+        await _host.Received(1).SucceedAsync();
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RunsCallbackOfResult()
+    {
+        // Arrange
+        var callback = Substitute.For<ISuspensionCallback>();
+        DTask<int> task = DTask<int>.Factory.Callback(callback);
+
+        DAsyncId id = default;
+        callback
+            .When(callback => callback.InvokeAsync(Arg.Any<DAsyncId>()))
+            .Do(call => id = call.Arg<DAsyncId>());
+
+        // Act
+        await _sut.StartAsync(_host, task);
+        await _sut.ResumeAsync(_host, id);
+
+        // Assert
+        await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId));
+        await _host.Received(1).SucceedAsync();
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RunsCallbackWithState()
+    {
+        // Arrange
+        var state = new object();
+        var callback = Substitute.For<ISuspensionCallback<object>>();
+        DTask task = DTask.Factory.Callback(state, callback);
+
+        DAsyncId id = default;
+        callback
+            .When(callback => callback.InvokeAsync(Arg.Any<DAsyncId>(), Arg.Any<object>()))
+            .Do(call => id = call.Arg<DAsyncId>());
+
+        // Act
+        await _sut.StartAsync(_host, task);
+        await _sut.ResumeAsync(_host, id);
+
+        // Assert
+        await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId), state);
+        await _host.Received(1).SucceedAsync();
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RunsCallbackOfResultWithState()
+    {
+        // Arrange
+        var state = new object();
+        var callback = Substitute.For<ISuspensionCallback<object>>();
+        DTask<int> task = DTask<int>.Factory.Callback(state, callback);
+
+        DAsyncId id = default;
+        callback
+            .When(callback => callback.InvokeAsync(Arg.Any<DAsyncId>(), Arg.Any<object>()))
+            .Do(call => id = call.Arg<DAsyncId>());
+
+        // Act
+        await _sut.StartAsync(_host, task);
+        await _sut.ResumeAsync(_host, id);
+
+        // Assert
+        await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId), state);
+        await _host.Received(1).SucceedAsync();
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RunsDelegateCallback()
+    {
+        // Arrange
+        var callback = Substitute.For<SuspensionCallback>();
+        DTask task = DTask.Factory.Callback(callback);
+
+        DAsyncId id = default;
+        callback
+            .When(callback => callback.Invoke(Arg.Any<DAsyncId>()))
+            .Do(call => id = call.Arg<DAsyncId>());
+
+        // Act
+        await _sut.StartAsync(_host, task);
+        await _sut.ResumeAsync(_host, id);
+
+        // Assert
+        await callback.Received(1).Invoke(Arg.Is(NonReservedId));
+        await _host.Received(1).SucceedAsync();
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RunsDelegateCallbackOfResult()
+    {
+        // Arrange
+        var callback = Substitute.For<SuspensionCallback>();
+        DTask<int> task = DTask<int>.Factory.Callback(callback);
+
+        DAsyncId id = default;
+        callback
+            .When(callback => callback.Invoke(Arg.Any<DAsyncId>()))
+            .Do(call => id = call.Arg<DAsyncId>());
+
+        // Act
+        await _sut.StartAsync(_host, task);
+        await _sut.ResumeAsync(_host, id);
+
+        // Assert
+        await callback.Received(1).Invoke(Arg.Is(NonReservedId));
+        await _host.Received(1).SucceedAsync();
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RunsDelegateCallbackWithState()
+    {
+        // Arrange
+        var state = new object();
+        var callback = Substitute.For<SuspensionCallback<object>>();
+        DTask task = DTask.Factory.Callback(state, callback);
+
+        DAsyncId id = default;
+        callback
+            .When(callback => callback.Invoke(Arg.Any<DAsyncId>(), Arg.Any<object>()))
+            .Do(call => id = call.Arg<DAsyncId>());
+
+        // Act
+        await _sut.StartAsync(_host, task);
+        await _sut.ResumeAsync(_host, id);
+
+        // Assert
+        await callback.Received(1).Invoke(Arg.Is(NonReservedId), state);
+        await _host.Received(1).SucceedAsync();
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RunsDelegateCallbackOfResultWithState()
+    {
+        // Arrange
+        var state = new object();
+        var callback = Substitute.For<SuspensionCallback<object>>();
+        DTask<int> task = DTask<int>.Factory.Callback(state, callback);
+
+        DAsyncId id = default;
+        callback
+            .When(callback => callback.Invoke(Arg.Any<DAsyncId>(), Arg.Any<object>()))
+            .Do(call => id = call.Arg<DAsyncId>());
+
+        // Act
+        await _sut.StartAsync(_host, task);
+        await _sut.ResumeAsync(_host, id);
+
+        // Assert
+        await callback.Received(1).Invoke(Arg.Is(NonReservedId), state);
+        await _host.Received(1).SucceedAsync();
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RunsDTaskThatCompletesLocallyAndSynchronously()
+    {
+        // Arrange
+        const int result = 42;
+        static async DTask<int> M1()
+        {
+            return result;
+        }
+
+        DTask<int> task = M1();
+
+        // Act
+        await _sut.StartAsync(_host, task);
+
+        // Assert
+        await _host.Received(1).SucceedAsync(result);
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RunsDTaskThatCompletesLocallyAndAsynchronously()
+    {
+        // Arrange
+        const int result = 42;
+        static async DTask<int> M1()
+        {
+            await Task.Delay(100);
+            return result;
+        }
+
+        DTask<int> task = M1();
+
+        // Act
+        await _sut.StartAsync(_host, task);
+
+        // Assert
+        await _host.Received(1).SucceedAsync(result);
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RunsDTaskThatAwaitsCompletedDTask()
+    {
+        // Arrange
+        const int result = 42;
+        static async DTask<int> M1()
+        {
+            await DTask.CompletedDTask;
+            return result;
+        }
+
+        DTask<int> task = M1();
+
+        // Act
+        await _sut.StartAsync(_host, task);
+
+        // Assert
+        await _host.Received(1).SucceedAsync(result);
+        _stateManager.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RunsDTaskThatAwaitsLocallyCompletingDTask()
+    {
+        // Arrange
+        const int result = 42;
+        static async DTask<int> M1()
+        {
+            int result = await M2();
+            return result + 1;
+        }
+
+        static async DTask<int> M2()
+        {
+            return result;
+        }
+
+        DTask<int> task = M1();
+
+        // Act
+        await _sut.StartAsync(_host, task);
+
+        // Assert
+        await _host.Received(1).SucceedAsync(result + 1);
+        _stateManager.Count.Should().Be(0);
+    }
+
+    private static Expression<Predicate<DAsyncId>> NonReservedId => id => id != default && id != DAsyncId.RootId;
+
+    private sealed class YieldRunnable : IDAsyncRunnable
+    {
+        public void Run(IDAsyncFlow flow) => DTask.Yield().GetAwaiter().Continue(flow);
     }
 }

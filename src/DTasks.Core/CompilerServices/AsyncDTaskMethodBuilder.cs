@@ -1,8 +1,11 @@
-﻿using System.Diagnostics;
+﻿using DTasks.Utils;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace DTasks.CompilerServices;
 
+[EditorBrowsable(EditorBrowsableState.Never)]
 public struct AsyncDTaskMethodBuilder
 {
     private DTaskBuilder<VoidDTaskResult>? _builder;
@@ -23,12 +26,12 @@ public struct AsyncDTaskMethodBuilder
     public void Start<TStateMachine>(ref TStateMachine stateMachine)
         where TStateMachine : IAsyncStateMachine
     {
-        Start(ref _builder, ref stateMachine);
+        DTaskBuilder<VoidDTaskResult>.Create(ref stateMachine, ref _builder);
     }
 
-    public void SetStateMachine(IAsyncStateMachine stateMachine)
+    public readonly void SetStateMachine(IAsyncStateMachine stateMachine)
     {
-        SetStateMachine(ref _builder, stateMachine);
+        SetStateMachine(stateMachine, _builder);
     }
 
     public readonly void SetResult()
@@ -45,7 +48,6 @@ public struct AsyncDTaskMethodBuilder
         where TAwaiter : INotifyCompletion
         where TStateMachine : IAsyncStateMachine
     {
-        Builder.EnsureSameStateMachine(stateMachine); // Debug only
         Builder.AwaitOnCompleted(ref awaiter);
     }
 
@@ -53,38 +55,17 @@ public struct AsyncDTaskMethodBuilder
         where TAwaiter : ICriticalNotifyCompletion
         where TStateMachine : IAsyncStateMachine
     {
-        Builder.EnsureSameStateMachine(stateMachine); // Debug only
         Builder.AwaitUnsafeOnCompleted(ref awaiter);
     }
 
-    internal static void Start<TResult, TStateMachine>(ref DTaskBuilder<TResult>? builderField, ref TStateMachine stateMachine)
-        where TStateMachine : IAsyncStateMachine
+    internal static void SetStateMachine(IAsyncStateMachine stateMachine, DTask? builder)
     {
-        Debug.Assert(builderField is null, $"'{nameof(Start)}' must be invoked once.");
+        ThrowHelper.ThrowIfNull(stateMachine);
 
-        // Unlike AsyncTaskMethodBuilder, here we allocate a boxed state machine right from the start.
-        // We do not have the same strict performance requirements, therefore we trade the possibility
-        // of avoiding the allocation of the state machine box if the method completes synchronously for
-        // a clearer and more manageable code.
+        if (builder is not null)
+            throw new InvalidOperationException("The builder was not properly initialized.");
 
-        // This method is called on the builder of the original state machine and it must initialize '_builder'
-        // because the calling code will access its 'Task' property.
-
-        builderField = DTaskBuilder<TResult>.Create(ref stateMachine);
-        builderField.Start();
-    }
-
-    internal static void SetStateMachine<TResult>(ref DTaskBuilder<TResult>? builderField, IAsyncStateMachine stateMachine)
-    {
-        Debug.Assert(builderField is null, $"'{nameof(SetStateMachine)}' must be invoked once.");
-
-        // This method is called on the builder of the boxed state machine and it must initialize '_builder'
-        // because the calling code will access its method to build the task.
-
-        if (stateMachine is not DTaskBuilder<TResult> builder)
-            throw new InvalidOperationException($"'{nameof(SetStateMachine)}' may be called from internal code only.");
-
-        builderField = builder;
+        Debug.Fail($"{nameof(SetStateMachine)} should not be used.");
     }
 }
 
@@ -108,12 +89,12 @@ public struct AsyncDTaskMethodBuilder<TResult>
     public void Start<TStateMachine>(ref TStateMachine stateMachine)
         where TStateMachine : IAsyncStateMachine
     {
-        AsyncDTaskMethodBuilder.Start(ref _builder, ref stateMachine);
+        DTaskBuilder<TResult>.Create(ref stateMachine, ref _builder);
     }
 
-    public void SetStateMachine(IAsyncStateMachine stateMachine)
+    public readonly void SetStateMachine(IAsyncStateMachine stateMachine)
     {
-        AsyncDTaskMethodBuilder.SetStateMachine(ref _builder, stateMachine);
+        AsyncDTaskMethodBuilder.SetStateMachine(stateMachine, _builder);
     }
 
     public readonly void SetResult(TResult result)
@@ -130,7 +111,6 @@ public struct AsyncDTaskMethodBuilder<TResult>
         where TAwaiter : INotifyCompletion
         where TStateMachine : IAsyncStateMachine
     {
-        Builder.EnsureSameStateMachine(stateMachine); // Debug only
         Builder.AwaitOnCompleted(ref awaiter);
     }
 
@@ -138,7 +118,6 @@ public struct AsyncDTaskMethodBuilder<TResult>
         where TAwaiter : ICriticalNotifyCompletion
         where TStateMachine : IAsyncStateMachine
     {
-        Builder.EnsureSameStateMachine(stateMachine); // Debug only
         Builder.AwaitUnsafeOnCompleted(ref awaiter);
     }
 }

@@ -1,13 +1,10 @@
-﻿namespace DTasks;
+﻿using DTasks.Hosting;
+
+namespace DTasks;
 
 internal sealed class DelayDTask(TimeSpan delay) : DTask
 {
-    internal override DTaskStatus Status => DTaskStatus.Suspended;
+    public override DTaskStatus Status => DTaskStatus.Pending;
 
-    internal override Task<bool> UnderlyingTask => Task.FromResult(false);
-
-    internal override Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
-    {
-        return handler.OnDelayAsync(delay, cancellationToken);
-    }
+    protected override void Run(IDAsyncFlow flow) => flow.Delay(delay);
 }
