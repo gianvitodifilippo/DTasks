@@ -88,7 +88,7 @@ internal partial class DAsyncFlow
 
     private void Resume(DAsyncId id)
     {
-        if (_parentId.IsRoot)
+        if (id.IsRoot)
         {
             Succeed();
         }
@@ -100,7 +100,7 @@ internal partial class DAsyncFlow
 
     private void Resume<TResult>(DAsyncId id, TResult result)
     {
-        if (_parentId.IsRoot)
+        if (id.IsRoot)
         {
             Succeed(result);
         }
@@ -112,7 +112,7 @@ internal partial class DAsyncFlow
 
     private void Resume(DAsyncId id, Exception exception)
     {
-        if (_parentId.IsRoot)
+        if (id.IsRoot)
         {
             Fail(exception);
         }

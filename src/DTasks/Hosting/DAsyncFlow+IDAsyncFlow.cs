@@ -19,39 +19,48 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         }
     }
 
-    void IDAsyncFlow.Succeed()
+    void IDAsyncFlow.Resume()
     {
-        if (_parentId.IsRoot)
+        IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
+
+        if (currentStateMachine is null)
         {
-            Succeed();
+            Resume(_parentId);
         }
         else
         {
-            Hydrate(_parentId);
+            _continuation = s_resumeContinuation;
+            currentStateMachine.Suspend();
         }
     }
 
-    void IDAsyncFlow.Succeed<TResult>(TResult result)
+    void IDAsyncFlow.Resume<TResult>(TResult result)
     {
-        if (_parentId.IsRoot)
+        IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
+
+        if (currentStateMachine is null)
         {
-            Succeed(result);
+            Resume(_parentId, result);
         }
         else
         {
-            Hydrate(_parentId, result);
+            _continuation = flow => flow.Resume(flow._parentId, result);
+            currentStateMachine.Suspend();
         }
     }
 
-    void IDAsyncFlow.Fail(Exception exception)
+    void IDAsyncFlow.Resume(Exception exception)
     {
-        if (_parentId.IsRoot)
+        IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
+
+        if (currentStateMachine is null)
         {
-            Fail(exception);
+            Resume(_parentId, exception);
         }
         else
         {
-            Hydrate(_parentId, exception);
+            _continuation = flow => flow.Resume(flow._parentId, exception);
+            currentStateMachine.Suspend();
         }
     }
 

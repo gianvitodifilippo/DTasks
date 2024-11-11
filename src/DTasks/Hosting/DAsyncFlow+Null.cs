@@ -1,5 +1,6 @@
 ﻿using DTasks.Marshaling;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace DTasks.Hosting;
 
@@ -12,11 +13,13 @@ internal sealed partial class DAsyncFlow
     //private static readonly ITypeResolver s_nullTypeResolver = new NullTypeResolver();
 
     [Conditional("DEBUG")]
+    [ExcludeFromCodeCoverage]
     private static void FailForNull(string fieldName)
     {
         Debug.Fail($"'{fieldName}' was not initialized.");
     }
 
+    [ExcludeFromCodeCoverage]
     private sealed class NullDAsyncHost : IDAsyncHost
     {
         //ITypeResolver IDAsyncHost.TypeResolver
@@ -82,6 +85,7 @@ internal sealed partial class DAsyncFlow
         //}
     }
 
+    [ExcludeFromCodeCoverage]
     private sealed class NullDAsyncMarshaler : IDAsyncMarshaler
     {
         bool IDAsyncMarshaler.TryMarshal<T, TAction>(string fieldName, in T value, scoped ref TAction action)
@@ -97,6 +101,7 @@ internal sealed partial class DAsyncFlow
         }
     }
 
+    [ExcludeFromCodeCoverage]
     private sealed class NullDAsyncStateManager : IDAsyncStateManager
     {
         ValueTask IDAsyncStateManager.DehydrateAsync<TStateMachine>(DAsyncId parentId, DAsyncId id, ref TStateMachine stateMachine, ISuspensionContext suspensionContext, CancellationToken cancellationToken)

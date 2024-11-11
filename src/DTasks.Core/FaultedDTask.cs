@@ -8,7 +8,7 @@ internal sealed class FaultedDTask(Exception exception) : DTask
 
     protected override Exception ExceptionCore => exception;
 
-    protected override void Run(IDAsyncFlow flow) => flow.Fail(exception);
+    protected override void Run(IDAsyncFlow flow) => flow.Resume(exception);
 }
 
 internal sealed class FaultedDTask<TResult>(Exception exception) : DTask<TResult>
@@ -17,5 +17,5 @@ internal sealed class FaultedDTask<TResult>(Exception exception) : DTask<TResult
 
     protected override Exception ExceptionCore => exception;
 
-    protected override void Run(IDAsyncFlow flow) => flow.Fail(exception);
+    protected override void Run(IDAsyncFlow flow) => flow.Resume(exception);
 }

@@ -97,11 +97,11 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
 
         public override void SetException(Exception exception)
         {
+            IDAsyncMethodBuilder builder = Builder;
+
             _status = exception is OperationCanceledException
                 ? DTaskStatus.Canceled
                 : DTaskStatus.Faulted;
-
-            IDAsyncMethodBuilder builder = Builder;
             _stateObject = exception;
             builder.SetException(exception);
         }

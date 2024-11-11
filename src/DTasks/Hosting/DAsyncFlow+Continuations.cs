@@ -5,6 +5,7 @@ namespace DTasks.Hosting;
 internal partial class DAsyncFlow
 {
     private static readonly Continuation s_startContinuation = flow => flow.Start();
+    private static readonly Continuation s_resumeContinuation = flow => flow.Resume(flow._parentId);
     private static readonly Continuation s_yieldContinuation = flow => flow.Yield();
     private static readonly Continuation s_delayContinuation = flow => flow.Delay();
     private static readonly Continuation s_callbackContinuation = flow => flow.Callback();
