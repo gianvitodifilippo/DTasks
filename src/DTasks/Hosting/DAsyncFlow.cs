@@ -48,11 +48,10 @@ internal partial class DAsyncFlow
         Debug.Assert(_state is FlowState.Pending);
 
         _state = FlowState.Running;
-        _parentId = id;
         _cancellationToken = cancellationToken;
         Initialize(host);
 
-        Resume();
+        Resume(id);
         return new ValueTask(this, _valueTaskSource.Version);
     }
 
@@ -61,11 +60,10 @@ internal partial class DAsyncFlow
         Debug.Assert(_state is FlowState.Pending);
 
         _state = FlowState.Running;
-        _parentId = id;
         _cancellationToken = cancellationToken;
         Initialize(host);
 
-        Resume(result);
+        Resume(id, result);
         return new ValueTask(this, _valueTaskSource.Version);
     }
 
@@ -74,11 +72,10 @@ internal partial class DAsyncFlow
         Debug.Assert(_state is FlowState.Pending);
 
         _state = FlowState.Running;
-        _parentId = id;
         _cancellationToken = cancellationToken;
         Initialize(host);
 
-        Resume(exception);
+        Resume(id, exception);
         return new ValueTask(this, _valueTaskSource.Version);
     }
 
@@ -89,7 +86,7 @@ internal partial class DAsyncFlow
         _stateManager = host.CreateStateManager(this);
     }
 
-    private void Resume()
+    private void Resume(DAsyncId id)
     {
         if (_parentId.IsRoot)
         {
@@ -97,11 +94,11 @@ internal partial class DAsyncFlow
         }
         else
         {
-            Hydrate();
+            Hydrate(id);
         }
     }
 
-    private void Resume<TResult>(TResult result)
+    private void Resume<TResult>(DAsyncId id, TResult result)
     {
         if (_parentId.IsRoot)
         {
@@ -109,11 +106,11 @@ internal partial class DAsyncFlow
         }
         else
         {
-            Hydrate(result);
+            Hydrate(id, result);
         }
     }
 
-    private void Resume(Exception exception)
+    private void Resume(DAsyncId id, Exception exception)
     {
         if (_parentId.IsRoot)
         {
@@ -121,7 +118,7 @@ internal partial class DAsyncFlow
         }
         else
         {
-            Hydrate(exception);
+            Hydrate(id, exception);
         }
     }
 
@@ -163,73 +160,6 @@ internal partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            _valueTaskSource.SetException(ex);
-        }
-    }
-
-    private void Hydrate()
-    {
-        _state = FlowState.Hydrating;
-        _id = _parentId;
-
-        try
-        {
-            Await(_stateManager.HydrateAsync(_id, _cancellationToken));
-        }
-        catch (Exception ex)
-        {
-            _valueTaskSource.SetException(ex);
-        }
-    }
-
-    private void Hydrate<TResult>(TResult result)
-    {
-        _state = FlowState.Hydrating;
-        _id = _parentId;
-
-        try
-        {
-            Await(_stateManager.HydrateAsync(_id, result, _cancellationToken));
-        }
-        catch (Exception ex)
-        {
-            _valueTaskSource.SetException(ex);
-        }
-    }
-
-    private void Hydrate(Exception exception)
-    {
-        _state = FlowState.Hydrating;
-        _id = _parentId;
-
-        try
-        {
-            Await(_stateManager.HydrateAsync(_id, exception, _cancellationToken));
-        }
-        catch (Exception ex)
-        {
-            _valueTaskSource.SetException(ex);
-        }
-    }
-
-    private void Dehydrate<TStateMachine>(ref TStateMachine stateMachine)
-        where TStateMachine : notnull
-    {
-        DAsyncId parentId = _parentId;
-        DAsyncId id = _id;
-
-        _state = FlowState.Dehydrating;
-        _parentId = _id;
-        _id = DAsyncId.New();
-
-        try
-        {
-            Await(_stateManager.DehydrateAsync(parentId, id, ref stateMachine, this, _cancellationToken));
-        }
-        catch (Exception ex)
-        {
-            _continuation = null;
-            _suspendingAwaiterOrType = null;
             _valueTaskSource.SetException(ex);
         }
     }

@@ -10,7 +10,7 @@ internal partial class DAsyncFlow
         _suspendingAwaiterOrType = typeof(HostIndirectionAwaiter);
         HostIndirectionStateMachine stateMachine = default;
 
-        Dehydrate(ref stateMachine);
+        Dehydrate(_parentId, _id, ref stateMachine);
     }
 
     private struct HostIndirectionRunnableBuilder

@@ -21,43 +21,37 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
 
     void IDAsyncFlow.Succeed()
     {
-        IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
-
-        if (currentStateMachine is null)
+        if (_parentId.IsRoot)
         {
             Succeed();
         }
         else
         {
-            throw new NotImplementedException();
+            Hydrate(_parentId);
         }
     }
 
     void IDAsyncFlow.Succeed<TResult>(TResult result)
     {
-        IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
-
-        if (currentStateMachine is null)
+        if (_parentId.IsRoot)
         {
             Succeed(result);
         }
         else
         {
-            throw new NotImplementedException();
+            Hydrate(_parentId, result);
         }
     }
 
     void IDAsyncFlow.Fail(Exception exception)
     {
-        IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
-
-        if (currentStateMachine is null)
+        if (_parentId.IsRoot)
         {
             Fail(exception);
         }
         else
         {
-            throw new NotImplementedException();
+            Hydrate(_parentId, exception);
         }
     }
 

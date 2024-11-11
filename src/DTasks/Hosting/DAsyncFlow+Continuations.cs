@@ -28,7 +28,7 @@ internal partial class DAsyncFlow
 
         try
         {
-            Await(_host.YieldAsync(_parentId, _cancellationToken));
+            Await(_host.YieldAsync(_id, _cancellationToken));
         }
         catch (Exception ex)
         {
@@ -43,7 +43,7 @@ internal partial class DAsyncFlow
 
         try
         {
-            Await(_host.DelayAsync(_parentId, Consume(ref _delay), _cancellationToken));
+            Await(_host.DelayAsync(_id, Consume(ref _delay), _cancellationToken));
         }
         catch (Exception ex)
         {
@@ -59,7 +59,7 @@ internal partial class DAsyncFlow
 
         try
         {
-            Await(Consume(ref _callback).InvokeAsync(_parentId, _cancellationToken));
+            Await(Consume(ref _callback).InvokeAsync(_id, _cancellationToken));
         }
         catch (Exception ex)
         {

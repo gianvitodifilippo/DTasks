@@ -54,21 +54,30 @@ internal partial class DAsyncFlow : IDAsyncMethodBuilder
 
     void IDAsyncMethodBuilder.SetResult()
     {
-        Resume();
+        _id = default;
+        Resume(_parentId);
     }
 
     void IDAsyncMethodBuilder.SetResult<TResult>(TResult result)
     {
-        Resume(result);
+        _id = default;
+        Resume(_parentId, result);
     }
 
     void IDAsyncMethodBuilder.SetException(Exception exception)
     {
-        Resume(exception);
+        _id = default;
+        Resume(_parentId, exception);
     }
 
     void IDAsyncMethodBuilder.SetState<TStateMachine>(ref TStateMachine stateMachine)
     {
-        Dehydrate(ref stateMachine);
+        DAsyncId parentId = _parentId;
+        DAsyncId id = _id;
+
+        _parentId = _id;
+        _id = DAsyncId.New();
+
+        Dehydrate(parentId, id, ref stateMachine);
     }
 }
