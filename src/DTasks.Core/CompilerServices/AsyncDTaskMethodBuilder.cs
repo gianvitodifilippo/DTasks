@@ -16,7 +16,7 @@ public struct AsyncDTaskMethodBuilder
     {
         get
         {
-            Debug.Assert(_builder is not null, $"'{nameof(Start)}' was not invoked.");
+            Assert.NotNull(_builder, $"'{nameof(Start)}' was not invoked.");
             return _builder;
         }
     }
@@ -79,7 +79,7 @@ public struct AsyncDTaskMethodBuilder<TResult>
     {
         get
         {
-            Debug.Assert(_builder is not null, $"'{nameof(Start)}' was not invoked.");
+            Assert.NotNull(_builder, $"'{nameof(Start)}' was not invoked.");
             return _builder;
         }
     }

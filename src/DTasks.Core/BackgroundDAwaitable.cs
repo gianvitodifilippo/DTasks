@@ -1,5 +1,6 @@
 ﻿using DTasks.CompilerServices;
 using DTasks.Hosting;
+using DTasks.Utils;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -75,7 +76,7 @@ internal sealed class BackgroundDTask<TTask>(IDAsyncRunnable runnable) : DTask<T
     {
         get
         {
-            Debug.Assert(_stateObject is TTask);
+            Assert.Is<TTask>(_stateObject);
 
             return Unsafe.As<TTask>(_stateObject);
         }
@@ -85,7 +86,7 @@ internal sealed class BackgroundDTask<TTask>(IDAsyncRunnable runnable) : DTask<T
     {
         get
         {
-            Debug.Assert(_stateObject is Exception);
+            Assert.Is<Exception>(_stateObject);
 
             return Unsafe.As<Exception>(_stateObject);
         }
@@ -95,13 +96,16 @@ internal sealed class BackgroundDTask<TTask>(IDAsyncRunnable runnable) : DTask<T
     {
         get
         {
-            Debug.Assert(_stateObject is IDAsyncRunnable);
+            Assert.Is<IDAsyncRunnable>(_stateObject);
 
             return Unsafe.As<IDAsyncRunnable>(_stateObject);
         }
     }
 
-    protected override void Run(IDAsyncFlow flow) => throw new NotImplementedException();
+    protected override void Run(IDAsyncFlow flow)
+    {
+        Debug.Fail($"'{nameof(Run)}' should not be invoked on {nameof(BackgroundDTask<DTask>)}.");
+    }
 
     void IDAsyncResultCallback<TTask>.SetResult(TTask result)
     {

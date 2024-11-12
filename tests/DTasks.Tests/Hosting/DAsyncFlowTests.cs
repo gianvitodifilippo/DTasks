@@ -651,8 +651,8 @@ public class DAsyncFlowTests
         static async DTask M1(ISuspensionCallback callback)
         {
             await DTask.WhenAll([
-                DTask.FromResult(string.Empty),
                 M2(callback),
+                DTask.FromResult(string.Empty),
                 DTask.CompletedDTask,
                 DTask.Delay(TimeSpan.FromMinutes(10))
             ]);

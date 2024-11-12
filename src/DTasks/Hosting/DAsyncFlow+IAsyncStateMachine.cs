@@ -14,13 +14,13 @@ internal partial class DAsyncFlow : IAsyncStateMachine
             switch (_state)
             {
                 case FlowState.Running: // After awaiting a regular awaitable or a completed d-awaitable
-                    Debug.Assert(_stateMachine is not null);
+                    Assert.NotNull(_stateMachine);
 
                     _stateMachine.MoveNext();
                     break;
 
                 case FlowState.Dehydrating:
-                    Debug.Assert(_continuation is not null);
+                    Assert.NotNull(_continuation);
 
                     GetVoidValueTaskResult();
                     _suspendingAwaiterOrType = null;
@@ -34,7 +34,18 @@ internal partial class DAsyncFlow : IAsyncStateMachine
                     
                 case FlowState.Returning:
                     GetVoidTaskResult();
+                    _parent = null;
+                    _stateMachine = null;
                     _valueTaskSource.SetResult(default);
+                    break;
+
+                case FlowState.WhenAll:
+                case FlowState.WhenAllResult:
+                    Assert.NotNull(_backgroundRunnable);
+
+                    GetVoidTaskResult();
+                    _state = FlowState.Running;
+                    Consume(ref _backgroundRunnable).Run(this);
                     break;
 
                 default:
@@ -62,6 +73,8 @@ internal partial class DAsyncFlow : IAsyncStateMachine
         Running,
         Dehydrating,
         Hydrating,
-        Returning
+        Returning,
+        WhenAll,
+        WhenAllResult
     }
 }

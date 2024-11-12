@@ -1,110 +1,120 @@
-﻿using System.Diagnostics;
+﻿using DTasks.Utils;
+using System.Runtime.CompilerServices;
 
 namespace DTasks.Hosting;
 
 internal partial class DAsyncFlow
 {
-    private static void StartContinuation(DAsyncFlow self)
+    private static class Continuations
     {
-        IDAsyncStateMachine? stateMachine = self.Consume(ref self._stateMachine);
+        public static void Return(DAsyncFlow self)
+        {
+            self.Await(Task.CompletedTask, FlowState.Returning);
+        }
 
-        Debug.Assert(stateMachine is not null);
-        self.Start(stateMachine);
-    }
+        public static void Start(DAsyncFlow self)
+        {
+            IDAsyncStateMachine? stateMachine = self.Consume(ref self._stateMachine);
 
-    private static void YieldContinuation(DAsyncFlow self)
-    {
-        self.Yield();
-    }
+            Assert.NotNull(stateMachine);
+            self.Start(stateMachine);
+        }
 
-    private static void DelayContinuation(DAsyncFlow self)
-    {
-        TimeSpan delay = self.Consume(ref self._delay);
+        public static void Yield(DAsyncFlow self)
+        {
+            self.Yield();
+        }
 
-        self.Delay(delay);
-    }
+        public static void Delay(DAsyncFlow self)
+        {
+            TimeSpan? delay = self.Consume(ref self._delay);
 
-    private static void CallbackContinuation(DAsyncFlow self)
-    {
-        ISuspensionCallback? callback = self.Consume(ref self._callback);
+            Assert.NotNull(delay);
+            self.Delay(delay.Value);
+        }
 
-        Debug.Assert(callback is not null);
-        self.Callback(callback);
-    }
+        public static void Callback(DAsyncFlow self)
+        {
+            ISuspensionCallback? callback = self.Consume(ref self._callback);
 
-    private static void WhenAllContinuation(DAsyncFlow self)
-    {
-        IEnumerable<IDAsyncRunnable>? aggregateBranches = self.Consume(ref self._aggregateBranches);
-        object? resultCallback = self.Consume(ref self._resultCallback);
+            Assert.NotNull(callback);
+            self.Callback(callback);
+        }
 
-        Debug.Assert(aggregateBranches is not null);
-        Debug.Assert(resultCallback is IDAsyncResultCallback);
-        self.WhenAll(aggregateBranches, (IDAsyncResultCallback)resultCallback);
-    }
+        public static void WhenAll(DAsyncFlow self)
+        {
+            IEnumerable<IDAsyncRunnable>? aggregateBranches = self.Consume(ref self._aggregateBranches);
+            object? resultCallback = self.Consume(ref self._resultCallback);
 
-    private static void WhenAllContinuation<TResult>(DAsyncFlow self)
-    {
-        IEnumerable<IDAsyncRunnable>? aggregateBranches = self.Consume(ref self._aggregateBranches);
-        object? resultCallback = self.Consume(ref self._resultCallback);
+            Assert.NotNull(aggregateBranches);
+            Assert.Is<IDAsyncResultCallback>(resultCallback);
+            self.Await(self.WhenAllAsync(aggregateBranches, Unsafe.As<IDAsyncResultCallback>(resultCallback)), FlowState.WhenAll);
+        }
 
-        Debug.Assert(aggregateBranches is not null);
-        Debug.Assert(resultCallback is IDAsyncResultCallback<TResult[]>);
-        self.WhenAll(aggregateBranches, (IDAsyncResultCallback<TResult[]>)resultCallback);
-    }
+        public static void WhenAll<TResult>(DAsyncFlow self)
+        {
+            IEnumerable<IDAsyncRunnable>? aggregateBranches = self.Consume(ref self._aggregateBranches);
+            object? resultCallback = self.Consume(ref self._resultCallback);
 
-    private static void WhenAnyContinuation(DAsyncFlow self)
-    {
-        IEnumerable<IDAsyncRunnable>? aggregateBranches = self.Consume(ref self._aggregateBranches);
-        object? resultCallback = self.Consume(ref self._resultCallback);
+            Assert.NotNull(aggregateBranches);
+            Assert.Is<IDAsyncResultCallback<TResult[]>>(resultCallback);
+            self.WhenAll(aggregateBranches, Unsafe.As<IDAsyncResultCallback<TResult[]>>(resultCallback));
+        }
 
-        Debug.Assert(aggregateBranches is not null);
-        Debug.Assert(resultCallback is IDAsyncResultCallback<DTask>);
-        self.WhenAny(aggregateBranches, (IDAsyncResultCallback<DTask>)resultCallback);
-    }
+        public static void WhenAny(DAsyncFlow self)
+        {
+            IEnumerable<IDAsyncRunnable>? aggregateBranches = self.Consume(ref self._aggregateBranches);
+            object? resultCallback = self.Consume(ref self._resultCallback);
 
-    private static void WhenAnyContinuation<TResult>(DAsyncFlow self)
-    {
-        IEnumerable<IDAsyncRunnable>? aggregateBranches = self.Consume(ref self._aggregateBranches);
-        object? resultCallback = self.Consume(ref self._resultCallback);
+            Assert.NotNull(aggregateBranches);
+            Assert.Is<IDAsyncResultCallback<DTask>>(resultCallback);
+            self.WhenAny(aggregateBranches, Unsafe.As<IDAsyncResultCallback<DTask>>(resultCallback));
+        }
 
-        Debug.Assert(aggregateBranches is not null);
-        Debug.Assert(resultCallback is IDAsyncResultCallback<DTask<TResult>>);
-        self.WhenAny(aggregateBranches, (IDAsyncResultCallback<DTask<TResult>>)resultCallback);
-    }
+        public static void WhenAny<TResult>(DAsyncFlow self)
+        {
+            IEnumerable<IDAsyncRunnable>? aggregateBranches = self.Consume(ref self._aggregateBranches);
+            object? resultCallback = self.Consume(ref self._resultCallback);
 
-    private static void BackgroundContinuation(DAsyncFlow self)
-    {
-        IDAsyncRunnable? backgroundRunnable = self.Consume(ref self._backgroundRunnable);
-        object? resultCallback = self.Consume(ref self._resultCallback);
+            Assert.NotNull(aggregateBranches);
+            Assert.Is<IDAsyncResultCallback<DTask<TResult>>>(resultCallback);
+            self.WhenAny(aggregateBranches, Unsafe.As<IDAsyncResultCallback<DTask<TResult>>>(resultCallback));
+        }
 
-        Debug.Assert(backgroundRunnable is not null);
-        Debug.Assert(resultCallback is IDAsyncResultCallback<DTask>);
-        self.Background(backgroundRunnable, (IDAsyncResultCallback<DTask>)resultCallback);
-    }
+        public static void Background(DAsyncFlow self)
+        {
+            IDAsyncRunnable? backgroundRunnable = self.Consume(ref self._backgroundRunnable);
+            object? resultCallback = self.Consume(ref self._resultCallback);
 
-    private static void BackgroundContinuation<TResult>(DAsyncFlow self)
-    {
-        IDAsyncRunnable? backgroundRunnable = self.Consume(ref self._backgroundRunnable);
-        object? resultCallback = self.Consume(ref self._resultCallback);
+            Assert.NotNull(backgroundRunnable);
+            Assert.Is<IDAsyncResultCallback<DTask>>(resultCallback);
+            self.Background(backgroundRunnable, Unsafe.As<IDAsyncResultCallback<DTask>>(resultCallback));
+        }
 
-        Debug.Assert(backgroundRunnable is not null);
-        Debug.Assert(resultCallback is IDAsyncResultCallback<DTask<TResult>>);
-        self.Background(backgroundRunnable, (IDAsyncResultCallback<DTask<TResult>>)resultCallback);
-    }
+        public static void Background<TResult>(DAsyncFlow self)
+        {
+            IDAsyncRunnable? backgroundRunnable = self.Consume(ref self._backgroundRunnable);
+            object? resultCallback = self.Consume(ref self._resultCallback);
 
-    private static void YieldIndirectionContinuation(DAsyncFlow self)
-    {
-        self.RunIndirection(YieldContinuation);
-    }
+            Assert.NotNull(backgroundRunnable);
+            Assert.Is<IDAsyncResultCallback<DTask<TResult>>>(resultCallback);
+            self.Background(backgroundRunnable, Unsafe.As<IDAsyncResultCallback<DTask<TResult>>>(resultCallback));
+        }
 
-    private static void DelayIndirectionContinuation(DAsyncFlow self)
-    {
-        self.RunIndirection(DelayContinuation);
-    }
+        public static void YieldIndirection(DAsyncFlow self)
+        {
+            self.RunIndirection(Yield);
+        }
 
-    private static void CallbackIndirectionContinuation(DAsyncFlow self)
-    {
-        self.RunIndirection(CallbackContinuation);
+        public static void DelayIndirection(DAsyncFlow self)
+        {
+            self.RunIndirection(Delay);
+        }
+
+        public static void CallbackIndirection(DAsyncFlow self)
+        {
+            self.RunIndirection(Callback);
+        }
     }
 
     private delegate void FlowContinuation(DAsyncFlow self);

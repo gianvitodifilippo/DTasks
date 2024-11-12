@@ -1,4 +1,5 @@
 ﻿using DTasks.Hosting;
+using DTasks.Utils;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -15,7 +16,7 @@ internal sealed class WhenAllDTask(IEnumerable<DTask> tasks) : DTask, IDAsyncRes
     {
         get
         {
-            Debug.Assert(_exception is not null);
+            Assert.NotNull(_exception);
             return _exception;
         }
     }
@@ -45,7 +46,7 @@ internal sealed class WhenAllDTask<TResult>(IEnumerable<DTask<TResult>> tasks) :
     {
         get
         {
-            Debug.Assert(_stateObject is TResult[]);
+            Assert.Is<TResult[]>(_stateObject);
 
             return Unsafe.As<TResult[]>(_stateObject);
         }
@@ -55,7 +56,7 @@ internal sealed class WhenAllDTask<TResult>(IEnumerable<DTask<TResult>> tasks) :
     {
         get
         {
-            Debug.Assert(_stateObject is Exception);
+            Assert.Is<Exception>(_stateObject);
 
             return Unsafe.As<Exception>(_stateObject);
         }

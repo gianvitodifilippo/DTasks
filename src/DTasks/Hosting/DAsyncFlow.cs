@@ -1,4 +1,5 @@
 ﻿using DTasks.Marshaling;
+using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -16,6 +17,7 @@ internal partial class DAsyncFlow
     private IDAsyncHost _host = s_nullHost;
     private IDAsyncMarshaler _marshaler = s_nullMarshaler;
     private IDAsyncStateManager _stateManager = s_nullStateManager;
+    private DAsyncFlow? _parent;
 
     private TaskAwaiter _voidTa;
     private ValueTaskAwaiter _voidVta;
@@ -25,12 +27,17 @@ internal partial class DAsyncFlow
     private DAsyncId _id;
     private IDAsyncStateMachine? _stateMachine;
     private object? _suspendingAwaiterOrType;
-    private TimeSpan _delay;
+    private TimeSpan? _delay;
     private ISuspensionCallback? _callback;
     private IEnumerable<IDAsyncRunnable>? _aggregateBranches;
+    private List<Exception>? _aggregateExceptions;
+    private int _whenAllBranchCount;
+    private IDictionary? _whenAllBranchResults;
     private IDAsyncRunnable? _backgroundRunnable;
     private object? _resultCallback;
     private FlowContinuation? _continuation;
+
+    private bool IsRunningAggregates => _parent is not null;
 
     public ValueTask StartAsync(IDAsyncHost host, IDAsyncRunnable runnable, CancellationToken cancellationToken = default)
     {
@@ -91,44 +98,17 @@ internal partial class DAsyncFlow
 
     private void Succeed()
     {
-        _state = FlowState.Returning;
-
-        try
-        {
-            Await(_host.SucceedAsync(_cancellationToken));
-        }
-        catch (Exception ex)
-        {
-            _valueTaskSource.SetException(ex);
-        }
+        Await(_host.SucceedAsync(_cancellationToken), FlowState.Returning);
     }
 
     private void Succeed<TResult>(TResult result)
     {
-        _state = FlowState.Returning;
-
-        try
-        {
-            Await(_host.SucceedAsync(result, _cancellationToken));
-        }
-        catch (Exception ex)
-        {
-            _valueTaskSource.SetException(ex);
-        }
+        Await(_host.SucceedAsync(result, _cancellationToken), FlowState.Returning);
     }
 
     private void Fail(Exception exception)
     {
-        _state = FlowState.Returning;
-
-        try
-        {
-            Await(_host.FailAsync(exception, _cancellationToken));
-        }
-        catch (Exception ex)
-        {
-            _valueTaskSource.SetException(ex);
-        }
+        Await(_host.FailAsync(exception, _cancellationToken), FlowState.Returning);
     }
 
     [DebuggerStepThrough]

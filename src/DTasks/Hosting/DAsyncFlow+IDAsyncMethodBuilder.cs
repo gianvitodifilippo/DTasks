@@ -1,4 +1,5 @@
 ﻿using DTasks.CompilerServices;
+using DTasks.Utils;
 using System.Diagnostics;
 
 namespace DTasks.Hosting;
@@ -33,14 +34,14 @@ internal partial class DAsyncFlow : IDAsyncMethodBuilder
 
     private void AwaitContinue<TAwaiter>(ref TAwaiter awaiter)
     {
-        Debug.Assert(awaiter is IDAsyncAwaiter);
+        Assert.Is<IDAsyncAwaiter>(awaiter);
 
         if (((IDAsyncAwaiter)awaiter).IsCompleted)
         {
             // To avoid possible stack dives, invoke the continuation asynchronously.
             // Awaiting a completed Task gets the job done and saves us the bother of flowing the execution context, as the state machine box takes care of that.
 
-            Await(Task.CompletedTask);
+            Await(Task.CompletedTask, FlowState.Running);
         }
         else
         {
@@ -52,10 +53,10 @@ internal partial class DAsyncFlow : IDAsyncMethodBuilder
             {
                 ((IDAsyncAwaiter)awaiter).Continue(this);
             }
-            catch (Exception ex)
+            catch
             {
                 _suspendingAwaiterOrType = null;
-                _valueTaskSource.SetException(ex);
+                throw;
             }
         }
     }
@@ -63,18 +64,21 @@ internal partial class DAsyncFlow : IDAsyncMethodBuilder
     void IDAsyncMethodBuilder.SetResult()
     {
         _id = default;
+        _stateMachine = null;
         Resume(_parentId);
     }
 
     void IDAsyncMethodBuilder.SetResult<TResult>(TResult result)
     {
         _id = default;
+        _stateMachine = null;
         Resume(_parentId, result);
     }
 
     void IDAsyncMethodBuilder.SetException(Exception exception)
     {
         _id = default;
+        _stateMachine = null;
         Resume(_parentId, exception);
     }
 

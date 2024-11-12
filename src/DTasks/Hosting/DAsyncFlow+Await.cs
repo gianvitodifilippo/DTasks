@@ -2,22 +2,28 @@
 
 internal partial class DAsyncFlow
 {
-    private void Await(Task task)
+    private void Await(Task task, FlowState state)
     {
+        _state = state;
+
         var self = this;
         _voidTa = task.GetAwaiter();
         _builder.AwaitUnsafeOnCompleted(ref _voidTa, ref self);
     }
 
-    private void Await(ValueTask task)
+    private void Await(ValueTask task, FlowState state)
     {
+        _state = state;
+
         var self = this;
         _voidVta = task.GetAwaiter();
         _builder.AwaitUnsafeOnCompleted(ref _voidVta, ref self);
     }
 
-    private void Await(ValueTask<DAsyncLink> task)
+    private void Await(ValueTask<DAsyncLink> task, FlowState state)
     {
+        _state = state;
+
         var self = this;
         _linkVta = task.GetAwaiter();
         _builder.AwaitUnsafeOnCompleted(ref _linkVta, ref self);

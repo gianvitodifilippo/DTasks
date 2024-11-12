@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using DTasks.Hosting;
+using DTasks.Utils;
 
 namespace DTasks;
 
@@ -49,7 +50,7 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
         {
             get
             {
-                Debug.Assert(_stateObject is Exception);
+                Assert.Is<Exception>(_stateObject);
 
                 return Unsafe.As<Exception>(_stateObject);
             }
@@ -62,7 +63,7 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
             get
             {
                 Debug.Assert(IsRunning);
-                Debug.Assert(_stateObject is IDAsyncMethodBuilder);
+                Assert.Is<IDAsyncMethodBuilder>(_stateObject);
 
                 return Unsafe.As<IDAsyncMethodBuilder>(_stateObject);
             }
@@ -78,7 +79,7 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
 
         public override void SetResult(TResult result)
         {
-            Debug.Assert(_status is DTaskStatus.Running, "The DTask should complete when running.");
+            Debug.Assert(IsRunning, "The DTask should complete when running.");
 
             IDAsyncMethodBuilder builder = Builder;
             _stateObject = null;
