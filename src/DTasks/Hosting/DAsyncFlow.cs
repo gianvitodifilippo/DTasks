@@ -27,6 +27,9 @@ internal partial class DAsyncFlow
     private object? _suspendingAwaiterOrType;
     private TimeSpan _delay;
     private ISuspensionCallback? _callback;
+    private IEnumerable<IDAsyncRunnable>? _aggregateBranches;
+    private IDAsyncRunnable? _backgroundRunnable;
+    private object? _resultCallback;
     private FlowContinuation? _continuation;
 
     public ValueTask StartAsync(IDAsyncHost host, IDAsyncRunnable runnable, CancellationToken cancellationToken = default)
@@ -84,48 +87,6 @@ internal partial class DAsyncFlow
         _host = host;
         _marshaler = host.CreateMarshaler();
         _stateManager = host.CreateStateManager(this);
-    }
-
-    private void Resume(DAsyncId id)
-    {
-        _id = id;
-
-        if (id.IsRoot)
-        {
-            Succeed();
-        }
-        else
-        {
-            Hydrate(id);
-        }
-    }
-
-    private void Resume<TResult>(DAsyncId id, TResult result)
-    {
-        _id = id;
-
-        if (id.IsRoot)
-        {
-            Succeed(result);
-        }
-        else
-        {
-            Hydrate(id, result);
-        }
-    }
-
-    private void Resume(DAsyncId id, Exception exception)
-    {
-        _id = id;
-
-        if (id.IsRoot)
-        {
-            Fail(exception);
-        }
-        else
-        {
-            Hydrate(id, exception);
-        }
     }
 
     private void Succeed()

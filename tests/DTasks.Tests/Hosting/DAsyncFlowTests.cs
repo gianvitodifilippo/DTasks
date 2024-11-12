@@ -643,6 +643,55 @@ public class DAsyncFlowTests
         _stateManager.Count.Should().Be(0);
     }
 
+    [Fact]
+    public async Task RunsDTaskThatAwaitsWhenAll()
+    {
+        // Arrange
+        var callback = Substitute.For<ISuspensionCallback>();
+        static async DTask M1(ISuspensionCallback callback)
+        {
+            await DTask.WhenAll([
+                DTask.FromResult(string.Empty),
+                M2(callback),
+                DTask.CompletedDTask,
+                DTask.Delay(TimeSpan.FromMinutes(10))
+            ]);
+        }
+
+        static async DTask M2(ISuspensionCallback callback)
+        {
+            await DTask.Factory.Callback(callback);
+        }
+
+        DAsyncId id1 = default;
+        DAsyncId id2 = default;
+        DAsyncId id3 = default;
+        _host
+            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .Do(call => id1 = call.Arg<DAsyncId>());
+        _host
+            .When(host => host.DelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>()))
+            .Do(call => id2 = call.Arg<DAsyncId>());
+        callback
+            .When(callback => callback.InvokeAsync(Arg.Any<DAsyncId>()))
+            .Do(call => id3 = call.Arg<DAsyncId>());
+
+        DTask task = M1(callback);
+
+        // Act
+        await _sut.StartAsync(_host, task);
+        await _sut.ResumeAsync(_host, id1);
+        await _sut.ResumeAsync(_host, id2);
+        await _sut.ResumeAsync(_host, id3);
+
+        // Assert
+        await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
+        await _host.Received(1).YieldAsync(Arg.Any<DAsyncId>());
+        await _host.Received(1).DelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>());
+        await _host.Received(1).SucceedAsync();
+        _stateManager.Count.Should().Be(0);
+    }
+
     private static Expression<Predicate<DAsyncId>> NonReservedId => id => id != default && id != DAsyncId.RootId;
 
     private sealed class YieldRunnable : IDAsyncRunnable

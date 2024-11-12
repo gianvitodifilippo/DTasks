@@ -48,7 +48,15 @@ internal partial class DAsyncFlow : IDAsyncMethodBuilder
                 ? typeof(TAwaiter)
                 : awaiter;
 
-            ((IDAsyncAwaiter)awaiter).Continue(this);
+            try
+            {
+                ((IDAsyncAwaiter)awaiter).Continue(this);
+            }
+            catch (Exception ex)
+            {
+                _suspendingAwaiterOrType = null;
+                _valueTaskSource.SetException(ex);
+            }
         }
     }
 
