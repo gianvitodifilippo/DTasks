@@ -198,7 +198,7 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         }
     }
 
-    void IDAsyncFlow.Run(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask> callback)
+    void IDAsyncFlow.Background(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask> callback)
     {
         ThrowHelper.ThrowIfNull(runnable);
         ThrowHelper.ThrowIfNull(callback);
@@ -207,18 +207,18 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
 
         if (currentStateMachine is null)
         {
-            Run(runnable, callback);
+            Background(runnable, callback);
         }
         else
         {
             _backgroundRunnable = runnable;
             _resultCallback = callback;
-            _continuation = RunContinuation;
+            _continuation = BackgroundContinuation;
             currentStateMachine.Suspend();
         }
     }
 
-    void IDAsyncFlow.Run<TResult>(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask<TResult>> callback)
+    void IDAsyncFlow.Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask<TResult>> callback)
     {
         ThrowHelper.ThrowIfNull(runnable);
         ThrowHelper.ThrowIfNull(callback);
@@ -227,13 +227,13 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
 
         if (currentStateMachine is null)
         {
-            Run(runnable, callback);
+            Background(runnable, callback);
         }
         else
         {
             _backgroundRunnable = runnable;
             _resultCallback = callback;
-            _continuation = RunContinuation<TResult>;
+            _continuation = BackgroundContinuation<TResult>;
             currentStateMachine.Suspend();
         }
     }
@@ -361,12 +361,12 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         throw new NotImplementedException();
     }
 
-    private void Run(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask> callback)
+    private void Background(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask> callback)
     {
         throw new NotImplementedException();
     }
 
-    private void Run<TResult>(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask<TResult>> callback)
+    private void Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask<TResult>> callback)
     {
         throw new NotImplementedException();
     }

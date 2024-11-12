@@ -72,24 +72,24 @@ internal partial class DAsyncFlow
         self.WhenAny(aggregateBranches, (IDAsyncResultCallback<DTask<TResult>>)resultCallback);
     }
 
-    private static void RunContinuation(DAsyncFlow self)
+    private static void BackgroundContinuation(DAsyncFlow self)
     {
         IDAsyncRunnable? backgroundRunnable = self.Consume(ref self._backgroundRunnable);
         object? resultCallback = self.Consume(ref self._resultCallback);
 
         Debug.Assert(backgroundRunnable is not null);
         Debug.Assert(resultCallback is IDAsyncResultCallback<DTask>);
-        self.Run(backgroundRunnable, (IDAsyncResultCallback<DTask>)resultCallback);
+        self.Background(backgroundRunnable, (IDAsyncResultCallback<DTask>)resultCallback);
     }
 
-    private static void RunContinuation<TResult>(DAsyncFlow self)
+    private static void BackgroundContinuation<TResult>(DAsyncFlow self)
     {
         IDAsyncRunnable? backgroundRunnable = self.Consume(ref self._backgroundRunnable);
         object? resultCallback = self.Consume(ref self._resultCallback);
 
         Debug.Assert(backgroundRunnable is not null);
         Debug.Assert(resultCallback is IDAsyncResultCallback<DTask<TResult>>);
-        self.Run(backgroundRunnable, (IDAsyncResultCallback<DTask<TResult>>)resultCallback);
+        self.Background(backgroundRunnable, (IDAsyncResultCallback<DTask<TResult>>)resultCallback);
     }
 
     private static void YieldIndirectionContinuation(DAsyncFlow self)

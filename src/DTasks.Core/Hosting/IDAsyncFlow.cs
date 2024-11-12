@@ -25,7 +25,7 @@ public interface IDAsyncFlow
 
     void WhenAny<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultCallback<DTask<TResult>> callback);
 
-    void Run(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask> callback);
+    void Background(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask> callback);
 
-    void Run<TResult>(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask<TResult>> callback);
+    void Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask<TResult>> callback);
 }
