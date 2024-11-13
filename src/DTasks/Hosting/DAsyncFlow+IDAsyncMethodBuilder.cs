@@ -1,6 +1,5 @@
 ﻿using DTasks.CompilerServices;
 using DTasks.Utils;
-using System.Diagnostics;
 
 namespace DTasks.Hosting;
 
@@ -83,6 +82,12 @@ internal partial class DAsyncFlow : IDAsyncMethodBuilder
     }
 
     void IDAsyncMethodBuilder.SetState<TStateMachine>(ref TStateMachine stateMachine)
+    {
+        SetState(ref stateMachine);
+    }
+
+    private void SetState<TStateMachine>(ref TStateMachine stateMachine)
+        where TStateMachine : notnull
     {
         DAsyncId parentId = _parentId;
         DAsyncId id = _id;

@@ -1,4 +1,5 @@
 ﻿using DTasks.Marshaling;
+using DTasks.Utils;
 using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -17,7 +18,6 @@ internal partial class DAsyncFlow
     private IDAsyncHost _host = s_nullHost;
     private IDAsyncMarshaler _marshaler = s_nullMarshaler;
     private IDAsyncStateManager _stateManager = s_nullStateManager;
-    private DAsyncFlow? _parent;
 
     private TaskAwaiter _voidTa;
     private ValueTaskAwaiter _voidVta;
@@ -29,15 +29,34 @@ internal partial class DAsyncFlow
     private object? _suspendingAwaiterOrType;
     private TimeSpan? _delay;
     private ISuspensionCallback? _callback;
+    private AggregateType _aggregateType;
     private IEnumerable<IDAsyncRunnable>? _aggregateBranches;
     private List<Exception>? _aggregateExceptions;
     private int _whenAllBranchCount;
     private IDictionary? _whenAllBranchResults;
-    private IDAsyncRunnable? _backgroundRunnable;
+    private IDAsyncRunnable? _aggregateRunnable;
     private object? _resultCallback;
     private FlowContinuation? _continuation;
 
+    private DAsyncFlow? _parent;
+    private int _branchIndex = -1;
+
+    [MemberNotNullWhen(true, nameof(_parent))]
     private bool IsRunningAggregates => _parent is not null;
+
+    private bool IsWhenAllResultBranch
+    {
+        get
+        {
+            if (_branchIndex != -1)
+            {
+                Debug.Assert(IsRunningAggregates && _parent._aggregateType is AggregateType.WhenAllResult);
+                return true;
+            }
+
+            return false;
+        }
+    }
 
     public ValueTask StartAsync(IDAsyncHost host, IDAsyncRunnable runnable, CancellationToken cancellationToken = default)
     {

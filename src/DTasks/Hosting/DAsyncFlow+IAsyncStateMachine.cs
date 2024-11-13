@@ -39,13 +39,12 @@ internal partial class DAsyncFlow : IAsyncStateMachine
                     _valueTaskSource.SetResult(default);
                     break;
 
-                case FlowState.WhenAll:
-                case FlowState.WhenAllResult:
-                    Assert.NotNull(_backgroundRunnable);
+                case FlowState.Aggregating:
+                    Assert.NotNull(_aggregateRunnable);
 
                     GetVoidTaskResult();
                     _state = FlowState.Running;
-                    Consume(ref _backgroundRunnable).Run(this);
+                    Consume(ref _aggregateRunnable).Run(this);
                     break;
 
                 default:
@@ -74,7 +73,6 @@ internal partial class DAsyncFlow : IAsyncStateMachine
         Dehydrating,
         Hydrating,
         Returning,
-        WhenAll,
-        WhenAllResult
+        Aggregating
     }
 }

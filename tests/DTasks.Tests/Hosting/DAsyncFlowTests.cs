@@ -692,6 +692,80 @@ public class DAsyncFlowTests
         _stateManager.Count.Should().Be(0);
     }
 
+    [Fact]
+    public async Task RunsDTaskThatAwaitsWhenAllResult()
+    {
+        // Arrange
+        const int result1 = 1;
+        const int result2 = 2;
+        const int result3 = 3;
+        static async DTask<int[]> M1()
+        {
+            int[] results = await DTask.WhenAll([
+                M2(result1),
+                DTask.FromResult(result3),
+                M2(result2)
+            ]);
+            return results;
+        }
+
+        static async DTask<int> M2(int result)
+        {
+            await DTask.Yield();
+            return result;
+        }
+
+        DAsyncId id1 = default;
+        DAsyncId id2 = default;
+        DAsyncId id3 = default;
+        DAsyncId id4 = default;
+        _host
+            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .Do(call =>
+            {
+                if (id1 == default)
+                {
+                    id1 = call.Arg<DAsyncId>();
+                    return;
+                }
+
+                if (id2 == default)
+                {
+                    id2 = call.Arg<DAsyncId>();
+                    return;
+                }
+
+                if (id3 == default)
+                {
+                    id3 = call.Arg<DAsyncId>();
+                    return;
+                }
+
+                if (id4 == default)
+                {
+                    id4 = call.Arg<DAsyncId>();
+                    return;
+                }
+
+                throw FailException.ForFailure("YieldAsync called too many times");
+            });
+
+        DTask task = M1();
+
+        // Act
+        await _sut.StartAsync(_host, task);
+        await _sut.ResumeAsync(_host, id2);
+        await _sut.ResumeAsync(_host, id1);
+        await _sut.ResumeAsync(_host, id3);
+        await _sut.ResumeAsync(_host, id4);
+
+        // Assert
+        task.Status.Should().Be(DTaskStatus.Suspended);
+        await _host.Received(4).YieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>());
+        await _host.Received(1).SucceedAsync(Arg.Is<int[]>(results => results.SequenceEqual(new[] { result1, result3, result2 })));
+        _stateManager.Count.Should().Be(0);
+    }
+
     private static Expression<Predicate<DAsyncId>> NonReservedId => id => id != default && id != DAsyncId.RootId;
 
     private sealed class YieldRunnable : IDAsyncRunnable
@@ -703,20 +777,20 @@ public class DAsyncFlowTests
     {
         public override DTaskStatus Status => DTaskStatus.Suspended;
 
-        protected override void Run(IDAsyncFlow flow) => flow.Resume();
+        protected override void Run(IDAsyncFlow flow) => flow.Succeed();
     }
 
     private sealed class ResumingDTask<TResult>(TResult result) : DTask<TResult>
     {
         public override DTaskStatus Status => DTaskStatus.Suspended;
 
-        protected override void Run(IDAsyncFlow flow) => flow.Resume(result);
+        protected override void Run(IDAsyncFlow flow) => flow.Succeed(result);
     }
 
     private sealed class ExceptionResumingDTask(Exception exception) : DTask
     {
         public override DTaskStatus Status => DTaskStatus.Suspended;
 
-        protected override void Run(IDAsyncFlow flow) => flow.Resume(exception);
+        protected override void Run(IDAsyncFlow flow) => flow.Fail(exception);
     }
 }

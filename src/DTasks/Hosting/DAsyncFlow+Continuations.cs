@@ -14,10 +14,7 @@ internal partial class DAsyncFlow
 
         public static void Start(DAsyncFlow self)
         {
-            IDAsyncStateMachine? stateMachine = self.Consume(ref self._stateMachine);
-
-            Assert.NotNull(stateMachine);
-            self.Start(stateMachine);
+            self.Start();
         }
 
         public static void Yield(DAsyncFlow self)
@@ -48,7 +45,7 @@ internal partial class DAsyncFlow
 
             Assert.NotNull(aggregateBranches);
             Assert.Is<IDAsyncResultCallback>(resultCallback);
-            self.Await(self.WhenAllAsync(aggregateBranches, Unsafe.As<IDAsyncResultCallback>(resultCallback)), FlowState.WhenAll);
+            self.WhenAll(aggregateBranches, Unsafe.As<IDAsyncResultCallback>(resultCallback));
         }
 
         public static void WhenAll<TResult>(DAsyncFlow self)
@@ -83,7 +80,7 @@ internal partial class DAsyncFlow
 
         public static void Background(DAsyncFlow self)
         {
-            IDAsyncRunnable? backgroundRunnable = self.Consume(ref self._backgroundRunnable);
+            IDAsyncRunnable? backgroundRunnable = self.Consume(ref self._aggregateRunnable);
             object? resultCallback = self.Consume(ref self._resultCallback);
 
             Assert.NotNull(backgroundRunnable);
@@ -93,7 +90,7 @@ internal partial class DAsyncFlow
 
         public static void Background<TResult>(DAsyncFlow self)
         {
-            IDAsyncRunnable? backgroundRunnable = self.Consume(ref self._backgroundRunnable);
+            IDAsyncRunnable? backgroundRunnable = self.Consume(ref self._aggregateRunnable);
             object? resultCallback = self.Consume(ref self._resultCallback);
 
             Assert.NotNull(backgroundRunnable);
@@ -114,6 +111,13 @@ internal partial class DAsyncFlow
         public static void CallbackIndirection(DAsyncFlow self)
         {
             self.RunIndirection(Callback);
+        }
+
+        public static void SuspendBranch(DAsyncFlow self)
+        {
+            Assert.NotNull(self._stateMachine);
+
+            self.SuspendBranch();
         }
     }
 

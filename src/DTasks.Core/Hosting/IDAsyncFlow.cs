@@ -7,11 +7,11 @@ public interface IDAsyncFlow
 {
     void Start(IDAsyncStateMachine stateMachine);
 
-    void Resume();
+    void Succeed();
 
-    void Resume<TResult>(TResult result);
+    void Succeed<TResult>(TResult result);
 
-    void Resume(Exception exception);
+    void Fail(Exception exception);
 
     void Yield();
 

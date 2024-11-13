@@ -45,12 +45,14 @@ internal partial class DAsyncFlow : IValueTaskSource
         Assert.Null(_callback);
         Assert.Null(_continuation);
         Assert.Null(_stateMachine);
+        Debug.Assert(_aggregateType is AggregateType.None);
         Assert.Null(_aggregateBranches);
         Assert.Null(_aggregateExceptions);
         Debug.Assert(_whenAllBranchCount == 0);
         Assert.Null(_whenAllBranchResults);
-        Assert.Null(_backgroundRunnable);
+        Assert.Null(_aggregateRunnable);
         Assert.Null(_resultCallback);
+        Debug.Assert(_branchIndex == -1);
 
         _state = FlowState.Pending;
         _valueTaskSource.Reset();
