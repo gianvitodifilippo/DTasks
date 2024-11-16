@@ -80,10 +80,14 @@ internal partial class DAsyncFlow
             BranchIndex = _branchIndex
         };
 
+        DAsyncId parentId = _parentId;
+        DAsyncId id = DAsyncId.New();
+
+        _parentId = id;
         _branchIndex = -1;
         _suspendingAwaiterOrType = typeof(WhenAllResultBranchAwaiter);
         _continuation = continuation;
-        SetState(ref branchStateMachine);
+        Dehydrate(parentId, id, ref branchStateMachine);
     }
 
     private enum AggregateType

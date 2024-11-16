@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace DTasks;
 
-internal sealed class WhenAnyDTask(IEnumerable<DTask> tasks) : DTask<DTask>, IDAsyncResultCallback<DTask>
+internal sealed class WhenAnyDTask(IEnumerable<DTask> tasks) : DTask<DTask>, IDAsyncResultBuilder<DTask>
 {
     private DTaskStatus _status = DTaskStatus.Pending;
     private object? _stateObject;
@@ -34,20 +34,20 @@ internal sealed class WhenAnyDTask(IEnumerable<DTask> tasks) : DTask<DTask>, IDA
 
     protected override void Run(IDAsyncFlow flow) => flow.WhenAny(tasks, this);
 
-    void IDAsyncResultCallback<DTask>.SetResult(DTask result)
+    void IDAsyncResultBuilder<DTask>.SetResult(DTask result)
     {
         _status = DTaskStatus.Succeeded;
         _stateObject = result;
     }
 
-    void IDAsyncResultCallback<DTask>.SetException(Exception exception)
+    void IDAsyncResultBuilder<DTask>.SetException(Exception exception)
     {
         _status = DTaskStatus.Faulted;
         _stateObject = exception;
     }
 }
 
-internal sealed class WhenAnyDTask<TResult>(IEnumerable<DTask<TResult>> tasks) : DTask<DTask<TResult>>, IDAsyncResultCallback<DTask<TResult>>
+internal sealed class WhenAnyDTask<TResult>(IEnumerable<DTask<TResult>> tasks) : DTask<DTask<TResult>>, IDAsyncResultBuilder<DTask<TResult>>
 {
     private DTaskStatus _status = DTaskStatus.Pending;
     private object? _stateObject;
@@ -76,13 +76,13 @@ internal sealed class WhenAnyDTask<TResult>(IEnumerable<DTask<TResult>> tasks) :
 
     protected override void Run(IDAsyncFlow flow) => flow.WhenAny(tasks, this);
 
-    void IDAsyncResultCallback<DTask<TResult>>.SetResult(DTask<TResult> result)
+    void IDAsyncResultBuilder<DTask<TResult>>.SetResult(DTask<TResult> result)
     {
         _status = DTaskStatus.Succeeded;
         _stateObject = result;
     }
 
-    void IDAsyncResultCallback<DTask<TResult>>.SetException(Exception exception)
+    void IDAsyncResultBuilder<DTask<TResult>>.SetException(Exception exception)
     {
         _status = DTaskStatus.Faulted;
         _stateObject = exception;

@@ -29,29 +29,20 @@ internal partial class DAsyncFlow : IValueTaskSource
         _valueTaskSource.OnCompleted(continuation, state, token, flags);
     }
 
-    //private AggregateType _aggregateType;
-    //private IEnumerable<IDAsyncRunnable>? _aggregateBranches;
-    //private List<Exception>? _aggregateExceptions;
-    //private int _whenAllBranchCount;
-    //private IDictionary? _whenAllBranchResults;
-    //private IDAsyncRunnable? _backgroundRunnable;
-    //private object? _resultCallback;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void Reset()
     {
-        Assert.Null(_parent);
         Assert.Null(_suspendingAwaiterOrType);
         Assert.Null(_delay);
         Assert.Null(_callback);
         Assert.Null(_continuation);
-        Assert.Null(_stateMachine);
         Debug.Assert(_aggregateType is AggregateType.None);
         Assert.Null(_aggregateBranches);
         Assert.Null(_aggregateExceptions);
         Debug.Assert(_whenAllBranchCount == 0);
         Assert.Null(_whenAllBranchResults);
         Assert.Null(_aggregateRunnable);
-        Assert.Null(_resultCallback);
+        Assert.Null(_resultBuilder);
         Debug.Assert(_branchIndex == -1);
 
         _state = FlowState.Pending;
@@ -64,5 +55,9 @@ internal partial class DAsyncFlow : IValueTaskSource
 
         _parentId = default;
         _id = default;
+        _stateMachine = null;
+        _parent = null;
+
+        _tokens.Clear();
     }
 }

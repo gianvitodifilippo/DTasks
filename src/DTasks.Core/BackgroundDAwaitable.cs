@@ -64,7 +64,7 @@ public readonly struct BackgroundDAwaitable<TResult>(IDAsyncRunnable runnable)
     }
 }
 
-internal sealed class BackgroundDTask<TTask>(IDAsyncRunnable runnable) : DTask<TTask>, IDAsyncResultCallback<TTask>
+internal sealed class BackgroundDTask<TTask>(IDAsyncRunnable runnable) : DTask<TTask>, IDAsyncResultBuilder<TTask>
     where TTask : DTask
 {
     private DTaskStatus _status = DTaskStatus.Pending;
@@ -107,13 +107,13 @@ internal sealed class BackgroundDTask<TTask>(IDAsyncRunnable runnable) : DTask<T
         Debug.Fail($"'{nameof(Run)}' should not be invoked on {nameof(BackgroundDTask<DTask>)}.");
     }
 
-    void IDAsyncResultCallback<TTask>.SetResult(TTask result)
+    void IDAsyncResultBuilder<TTask>.SetResult(TTask result)
     {
         _status = DTaskStatus.Succeeded;
         _stateObject = result;
     }
 
-    void IDAsyncResultCallback<TTask>.SetException(Exception exception)
+    void IDAsyncResultBuilder<TTask>.SetException(Exception exception)
     {
         _status = DTaskStatus.Faulted;
         _stateObject = exception;

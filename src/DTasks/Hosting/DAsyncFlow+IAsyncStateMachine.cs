@@ -28,14 +28,18 @@ internal partial class DAsyncFlow : IAsyncStateMachine
                     break;
 
                 case FlowState.Hydrating: // After calling _stateManager.HydrateAsync
-                    (_parentId, IDAsyncRunnable runnable) = GetLinkValueTaskResult();
+                    (DAsyncId parentId, IDAsyncRunnable runnable) = GetLinkValueTaskResult();
+                    if (parentId != default)
+                    {
+                        _parentId = parentId; // TODO: This stinks. It is like this only to support handles
+                    }
+
+                    _state = FlowState.Running;
                     runnable.Run(this);
                     break;
                     
                 case FlowState.Returning:
                     GetVoidTaskResult();
-                    _parent = null;
-                    _stateMachine = null;
                     _valueTaskSource.SetResult(default);
                     break;
 

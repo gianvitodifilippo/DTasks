@@ -17,15 +17,15 @@ public interface IDAsyncFlow
 
     void Delay(TimeSpan delay);
 
-    void WhenAll(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultCallback callback);
+    void WhenAll(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder builder);
 
-    void WhenAll<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultCallback<TResult[]> callback);
+    void WhenAll<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<TResult[]> builder);
 
-    void WhenAny(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultCallback<DTask> callback);
+    void WhenAny(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask> builder);
 
-    void WhenAny<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultCallback<DTask<TResult>> callback);
+    void WhenAny<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask<TResult>> builder);
 
-    void Background(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask> callback);
+    void Background(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask> builder);
 
-    void Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask<TResult>> callback);
+    void Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask<TResult>> builder);
 }

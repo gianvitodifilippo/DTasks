@@ -3,7 +3,7 @@
 namespace DTasks.Hosting;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface IDAsyncResultCallback
+public interface IDAsyncResultBuilder
 {
     void SetResult();
 
@@ -11,7 +11,7 @@ public interface IDAsyncResultCallback
 }
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface IDAsyncResultCallback<TResult>
+public interface IDAsyncResultBuilder<TResult>
 {
     void SetResult(TResult result);
 

@@ -4,6 +4,8 @@ namespace DTasks.Hosting;
 
 internal interface IDAsyncHost
 {
+    ITypeResolver TypeResolver { get; }
+
     IDAsyncMarshaler CreateMarshaler();
 
     IDAsyncStateManager CreateStateManager(IDAsyncMarshaler marshaler);

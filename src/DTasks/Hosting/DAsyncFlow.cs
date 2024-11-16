@@ -1,5 +1,4 @@
 ﻿using DTasks.Marshaling;
-using DTasks.Utils;
 using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -18,6 +17,7 @@ internal partial class DAsyncFlow
     private IDAsyncHost _host = s_nullHost;
     private IDAsyncMarshaler _marshaler = s_nullMarshaler;
     private IDAsyncStateManager _stateManager = s_nullStateManager;
+    private ITypeResolver _typeResolver = s_nullTypeResolver;
 
     private TaskAwaiter _voidTa;
     private ValueTaskAwaiter _voidVta;
@@ -35,11 +35,15 @@ internal partial class DAsyncFlow
     private int _whenAllBranchCount;
     private IDictionary? _whenAllBranchResults;
     private IDAsyncRunnable? _aggregateRunnable;
-    private object? _resultCallback;
+    private object? _resultBuilder;
+    private Type? _handleResultType;
     private FlowContinuation? _continuation;
 
     private DAsyncFlow? _parent;
     private int _branchIndex = -1;
+
+    private readonly Dictionary<DTask, DTaskToken> _tokens = [];
+    private readonly Dictionary<DAsyncId, DTask> _tasks = [];
 
     [MemberNotNullWhen(true, nameof(_parent))]
     private bool IsRunningAggregates => _parent is not null;
@@ -48,13 +52,9 @@ internal partial class DAsyncFlow
     {
         get
         {
-            if (_branchIndex != -1)
-            {
-                Debug.Assert(IsRunningAggregates && _parent._aggregateType is AggregateType.WhenAllResult);
-                return true;
-            }
-
-            return false;
+            bool result = _branchIndex != -1;
+            Debug.Assert(!result || IsRunningAggregates && _parent._aggregateType is AggregateType.WhenAllResult, $"'{_branchIndex}' should be set only when running branches of a WhenAll runnable.");
+            return result;
         }
     }
 
@@ -113,6 +113,7 @@ internal partial class DAsyncFlow
         _host = host;
         _marshaler = host.CreateMarshaler();
         _stateManager = host.CreateStateManager(this);
+        _typeResolver = host.TypeResolver;
     }
 
     private void Succeed()

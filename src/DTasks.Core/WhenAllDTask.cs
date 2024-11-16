@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace DTasks;
 
-internal sealed class WhenAllDTask(IEnumerable<DTask> tasks) : DTask, IDAsyncResultCallback
+internal sealed class WhenAllDTask(IEnumerable<DTask> tasks) : DTask, IDAsyncResultBuilder
 {
     private DTaskStatus _status = DTaskStatus.Pending;
     private Exception? _exception;
@@ -23,19 +23,19 @@ internal sealed class WhenAllDTask(IEnumerable<DTask> tasks) : DTask, IDAsyncRes
 
     protected override void Run(IDAsyncFlow flow) => flow.WhenAll(tasks, this);
 
-    void IDAsyncResultCallback.SetResult()
+    void IDAsyncResultBuilder.SetResult()
     {
         _status = DTaskStatus.Succeeded;
     }
 
-    void IDAsyncResultCallback.SetException(Exception exception)
+    void IDAsyncResultBuilder.SetException(Exception exception)
     {
         _status = DTaskStatus.Faulted;
         _exception = exception;
     }
 }
 
-internal sealed class WhenAllDTask<TResult>(IEnumerable<DTask<TResult>> tasks) : DTask<TResult[]>, IDAsyncResultCallback<TResult[]>
+internal sealed class WhenAllDTask<TResult>(IEnumerable<DTask<TResult>> tasks) : DTask<TResult[]>, IDAsyncResultBuilder<TResult[]>
 {
     private DTaskStatus _status = DTaskStatus.Pending;
     private object? _stateObject;
@@ -64,13 +64,13 @@ internal sealed class WhenAllDTask<TResult>(IEnumerable<DTask<TResult>> tasks) :
 
     protected override void Run(IDAsyncFlow flow) => flow.WhenAll(tasks, this);
 
-    void IDAsyncResultCallback<TResult[]>.SetResult(TResult[] result)
+    void IDAsyncResultBuilder<TResult[]>.SetResult(TResult[] result)
     {
         _status = DTaskStatus.Succeeded;
         _stateObject = result;
     }
 
-    void IDAsyncResultCallback<TResult[]>.SetException(Exception exception)
+    void IDAsyncResultBuilder<TResult[]>.SetException(Exception exception)
     {
         _status = DTaskStatus.Faulted;
         _stateObject = exception;

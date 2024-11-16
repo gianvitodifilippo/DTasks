@@ -10,7 +10,7 @@ internal sealed partial class DAsyncFlow
     private static readonly IDAsyncHost s_nullHost = new NullDAsyncHost();
     private static readonly IDAsyncMarshaler s_nullMarshaler = new NullDAsyncMarshaler();
     private static readonly IDAsyncStateManager s_nullStateManager = new NullDAsyncStateManager();
-    //private static readonly ITypeResolver s_nullTypeResolver = new NullTypeResolver();
+    private static readonly ITypeResolver s_nullTypeResolver = new NullTypeResolver();
 
     [Conditional("DEBUG")]
     [ExcludeFromCodeCoverage]
@@ -22,14 +22,14 @@ internal sealed partial class DAsyncFlow
     [ExcludeFromCodeCoverage]
     private sealed class NullDAsyncHost : IDAsyncHost
     {
-        //ITypeResolver IDAsyncHost.TypeResolver
-        //{
-        //    get
-        //    {
-        //        FailForNull(nameof(_host));
-        //        throw new UnreachableException();
-        //    }
-        //}
+        ITypeResolver IDAsyncHost.TypeResolver
+        {
+            get
+            {
+                FailForNull(nameof(_host));
+                throw new UnreachableException();
+            }
+        }
 
         IDAsyncMarshaler IDAsyncHost.CreateMarshaler()
         {
@@ -141,18 +141,18 @@ internal sealed partial class DAsyncFlow
         }
     }
 
-    //private sealed class NullTypeResolver : ITypeResolver
-    //{
-    //    Type ITypeResolver.GetType(TypeId id)
-    //    {
-    //        FailForNull(nameof(_typeResolver));
-    //        throw new UnreachableException();
-    //    }
+    private sealed class NullTypeResolver : ITypeResolver
+    {
+        Type ITypeResolver.GetType(TypeId id)
+        {
+            FailForNull(nameof(_typeResolver));
+            throw new UnreachableException();
+        }
 
-    //    TypeId ITypeResolver.GetTypeId(Type type)
-    //    {
-    //        FailForNull(nameof(_typeResolver));
-    //        throw new UnreachableException();
-    //    }
-    //}
+        TypeId ITypeResolver.GetTypeId(Type type)
+        {
+            FailForNull(nameof(_typeResolver));
+            throw new UnreachableException();
+        }
+    }
 }

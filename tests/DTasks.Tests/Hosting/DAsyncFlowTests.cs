@@ -766,6 +766,89 @@ public class DAsyncFlowTests
         _stateManager.Count.Should().Be(0);
     }
 
+    [Fact]
+    public async Task AwaitingWhenAll_GivesAccessToIndividualResults()
+    {
+        // Arrange
+        const int result1 = 1;
+        const int result2 = 2;
+        static async DTask<bool> M1()
+        {
+            DTask<int> task1 = M2(result1);
+            DTask<int> task2 = M2(result2);
+            int[] results = await DTask.WhenAll([
+                task1,
+                task2
+            ]);
+
+            int result1Awaited = await task1;
+            int result2Awaited = await task2;
+
+            int result1Property = task1.Result;
+            int result2Property = task2.Result;
+
+            return
+                results[0] == result1Awaited &&
+                results[0] == result1Property &&
+                results[1] == result2Awaited &&
+                results[1] == result2Property;
+        }
+
+        static async DTask<int> M2(int result)
+        {
+            await DTask.Yield();
+            return result;
+        }
+
+        DAsyncId id1 = default;
+        DAsyncId id2 = default;
+        DAsyncId id3 = default;
+        DAsyncId id4 = default;
+        _host
+            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .Do(call =>
+            {
+                if (id1 == default)
+                {
+                    id1 = call.Arg<DAsyncId>();
+                    return;
+                }
+
+                if (id2 == default)
+                {
+                    id2 = call.Arg<DAsyncId>();
+                    return;
+                }
+
+                if (id3 == default)
+                {
+                    id3 = call.Arg<DAsyncId>();
+                    return;
+                }
+
+                if (id4 == default)
+                {
+                    id4 = call.Arg<DAsyncId>();
+                    return;
+                }
+
+                throw FailException.ForFailure("YieldAsync called too many times");
+            });
+
+        DTask task = M1();
+
+        // Act
+        await _sut.StartAsync(_host, task);
+        await _sut.ResumeAsync(_host, id2);
+        await _sut.ResumeAsync(_host, id1);
+        await _sut.ResumeAsync(_host, id3);
+        await _sut.ResumeAsync(_host, id4);
+
+        // Assert
+        await _host.Received(1).SucceedAsync(true);
+        _stateManager.Count.Should().Be(0);
+    }
+
     private static Expression<Predicate<DAsyncId>> NonReservedId => id => id != default && id != DAsyncId.RootId;
 
     private sealed class YieldRunnable : IDAsyncRunnable

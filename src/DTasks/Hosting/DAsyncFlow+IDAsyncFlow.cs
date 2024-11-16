@@ -1,4 +1,5 @@
-﻿using DTasks.Utils;
+﻿using DTasks.Marshaling;
+using DTasks.Utils;
 using System.Runtime.CompilerServices;
 
 namespace DTasks.Hosting;
@@ -127,20 +128,20 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         Await(callback.InvokeAsync(_id, _cancellationToken), FlowState.Returning);
     }
 
-    private void WhenAll(IEnumerable<IDAsyncRunnable> aggregateBranches, IDAsyncResultCallback resultCallback)
+    private void WhenAll(IEnumerable<IDAsyncRunnable> aggregateBranches, IDAsyncResultBuilder resultBuilder)
     {
         if (IsRunningAggregates && IsWhenAllResultBranch)
         {
             _aggregateBranches = aggregateBranches;
-            _resultCallback = resultCallback;
+            _resultBuilder = resultBuilder;
             RunBranchIndexIndirection(Continuations.WhenAll);
             return;
         }
 
-        Await(WhenAllAsync(aggregateBranches, resultCallback), FlowState.Aggregating);
+        Await(WhenAllAsync(aggregateBranches, resultBuilder), FlowState.Aggregating);
     }
 
-    private async Task WhenAllAsync(IEnumerable<IDAsyncRunnable> aggregateBranches, IDAsyncResultCallback resultCallback)
+    private async Task WhenAllAsync(IEnumerable<IDAsyncRunnable> aggregateBranches, IDAsyncResultBuilder resultBuilder)
     {
         Assert.Null(_aggregateExceptions);
 
@@ -158,7 +159,7 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
             childFlow._stateManager = _stateManager;
             childFlow._parentId = _id;
             childFlow._id = id;
-            // childFlow._typeResolver = _typeResolver;
+            childFlow._typeResolver = _typeResolver;
 
             try
             {
@@ -179,12 +180,12 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
             if (_whenAllBranchCount != 0)
                 throw new NotImplementedException();
 
-            resultCallback.SetException(new AggregateException(_aggregateExceptions));
+            resultBuilder.SetException(new AggregateException(_aggregateExceptions));
         }
 
         if (_whenAllBranchCount == 0)
         {
-            resultCallback.SetResult();
+            resultBuilder.SetResult();
             return;
         }
 
@@ -204,20 +205,20 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         }
     }
 
-    private void WhenAll<TResult>(IEnumerable<IDAsyncRunnable> aggregateBranches, IDAsyncResultCallback<TResult[]> resultCallback)
+    private void WhenAll<TResult>(IEnumerable<IDAsyncRunnable> aggregateBranches, IDAsyncResultBuilder<TResult[]> resultBuilder)
     {
         if (IsRunningAggregates && IsWhenAllResultBranch)
         {
             _aggregateBranches = aggregateBranches;
-            _resultCallback = resultCallback;
+            _resultBuilder = resultBuilder;
             RunBranchIndexIndirection(Continuations.WhenAll<TResult>);
             return;
         }
 
-        Await(WhenAllAsync(aggregateBranches, resultCallback), FlowState.Aggregating);
+        Await(WhenAllAsync(aggregateBranches, resultBuilder), FlowState.Aggregating);
     }
 
-    private async Task WhenAllAsync<TResult>(IEnumerable<IDAsyncRunnable> aggregateBranches, IDAsyncResultCallback<TResult[]> resultCallback)
+    private async Task WhenAllAsync<TResult>(IEnumerable<IDAsyncRunnable> aggregateBranches, IDAsyncResultBuilder<TResult[]> resultBuilder)
     {
         Assert.Null(_aggregateExceptions);
 
@@ -227,7 +228,9 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
 
         foreach (IDAsyncRunnable runnable in aggregateBranches)
         {
-            DAsyncId id = DAsyncId.New();
+            IDAsyncRunnable theRunnable = runnable is DTask task && _tokens.TryGetValue(task, out DTaskToken? token)
+                ? new HandleRunnableWrapper(childFlow, runnable, token.Id)
+                : runnable;
 
             childFlow._state = FlowState.Running;
             childFlow._parent = this;
@@ -235,13 +238,13 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
             childFlow._marshaler = _marshaler;
             childFlow._stateManager = _stateManager;
             childFlow._parentId = _id;
-            childFlow._id = id;
+            childFlow._id = DAsyncId.New();
             childFlow._branchIndex = _whenAllBranchCount;
-            // childFlow._typeResolver = _typeResolver;
+            childFlow._typeResolver = _typeResolver;
 
             try
             {
-                runnable.Run(childFlow);
+                theRunnable.Run(childFlow);
                 await new ValueTask(childFlow, childFlow._valueTaskSource.Version);
             }
             catch (Exception ex)
@@ -264,10 +267,10 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         if (_aggregateExceptions is not null)
             throw new NotImplementedException();
 
-        if (_whenAllBranchCount == whenAllBranchResults.Count)
+        if (whenAllBranchCount == whenAllBranchResults.Count)
         {
             TResult[] result = ToResultArray(whenAllBranchResults);
-            resultCallback.SetResult(result);
+            resultBuilder.SetResult(result);
             return;
         }
 
@@ -296,24 +299,36 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         return results;
     }
 
-    private void WhenAny(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultCallback<DTask> callback)
+    private void WhenAny(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask> builder)
     {
         throw new NotImplementedException();
     }
 
-    private void WhenAny<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultCallback<DTask<TResult>> callback)
+    private void WhenAny<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask<TResult>> builder)
     {
         throw new NotImplementedException();
     }
 
-    private void Background(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask> callback)
+    private void Background(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask> builder)
     {
         throw new NotImplementedException();
     }
 
-    private void Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask<TResult>> callback)
+    private void Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask<TResult>> builder)
     {
         throw new NotImplementedException();
+    }
+
+    private void Handle(DAsyncId id, IDAsyncResultBuilder builder)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void Handle<TResult>(DAsyncId id, IDAsyncResultBuilder<TResult> builder)
+    {
+        _handleResultType = typeof(TResult);
+        _resultBuilder = builder;
+        Hydrate(id);
     }
 
     void IDAsyncFlow.Start(IDAsyncStateMachine stateMachine)
@@ -442,151 +457,181 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         }
     }
 
-    void IDAsyncFlow.WhenAll(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultCallback callback)
+    void IDAsyncFlow.WhenAll(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder builder)
     {
         Assert.NotNull(runnables);
-        Assert.NotNull(callback);
+        Assert.NotNull(builder);
         Assert.Null(_aggregateBranches);
-        Assert.Null(_resultCallback);
+        Assert.Null(_resultBuilder);
         Assert.Null(_continuation);
 
         IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
 
         if (currentStateMachine is null)
         {
-            WhenAll(runnables, callback);
+            WhenAll(runnables, builder);
         }
         else
         {
             _aggregateBranches = runnables;
-            _resultCallback = callback;
+            _resultBuilder = builder;
             _continuation = Continuations.WhenAll;
             currentStateMachine.Suspend();
         }
     }
 
-    void IDAsyncFlow.WhenAll<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultCallback<TResult[]> callback)
+    void IDAsyncFlow.WhenAll<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<TResult[]> builder)
     {
         Assert.NotNull(runnables);
-        Assert.NotNull(callback);
+        Assert.NotNull(builder);
         Assert.Null(_aggregateBranches);
-        Assert.Null(_resultCallback);
+        Assert.Null(_resultBuilder);
         Assert.Null(_continuation);
 
         IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
 
         if (currentStateMachine is null)
         {
-            WhenAll(runnables, callback);
+            WhenAll(runnables, builder);
         }
         else
         {
             _aggregateBranches = runnables;
-            _resultCallback = callback;
+            _resultBuilder = builder;
             _continuation = Continuations.WhenAll<TResult>;
             currentStateMachine.Suspend();
         }
     }
 
-    void IDAsyncFlow.WhenAny(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultCallback<DTask> callback)
+    void IDAsyncFlow.WhenAny(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask> builder)
     {
         Assert.NotNull(runnables);
-        Assert.NotNull(callback);
+        Assert.NotNull(builder);
         Assert.Null(_aggregateBranches);
-        Assert.Null(_resultCallback);
+        Assert.Null(_resultBuilder);
         Assert.Null(_continuation);
 
         IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
 
         if (currentStateMachine is null)
         {
-            WhenAny(runnables, callback);
+            WhenAny(runnables, builder);
         }
         else
         {
             _aggregateBranches = runnables;
-            _resultCallback = callback;
+            _resultBuilder = builder;
             _continuation = Continuations.WhenAny;
             currentStateMachine.Suspend();
         }
     }
 
-    void IDAsyncFlow.WhenAny<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultCallback<DTask<TResult>> callback)
+    void IDAsyncFlow.WhenAny<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask<TResult>> builder)
     {
         Assert.NotNull(runnables);
-        Assert.NotNull(callback);
+        Assert.NotNull(builder);
         Assert.Null(_aggregateBranches);
-        Assert.Null(_resultCallback);
+        Assert.Null(_resultBuilder);
         Assert.Null(_continuation);
 
         IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
 
         if (currentStateMachine is null)
         {
-            WhenAny(runnables, callback);
+            WhenAny(runnables, builder);
         }
         else
         {
             _aggregateBranches = runnables;
-            _resultCallback = callback;
+            _resultBuilder = builder;
             _continuation = Continuations.WhenAny<TResult>;
             currentStateMachine.Suspend();
         }
     }
 
-    void IDAsyncFlow.Background(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask> callback)
+    void IDAsyncFlow.Background(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask> builder)
     {
         Assert.NotNull(runnable);
-        Assert.NotNull(callback);
+        Assert.NotNull(builder);
         Assert.Null(_aggregateRunnable);
-        Assert.Null(_resultCallback);
+        Assert.Null(_resultBuilder);
         Assert.Null(_continuation);
 
         IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
 
         if (currentStateMachine is null)
         {
-            Background(runnable, callback);
+            Background(runnable, builder);
         }
         else
         {
             _aggregateRunnable = runnable;
-            _resultCallback = callback;
+            _resultBuilder = builder;
             _continuation = Continuations.Background;
             currentStateMachine.Suspend();
         }
     }
 
-    void IDAsyncFlow.Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultCallback<DTask<TResult>> callback)
+    void IDAsyncFlow.Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask<TResult>> builder)
     {
         Assert.NotNull(runnable);
-        Assert.NotNull(callback);
+        Assert.NotNull(builder);
         Assert.Null(_aggregateRunnable);
-        Assert.Null(_resultCallback);
+        Assert.Null(_resultBuilder);
         Assert.Null(_continuation);
 
         IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
 
         if (currentStateMachine is null)
         {
-            Background(runnable, callback);
+            Background(runnable, builder);
         }
         else
         {
             _aggregateRunnable = runnable;
-            _resultCallback = callback;
+            _resultBuilder = builder;
             _continuation = Continuations.Background<TResult>;
             currentStateMachine.Suspend();
         }
     }
 
-    void IDAsyncFlowInternal.Handle(DAsyncId id)
+    void IDAsyncFlowInternal.Handle(DAsyncId id, IDAsyncResultBuilder builder)
     {
-        throw new NotImplementedException();
+        Assert.NotNull(builder);
+        Assert.Null(_resultBuilder);
+        Assert.Null(_continuation);
+
+        _suspendingAwaiterOrType = null;
+        Handle(id, builder);
+
+        //IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
+
+        //if (currentStateMachine is null)
+        //    throw new InvalidOperationException("The provided DTask can be run inside async methods only.");
+
+        //_handleId = id;
+        //_resultBuilder = builder;
+        //_continuation = Continuations.Handle;
+        //currentStateMachine.Suspend(); // TODO: Should not suspend after a WhenAll
     }
 
-    void IDAsyncFlowInternal.Handle<TResult>(DAsyncId id)
+    void IDAsyncFlowInternal.Handle<TResult>(DAsyncId id, IDAsyncResultBuilder<TResult> builder)
     {
-        throw new NotImplementedException();
+        Assert.NotNull(builder);
+        Assert.Null(_resultBuilder);
+        Assert.Null(_continuation);
+
+        _suspendingAwaiterOrType = null;
+        Handle(id, builder);
+
+        //IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
+
+        //if (currentStateMachine is null)
+        //    throw new InvalidOperationException("The provided DTask can be run inside async methods only.");
+
+        //_handleId = id;
+        //_resultBuilder = builder;
+        //_continuation = Continuations.Handle<TResult>;
+        //currentStateMachine.Suspend(); // TODO: Should not suspend after a WhenAll
     }
 }
