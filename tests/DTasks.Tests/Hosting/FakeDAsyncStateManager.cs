@@ -162,7 +162,7 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler) : IDAsy
                         throw FailException.ForFailure($"Multiple async method builder fields found on type '{typeof(TStateMachine).Name}'.");
 
                     MethodInfo coreMethod = s_createStateMachineStarterGenericMethod.MakeGenericMethod(typeof(TStateMachine), field.FieldType);
-                    starter = (StateMachineStarter)coreMethod.Invoke(null, [field, boxedStateMachine, marshaler])!;
+                    starter = (StateMachineStarter)coreMethod.Invoke(null, [field])!;
                 }
                 else if (StateMachineFacts.IsAwaiterField(field))
                 {
@@ -237,7 +237,7 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler) : IDAsy
             return action.Hydrator;
         }
 
-        private static StateMachineStarter CreateStateMachineStarter<TStateMachine, TBuilder>(FieldInfo builderField, object boxedStateMachine, IDAsyncMarshaler marshaler)
+        private static StateMachineStarter CreateStateMachineStarter<TStateMachine, TBuilder>(FieldInfo builderField)
         {
             Type stateMachineType = typeof(TStateMachine);
             Type builderType = typeof(TBuilder);

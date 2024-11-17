@@ -43,8 +43,8 @@ internal partial class DAsyncFlow
     {
         public virtual void Run(IDAsyncFlow flow)
         {
-            Assert.Is<DAsyncFlow>(flow); // TODO: Perform an actual check
-            DAsyncFlow flowImpl = Unsafe.As<DAsyncFlow>(flow);
+            if (flow is not DAsyncFlow flowImpl)
+                throw new ArgumentException("A d-async runnable was resumed on a different flow than the one that started it.");
 
             CompletedHandleStateMachine stateMachine = default;
             stateMachine.Runnable = this;
@@ -53,23 +53,22 @@ internal partial class DAsyncFlow
             flowImpl.Dehydrate(default, flowImpl._id, ref stateMachine);
         }
 
-        internal virtual void Write<T, TAction>(scoped ref TAction action)
+        public virtual void Write<T, TAction>(scoped ref TAction action)
             where TAction : IMarshalingAction
 #if NET9_0_OR_GREATER
-        , allows ref struct
+            , allows ref struct
 #endif
         {
             action.MarshalAs(default, null as object);
         }
-
     }
 
     private sealed class HandleRunnable<TResult>(TResult result) : HandleRunnable
     {
         public override void Run(IDAsyncFlow flow)
         {
-            Assert.Is<DAsyncFlow>(flow); // TODO: Perform an actual check
-            DAsyncFlow flowImpl = Unsafe.As<DAsyncFlow>(flow);
+            if (flow is not DAsyncFlow flowImpl)
+                throw new ArgumentException("A d-async runnable was resumed on a different flow than the one that started it.");
 
             CompletedHandleStateMachine stateMachine = default;
             stateMachine.Runnable = this;
@@ -78,7 +77,7 @@ internal partial class DAsyncFlow
             flowImpl.Dehydrate(default, flowImpl._id, ref stateMachine);
         }
 
-        internal override void Write<T, TAction>(ref TAction action)
+        public override void Write<T, TAction>(scoped ref TAction action)
         {
             action.MarshalAs(default, result);
         }
@@ -123,9 +122,7 @@ internal partial class DAsyncFlow
     {
         public override void Run(IDAsyncFlow flow)
         {
-            Assert.Is<DAsyncFlow>(flow); // TODO: Perform an actual check
-            DAsyncFlow flowImpl = Unsafe.As<DAsyncFlow>(flow);
-
+            throw new NotImplementedException();
         }
     }
 
@@ -133,8 +130,8 @@ internal partial class DAsyncFlow
     {
         public override void Run(IDAsyncFlow flow)
         {
-            Assert.Is<DAsyncFlow>(flow); // TODO: Perform an actual check
-            DAsyncFlow flowImpl = Unsafe.As<DAsyncFlow>(flow);
+            if (flow is not DAsyncFlow flowImpl)
+                throw new ArgumentException("A d-async runnable was resumed on a different flow than the one that started it.");
 
             IDAsyncStateMachine? stateMachine = flowImpl._stateMachine;
             object? resultBuilder = flowImpl.Consume(ref flowImpl._resultBuilder);

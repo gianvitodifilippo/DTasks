@@ -9,7 +9,7 @@ internal partial class DAsyncFlow
     {
         public static void Return(DAsyncFlow self)
         {
-            self.Await(Task.CompletedTask, FlowState.Returning);
+            self.Return();
         }
 
         public static void Start(DAsyncFlow self)

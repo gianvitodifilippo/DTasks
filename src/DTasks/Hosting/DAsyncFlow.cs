@@ -14,10 +14,11 @@ internal partial class DAsyncFlow
     private ManualResetValueTaskSourceCore<VoidDTaskResult> _valueTaskSource;
     private CancellationToken _cancellationToken;
 
-    private IDAsyncHost _host = s_nullHost;
-    private IDAsyncMarshaler _marshaler = s_nullMarshaler;
-    private IDAsyncStateManager _stateManager = s_nullStateManager;
-    private ITypeResolver _typeResolver = s_nullTypeResolver;
+    private IDAsyncHost _host;
+    private IDAsyncMarshaler _marshaler;
+    private IDAsyncStateManager _stateManager;
+    private ITypeResolver _typeResolver;
+    // TODO: Add distributed lock provider
 
     private TaskAwaiter _voidTa;
     private ValueTaskAwaiter _voidVta;
@@ -25,6 +26,7 @@ internal partial class DAsyncFlow
 
     private DAsyncId _parentId;
     private DAsyncId _id;
+    private DAsyncId _childId;
     private IDAsyncStateMachine? _stateMachine;
     private object? _suspendingAwaiterOrType;
     private TimeSpan? _delay;
@@ -32,7 +34,7 @@ internal partial class DAsyncFlow
     private AggregateType _aggregateType;
     private IEnumerable<IDAsyncRunnable>? _aggregateBranches;
     private List<Exception>? _aggregateExceptions;
-    private int _whenAllBranchCount;
+    private int _branchCount;
     private IDictionary? _whenAllBranchResults;
     private IDAsyncRunnable? _aggregateRunnable;
     private object? _resultBuilder;
@@ -42,8 +44,24 @@ internal partial class DAsyncFlow
     private DAsyncFlow? _parent;
     private int _branchIndex = -1;
 
-    private readonly Dictionary<DTask, DTaskToken> _tokens = [];
-    private readonly Dictionary<DAsyncId, DTask> _tasks = [];
+    private readonly DTaskTokenConverter _taskTokenConverter;
+    private readonly Dictionary<DTask, DTaskToken> _tokens;
+    private readonly Dictionary<DAsyncId, DTask> _tasks;
+
+    public DAsyncFlow()
+    {
+        _state = FlowState.Pending;
+        _builder = AsyncTaskMethodBuilder.Create();
+
+        _host = s_nullHost;
+        _marshaler = s_nullMarshaler;
+        _stateManager = s_nullStateManager;
+        _typeResolver = s_nullTypeResolver;
+
+        _taskTokenConverter = new DTaskTokenConverter(this);
+        _tokens = [];
+        _tasks = [];
+    }
 
     [MemberNotNullWhen(true, nameof(_parent))]
     private bool IsRunningAggregates => _parent is not null;
@@ -129,6 +147,11 @@ internal partial class DAsyncFlow
     private void Fail(Exception exception)
     {
         Await(_host.FailAsync(exception, _cancellationToken), FlowState.Returning);
+    }
+
+    private void Return()
+    {
+        Await(Task.CompletedTask, FlowState.Returning);
     }
 
     [DebuggerStepThrough]

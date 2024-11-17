@@ -19,7 +19,7 @@ internal partial class DAsyncFlow : IAsyncStateMachine
                     _stateMachine.MoveNext();
                     break;
 
-                case FlowState.Dehydrating:
+                case FlowState.Dehydrating: // After awaiting _stateManager.DehydrateAsync
                     Assert.NotNull(_continuation);
 
                     GetVoidValueTaskResult();
@@ -27,23 +27,23 @@ internal partial class DAsyncFlow : IAsyncStateMachine
                     Consume(ref _continuation).Invoke(this);
                     break;
 
-                case FlowState.Hydrating: // After calling _stateManager.HydrateAsync
+                case FlowState.Hydrating: // After awaiting _stateManager.HydrateAsync
                     (DAsyncId parentId, IDAsyncRunnable runnable) = GetLinkValueTaskResult();
                     if (parentId != default)
                     {
-                        _parentId = parentId; // TODO: This stinks. It is like this only to support handles
+                        _parentId = parentId; // TODO: Remove this and implement a better solution. It is like this only to support handles
                     }
 
                     _state = FlowState.Running;
                     runnable.Run(this);
                     break;
                     
-                case FlowState.Returning:
+                case FlowState.Returning: // After awaiting a method that results in completing the d-async flow
                     GetVoidTaskResult();
                     _valueTaskSource.SetResult(default);
                     break;
 
-                case FlowState.Aggregating:
+                case FlowState.Aggregating: // After awaiting WhenAllAsync, WhenAnyAsync, etc
                     Assert.NotNull(_aggregateRunnable);
 
                     GetVoidTaskResult();

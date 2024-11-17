@@ -7,7 +7,6 @@ namespace DTasks.Hosting;
 internal partial class DAsyncFlow : IDAsyncMarshaler
 {
     private static readonly HandleRunnableTokenConverter _handleRunnableConverter = new();
-    private static readonly Func<DTaskToken, DTask> s_toDTask = token => token.ToDTask(); // Using the extension that accepts a Func might allocate in some implementations of IUnmarshalingAction
 
     bool IDAsyncMarshaler.TryMarshal<T, TAction>(string fieldName, in T value, scoped ref TAction action)
     {
@@ -44,14 +43,14 @@ internal partial class DAsyncFlow : IDAsyncMarshaler
 
         if (objectType == typeof(DTask))
         {
-            action.UnmarshalAs(typeof(DTaskToken), s_toDTask);
+            action.UnmarshalAs(typeof(DTaskToken), _taskTokenConverter);
             return true;
         }
 
         if (objectType.IsGenericType && objectType.GetGenericTypeDefinition() == typeof(DTask<>))
         {
             Type tokenType = typeof(DTaskToken<>).MakeGenericType(objectType.GetGenericArguments());
-            action.UnmarshalAs(tokenType, s_toDTask);
+            action.UnmarshalAs(tokenType, _taskTokenConverter);
             return true;
         }
 
@@ -65,6 +64,27 @@ internal partial class DAsyncFlow : IDAsyncMarshaler
         }
 
         return _marshaler.TryUnmarshal<T, TAction>(fieldName, typeId, ref action);
+    }
+
+    private sealed class DTaskTokenConverter(DAsyncFlow flow) : ITokenConverter
+    {
+        public T Convert<TToken, T>(TToken token)
+        {
+            // TODO: Unify this logic with that of UnmarshalingActionExtensions.FuncTokenConverterWrapper
+            if (token is not DTaskToken taskToken)
+                throw new ArgumentException($"Expected a token of type '{typeof(DTaskToken).Name}'.", nameof(token));
+
+            if (!flow._tasks.TryGetValue(taskToken.Id, out DTask? task))
+            {
+                task = taskToken.ToDTask();
+                flow._tasks.Add(taskToken.Id, task);
+            }
+
+            if (task is not T value)
+                throw new InvalidOperationException("Attempted to unmarshal a token to a value of the wrong type.");
+
+            return value;
+        }
     }
 
     private sealed class HandleRunnableTokenConverter : ITokenConverter

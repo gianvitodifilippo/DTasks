@@ -1,6 +1,7 @@
 ﻿using DTasks.Inspection;
 using DTasks.Utils;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace DTasks.Hosting;
 
@@ -11,15 +12,19 @@ internal partial class DAsyncFlow
         switch (_aggregateType)
         {
             case AggregateType.WhenAll:
-                _whenAllBranchCount--;
+                _branchCount--;
                 break;
 
             case AggregateType.WhenAllResult:
                 Debug.Fail("Expected a result from completed WhenAll branch.");
                 break;
 
+            case AggregateType.WhenAny:
+            case AggregateType.WhenAnyResult:
+                throw new NotImplementedException();
+
             default:
-                Debug.Fail("Invalid aggregate state.");
+                Debug.Fail("Invalid aggregate type.");
                 break;
         }
     }
@@ -29,16 +34,20 @@ internal partial class DAsyncFlow
         switch (_aggregateType)
         {
             case AggregateType.WhenAll:
-                _whenAllBranchCount--;
+                _branchCount--;
                 break;
 
             case AggregateType.WhenAllResult:
                 Assert.Is<Dictionary<int, TResult>>(_whenAllBranchResults);
-                _whenAllBranchResults.Add(_whenAllBranchCount, result);
+                _whenAllBranchResults.Add(_branchCount, result);
                 break;
 
+            case AggregateType.WhenAny:
+            case AggregateType.WhenAnyResult:
+                throw new NotImplementedException();
+
             default:
-                Debug.Fail("Invalid aggregate state.");
+                Debug.Fail("Invalid aggregate type.");
                 break;
         }
     }
@@ -52,11 +61,15 @@ internal partial class DAsyncFlow
         {
             case AggregateType.WhenAll:
             case AggregateType.WhenAllResult:
-                _whenAllBranchCount--;
+                _branchCount--;
                 break;
 
+            case AggregateType.WhenAny:
+            case AggregateType.WhenAnyResult:
+                throw new NotImplementedException();
+
             default:
-                Debug.Fail("Invalid aggregate state.");
+                Debug.Fail("Invalid aggregate type.");
                 break;
         }
     }
@@ -94,7 +107,9 @@ internal partial class DAsyncFlow
     {
         None,
         WhenAll,
-        WhenAllResult
+        WhenAllResult,
+        WhenAny,
+        WhenAnyResult
     }
 
     private abstract class WhenAllResultBranchRunnable : IDAsyncRunnable
@@ -142,6 +157,83 @@ internal partial class DAsyncFlow
         public WhenAllResultBranchAwaiter Awaiter;
 
         public int BranchIndex;
+    }
+#pragma warning restore CS0649 // Field is never assigned to, and will always have its default value
+
+
+    private sealed class WhenAnyRunnable(int branchCount) : IDAsyncRunnable
+    {
+        public void Run(IDAsyncFlow flow)
+        {
+            Assert.Is<DAsyncFlow>(flow);
+            DAsyncFlow flowImpl = Unsafe.As<DAsyncFlow>(flow);
+
+            WhenAnyStateMachine stateMachine = default;
+            //stateMachine.BranchCount = branchCount;
+            flowImpl._suspendingAwaiterOrType = typeof(WhenAnyAwaiter);
+            flowImpl._continuation = Continuations.Return;
+            flowImpl.Dehydrate(flowImpl._parentId, flowImpl._id, ref stateMachine);
+        }
+    }
+
+    private sealed class CompletedWhenAnyRunnable(ref WhenAnyStateMachine stateMachine) : IDAsyncRunnable
+    {
+        private WhenAnyStateMachine _stateMachine = stateMachine;
+
+        public void Run(IDAsyncFlow flow)
+        {
+            if (flow is not DAsyncFlow flowImpl)
+                throw new ArgumentException("A d-async runnable was resumed on a different flow than the one that started it.");
+
+            if (_stateMachine.IsCompleted)
+            {
+                flowImpl.Return();
+                return;
+            }
+
+            _stateMachine.IsCompleted = true;
+            flowImpl._suspendingAwaiterOrType = typeof(WhenAnyAwaiter);
+            flowImpl._continuation = self =>
+            {
+                DTask result = new DTaskHandle(self._childId);
+                self._tasks.Add(self._childId, result);
+                self.Resume(self._parentId, result);
+            };
+            flowImpl.Dehydrate(flowImpl._parentId, flowImpl._id, ref _stateMachine);
+        }
+    }
+
+    private struct WhenAnyRunnableBuilder
+    {
+        public IDAsyncRunnable Task { get; private set; }
+
+        public void Start(ref WhenAnyStateMachine stateMachine)
+        {
+            Task = new CompletedWhenAnyRunnable(ref stateMachine);
+        }
+
+        public static WhenAnyRunnableBuilder Create() => default;
+    }
+
+    private readonly struct WhenAnyAwaiter
+    {
+        public static WhenAnyAwaiter FromResult() => default;
+
+        public static WhenAnyAwaiter FromResult<TResult>(TResult result) => default;
+
+        public static WhenAnyAwaiter FromException(Exception exception) => throw new NotImplementedException();
+    }
+
+#pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
+    private struct WhenAnyStateMachine
+    {
+        [DAsyncRunnableBuilderField]
+        public WhenAnyRunnableBuilder Builder;
+
+        [DAsyncAwaiterField]
+        public WhenAnyAwaiter Awaiter;
+
+        public bool IsCompleted;
     }
 #pragma warning restore CS0649 // Field is never assigned to, and will always have its default value
 }

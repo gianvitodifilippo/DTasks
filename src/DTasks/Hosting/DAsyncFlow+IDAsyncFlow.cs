@@ -1,5 +1,6 @@
 ﻿using DTasks.Marshaling;
 using DTasks.Utils;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace DTasks.Hosting;
@@ -32,6 +33,7 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
 
     private void Resume(DAsyncId id)
     {
+        _childId = _id;
         _id = id;
 
         if (id.IsRoot)
@@ -42,7 +44,7 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         {
             _branchIndex = -1;
             _parent.SetBranchResult();
-            Await(Task.CompletedTask, FlowState.Returning);
+            Return();
         }
         else
         {
@@ -52,6 +54,7 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
 
     private void Resume<TResult>(DAsyncId id, TResult result)
     {
+        _childId = _id;
         _id = id;
 
         if (id.IsRoot)
@@ -62,7 +65,7 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         {
             _branchIndex = -1;
             _parent.SetBranchResult(result);
-            Await(Task.CompletedTask, FlowState.Returning);
+            Return();
         }
         else
         {
@@ -72,6 +75,7 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
 
     private void Resume(DAsyncId id, Exception exception)
     {
+        _childId = _id;
         _id = id;
 
         if (id.IsRoot)
@@ -82,7 +86,7 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         {
             _branchIndex = -1;
             _parent.SetBranchException(exception);
-            Await(Task.CompletedTask, FlowState.Returning);
+            Return();
         }
         else
         {
@@ -128,29 +132,32 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         Await(callback.InvokeAsync(_id, _cancellationToken), FlowState.Returning);
     }
 
-    private void WhenAll(IEnumerable<IDAsyncRunnable> aggregateBranches, IDAsyncResultBuilder resultBuilder)
+    private void WhenAll(IEnumerable<IDAsyncRunnable> branches, IDAsyncResultBuilder resultBuilder)
     {
         if (IsRunningAggregates && IsWhenAllResultBranch)
         {
-            _aggregateBranches = aggregateBranches;
+            _aggregateBranches = branches;
             _resultBuilder = resultBuilder;
             RunBranchIndexIndirection(Continuations.WhenAll);
             return;
         }
 
-        Await(WhenAllAsync(aggregateBranches, resultBuilder), FlowState.Aggregating);
+        Await(WhenAllAsync(branches, resultBuilder), FlowState.Aggregating);
     }
 
-    private async Task WhenAllAsync(IEnumerable<IDAsyncRunnable> aggregateBranches, IDAsyncResultBuilder resultBuilder)
+    private async Task WhenAllAsync(IEnumerable<IDAsyncRunnable> branches, IDAsyncResultBuilder resultBuilder)
     {
         Assert.Null(_aggregateExceptions);
+        Debug.Assert(_branchCount == 0);
 
         _aggregateType = AggregateType.WhenAll;
         DAsyncFlow childFlow = new();
 
-        foreach (IDAsyncRunnable runnable in aggregateBranches)
+        foreach (IDAsyncRunnable branch in branches)
         {
-            DAsyncId id = DAsyncId.New();
+            IDAsyncRunnable runnable = branch is DTask task && _tokens.TryGetValue(task, out DTaskToken? token)
+                ? new HandleRunnableWrapper(childFlow, branch, token.Id)
+                : branch;
 
             childFlow._state = FlowState.Running;
             childFlow._parent = this;
@@ -158,7 +165,7 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
             childFlow._marshaler = _marshaler;
             childFlow._stateManager = _stateManager;
             childFlow._parentId = _id;
-            childFlow._id = id;
+            childFlow._id = DAsyncId.New();
             childFlow._typeResolver = _typeResolver;
 
             try
@@ -172,27 +179,27 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
                 _aggregateExceptions.Add(ex);
             }
 
-            _whenAllBranchCount++;
+            _branchCount++;
         }
 
         if (_aggregateExceptions is not null)
         {
-            if (_whenAllBranchCount != 0)
+            if (_branchCount != 0)
                 throw new NotImplementedException();
 
             resultBuilder.SetException(new AggregateException(_aggregateExceptions));
         }
 
-        if (_whenAllBranchCount == 0)
+        if (_branchCount == 0)
         {
             resultBuilder.SetResult();
             return;
         }
 
-        int whenAllBranchCount = _whenAllBranchCount;
+        int whenAllBranchCount = _branchCount;
 
         _aggregateType = AggregateType.None;
-        _whenAllBranchCount = 0;
+        _branchCount = 0;
         _aggregateRunnable = WhenAllDAsync(whenAllBranchCount);
     }
 
@@ -205,32 +212,33 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         }
     }
 
-    private void WhenAll<TResult>(IEnumerable<IDAsyncRunnable> aggregateBranches, IDAsyncResultBuilder<TResult[]> resultBuilder)
+    private void WhenAll<TResult>(IEnumerable<IDAsyncRunnable> branches, IDAsyncResultBuilder<TResult[]> resultBuilder)
     {
         if (IsRunningAggregates && IsWhenAllResultBranch)
         {
-            _aggregateBranches = aggregateBranches;
+            _aggregateBranches = branches;
             _resultBuilder = resultBuilder;
             RunBranchIndexIndirection(Continuations.WhenAll<TResult>);
             return;
         }
 
-        Await(WhenAllAsync(aggregateBranches, resultBuilder), FlowState.Aggregating);
+        Await(WhenAllAsync(branches, resultBuilder), FlowState.Aggregating);
     }
 
-    private async Task WhenAllAsync<TResult>(IEnumerable<IDAsyncRunnable> aggregateBranches, IDAsyncResultBuilder<TResult[]> resultBuilder)
+    private async Task WhenAllAsync<TResult>(IEnumerable<IDAsyncRunnable> branches, IDAsyncResultBuilder<TResult[]> resultBuilder)
     {
         Assert.Null(_aggregateExceptions);
+        Debug.Assert(_branchCount == 0);
 
         _aggregateType = AggregateType.WhenAllResult;
         _whenAllBranchResults = new Dictionary<int, TResult>();
         DAsyncFlow childFlow = new();
 
-        foreach (IDAsyncRunnable runnable in aggregateBranches)
+        foreach (IDAsyncRunnable branch in branches)
         {
-            IDAsyncRunnable theRunnable = runnable is DTask task && _tokens.TryGetValue(task, out DTaskToken? token)
-                ? new HandleRunnableWrapper(childFlow, runnable, token.Id)
-                : runnable;
+            IDAsyncRunnable runnable = branch is DTask task && _tokens.TryGetValue(task, out DTaskToken? token)
+                ? new HandleRunnableWrapper(childFlow, branch, token.Id)
+                : branch;
 
             childFlow._state = FlowState.Running;
             childFlow._parent = this;
@@ -239,12 +247,12 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
             childFlow._stateManager = _stateManager;
             childFlow._parentId = _id;
             childFlow._id = DAsyncId.New();
-            childFlow._branchIndex = _whenAllBranchCount;
+            childFlow._branchIndex = _branchCount;
             childFlow._typeResolver = _typeResolver;
 
             try
             {
-                theRunnable.Run(childFlow);
+                runnable.Run(childFlow);
                 await new ValueTask(childFlow, childFlow._valueTaskSource.Version);
             }
             catch (Exception ex)
@@ -253,28 +261,28 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
                 _aggregateExceptions.Add(ex);
             }
 
-            _whenAllBranchCount++;
+            _branchCount++;
         }
 
         Assert.Is<Dictionary<int, TResult>>(_whenAllBranchResults);
         Dictionary<int, TResult> whenAllBranchResults = Unsafe.As<Dictionary<int, TResult>>(_whenAllBranchResults);
-        int whenAllBranchCount = _whenAllBranchCount;
+        int branchCount = _branchCount;
 
         _aggregateType = AggregateType.None;
-        _whenAllBranchCount = 0;
+        _branchCount = 0;
         _whenAllBranchResults = null;
         
         if (_aggregateExceptions is not null)
             throw new NotImplementedException();
 
-        if (whenAllBranchCount == whenAllBranchResults.Count)
+        if (branchCount == whenAllBranchResults.Count)
         {
             TResult[] result = ToResultArray(whenAllBranchResults);
             resultBuilder.SetResult(result);
             return;
         }
 
-        _aggregateRunnable = WhenAllDAsync(whenAllBranchResults, whenAllBranchCount);
+        _aggregateRunnable = WhenAllDAsync(whenAllBranchResults, branchCount);
     }
 
     private static async DTask<TResult[]> WhenAllDAsync<TResult>(Dictionary<int, TResult> branchResults, int branchCount)
@@ -299,12 +307,62 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         return results;
     }
 
-    private void WhenAny(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask> builder)
+    private void WhenAny(IEnumerable<IDAsyncRunnable> branches, IDAsyncResultBuilder<DTask> resultBuilder)
     {
-        throw new NotImplementedException();
+        if (IsRunningAggregates && IsWhenAllResultBranch)
+        {
+            _aggregateBranches = branches;
+            _resultBuilder = resultBuilder;
+            RunBranchIndexIndirection(Continuations.WhenAll);
+            return;
+        }
+
+        Await(WhenAnyAsync(branches, resultBuilder), FlowState.Aggregating);
     }
 
-    private void WhenAny<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask<TResult>> builder)
+    private async Task WhenAnyAsync(IEnumerable<IDAsyncRunnable> branches, IDAsyncResultBuilder<DTask> resultBuilder)
+    {
+        Debug.Assert(_branchCount == 0);
+
+        _aggregateType = AggregateType.WhenAny;
+        DAsyncFlow childFlow = new();
+
+        foreach (IDAsyncRunnable branch in branches)
+        {
+            IDAsyncRunnable runnable = branch is DTask task && _tokens.TryGetValue(task, out DTaskToken? token)
+                ? new HandleRunnableWrapper(childFlow, branch, token.Id)
+                : branch;
+
+            childFlow._state = FlowState.Running;
+            childFlow._parent = this;
+            childFlow._host = _host;
+            childFlow._marshaler = _marshaler;
+            childFlow._stateManager = _stateManager;
+            childFlow._parentId = _id;
+            childFlow._id = DAsyncId.New();
+            childFlow._typeResolver = _typeResolver;
+
+            try
+            {
+                runnable.Run(childFlow);
+                await new ValueTask(childFlow, childFlow._valueTaskSource.Version);
+            }
+            catch
+            {
+                throw new NotImplementedException();
+            }
+
+            _branchCount++;
+        }
+
+        int branchCount = _branchCount;
+
+        _aggregateType = AggregateType.None;
+        _branchCount = 0;
+        _aggregateRunnable = new WhenAnyRunnable(branchCount);
+    }
+
+    private void WhenAny<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask<TResult>> resultBuilder)
     {
         throw new NotImplementedException();
     }

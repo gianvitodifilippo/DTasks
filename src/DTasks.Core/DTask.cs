@@ -75,13 +75,13 @@ public abstract class DTask : IDAsyncRunnable
 
     public static DTask FromException(Exception exception) => new FaultedDTask(exception);
 
-    public static DTask WhenAll(IEnumerable<DTask> tasks) => new WhenAllDTask(tasks);
+    public static DTask WhenAll(params IEnumerable<DTask> tasks) => new WhenAllDTask(tasks);
 
-    public static DTask<TResult[]> WhenAll<TResult>(IEnumerable<DTask<TResult>> tasks) => new WhenAllDTask<TResult>(tasks);
+    public static DTask<TResult[]> WhenAll<TResult>(params IEnumerable<DTask<TResult>> tasks) => new WhenAllDTask<TResult>(tasks);
 
-    public static DTask<DTask> WhenAny(IEnumerable<DTask> tasks) => new WhenAnyDTask(tasks);
+    public static DTask<DTask> WhenAny(params IEnumerable<DTask> tasks) => new WhenAnyDTask(tasks);
 
-    public static DTask<DTask<TResult>> WhenAny<TResult>(IEnumerable<DTask<TResult>> tasks) => new WhenAnyDTask<TResult>(tasks);
+    public static DTask<DTask<TResult>> WhenAny<TResult>(params IEnumerable<DTask<TResult>> tasks) => new WhenAnyDTask<TResult>(tasks);
 
     public static BackgroundDAwaitable Run(DTask task) => new(task);
 

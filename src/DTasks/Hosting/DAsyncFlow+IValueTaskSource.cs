@@ -39,7 +39,7 @@ internal partial class DAsyncFlow : IValueTaskSource
         Debug.Assert(_aggregateType is AggregateType.None);
         Assert.Null(_aggregateBranches);
         Assert.Null(_aggregateExceptions);
-        Debug.Assert(_whenAllBranchCount == 0);
+        Debug.Assert(_branchCount == 0);
         Assert.Null(_whenAllBranchResults);
         Assert.Null(_aggregateRunnable);
         Assert.Null(_resultBuilder);
@@ -59,5 +59,6 @@ internal partial class DAsyncFlow : IValueTaskSource
         _parent = null;
 
         _tokens.Clear();
+        _tasks.Clear();
     }
 }
