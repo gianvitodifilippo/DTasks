@@ -240,6 +240,8 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
                 }
                 else
                 {
+                    Debug.Assert(field.FieldType == typeof(object));
+
                     // writer.WriteField($InspectionConstants.AwaiterFieldName, _typeResolver.GetTypeId(stateMachine.$field.GetType()).Value);
                     _il.LoadWriter();                                     // Stack: writer
                     _il.LoadString(InspectionConstants.AwaiterFieldName); // Stack: writer, $InspectionConstants.AwaiterFieldName
@@ -247,9 +249,7 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
                     _il.LoadField(typeResolverField);                     // Stack: writer, $InspectionConstants.AwaiterFieldName, _typeResolver
                     _il.LoadStateMachineArg();                            // Stack: writer, $InspectionConstants.AwaiterFieldName, _typeResolver, stateMachine
                     _il.LoadField(field);                                 // Stack: writer, $InspectionConstants.AwaiterFieldName, _typeResolver, stateMachine.$field
-                    _il.CallGetType();                                    // Stack: writer, $InspectionConstants.AwaiterFieldName, _typeResolver, awaiterType=@result[stateMachine.$field.GetType()]
-                    _il.CallGetTypeId();                                  // Stack: writer, $InspectionConstants.AwaiterFieldName, _typeResolver, typeId=@result[_typeResolver.GetTypeId(awaiterType)]
-                    _il.GetTypeIdValue();                                 // Stack: writer, $InspectionConstants.AwaiterFieldName, _typeResolver, @result[typeId.Value]
+                    _il.CallGetReferenceAwaiterId();                      // Stack: writer, $InspectionConstants.AwaiterFieldName, @result[InspectorILGenerator.GetReferenceAwaiterId(_typeResolver, stateMachine.$field)]
                     _il.CallWriterMethod(writeFieldMethod);               // Stack: -
                 }
             }

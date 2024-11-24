@@ -183,9 +183,7 @@ public partial class DynamicStateMachineInspectorTests
             _il.Emit(OpCodes.Ldind_Ref);
 #endif
             _il.Emit(OpCodes.Ldfld, Arg.Is(StateMachineField("<>u__3")));
-            _il.Emit(OpCodes.Callvirt, Arg.Is(GetTypeMethod()));
-            _il.Emit(OpCodes.Callvirt, Arg.Is(GetTypeIdMethod()));
-            _il.Emit(OpCodes.Call, Arg.Is(TypeIdValueGetter()));
+            _il.Emit(OpCodes.Call, Arg.Is(GetReferenceAwaiterIdMethod()));
             _il.Emit(OpCodes.Callvirt, writeFieldMethods[typeof(string)]);
             _il.Emit(OpCodes.Ret);
 
