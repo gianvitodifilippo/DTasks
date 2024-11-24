@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
-
+        
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
 
@@ -33,11 +33,17 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\DTasks\DTasks.csproj" />
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+            <_Parameter1>DynamicProxyGenAssembly2</_Parameter1>
+        </AssemblyAttribute>
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="FluentAssertions" />
+      <ProjectReference Include="..\..\src\DTasks.Inspection.Dynamic\DTasks.Inspection.Dynamic.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
         <Using Include="NSubstitute" />
         <Using Include="Xunit" />
     </ItemGroup>

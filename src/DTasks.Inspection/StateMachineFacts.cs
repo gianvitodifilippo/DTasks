@@ -1,12 +1,29 @@
-﻿using System.Reflection;
+﻿using DTasks.CompilerServices;
+using System.Reflection;
 
 namespace DTasks.Inspection;
 
 internal static class StateMachineFacts
 {
-    public static bool IsBuilderField(FieldInfo field) => field.Name == "<>t__builder" || field.IsDefined(typeof(DAsyncRunnableBuilderFieldAttribute));
+    public static StateMachineFieldKind GetFieldKind(FieldInfo field)
+    {
+        Type fieldType = field.FieldType;
+        string fieldName = field.Name;
 
-    public static bool IsStateField(FieldInfo field) => field.Name == "<>1__state";
+        if (fieldName.StartsWith("<>u"))
+            return !fieldType.IsValueType || typeof(IDAsyncAwaiter).IsAssignableFrom(fieldType)
+                ? StateMachineFieldKind.DAsyncAwaiterField
+                : StateMachineFieldKind.AwaiterField;
 
-    public static bool IsAwaiterField(FieldInfo field) => field.Name.StartsWith("<>u") || field.IsDefined(typeof(DAsyncAwaiterFieldAttribute));
+        if (field.IsDefined(typeof(DAsyncAwaiterFieldAttribute)))
+            return StateMachineFieldKind.DAsyncAwaiterField;
+
+        if (fieldName == "<>t__builder" || field.IsDefined(typeof(DAsyncRunnableBuilderFieldAttribute)))
+            return StateMachineFieldKind.BuilderField;
+
+        if (fieldName == "<>1__state")
+            return StateMachineFieldKind.StateField;
+
+        return StateMachineFieldKind.UserField;
+    }
 }

@@ -1,7 +1,6 @@
 ﻿#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 
 using DTasks.Marshaling;
-using NSubstitute.Core;
 using System.Linq.Expressions;
 using Xunit.Sdk;
 
@@ -19,6 +18,9 @@ public class DAsyncFlowTests
         _sut = new();
         _stateManager = new(_sut);
 
+        _host
+            .CreateMarshaler()
+            .Returns(new FakeDAsyncMarshaler());
         _host
             .CreateStateManager(Arg.Any<IDAsyncMarshaler>())
             .Returns(_stateManager);

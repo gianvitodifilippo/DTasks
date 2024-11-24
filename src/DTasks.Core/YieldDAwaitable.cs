@@ -24,13 +24,13 @@ public readonly struct YieldDAwaitable
         public void OnCompleted(Action continuation)
         {
             ThrowHelper.ThrowIfNull(continuation);
-            DTask.InvalidAwait();
+            DTask.ThrowInvalidAwait();
         }
 
         public void UnsafeOnCompleted(Action continuation)
         {
             ThrowHelper.ThrowIfNull(continuation);
-            DTask.InvalidAwait();
+            DTask.ThrowInvalidAwait();
         }
     }
 }

@@ -2,6 +2,7 @@
 using DTasks.Marshaling;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Xunit.Sdk;
 
 namespace DTasks.Hosting;
@@ -156,37 +157,42 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler) : IDAsy
 
             foreach (FieldInfo field in fields)
             {
-                if (StateMachineFacts.IsBuilderField(field))
+                StateMachineFieldKind kind = StateMachineFacts.GetFieldKind(field);
+
+                switch (kind)
                 {
-                    if (starter is not null)
-                        throw FailException.ForFailure($"Multiple async method builder fields found on type '{typeof(TStateMachine).Name}'.");
+                    case StateMachineFieldKind.UserField:
+                    case StateMachineFieldKind.StateField:
+                        if (kind is StateMachineFieldKind.StateField)
+                        {
+                            state = (int?)field.GetValue(boxedStateMachine);
+                        }
 
-                    MethodInfo coreMethod = s_createStateMachineStarterGenericMethod.MakeGenericMethod(typeof(TStateMachine), field.FieldType);
-                    starter = (StateMachineStarter)coreMethod.Invoke(null, [field])!;
-                }
-                else if (StateMachineFacts.IsAwaiterField(field))
-                {
-                    MethodInfo isSuspendedMethod = s_isSuspendedGenericMethod.MakeGenericMethod(field.FieldType);
-                    bool isSuspended = (bool)isSuspendedMethod.Invoke(null, [boxedStateMachine, field, suspensionContext])!;
+                        MethodInfo createFieldHydratorMethod = s_createFieldHydratorGenericMethod.MakeGenericMethod(typeof(TStateMachine), field.FieldType);
+                        FieldHydrator hydrator = (FieldHydrator)createFieldHydratorMethod.Invoke(null, [marshaler, boxedStateMachine, field])!;
+                        fieldHydrators.Add(hydrator);
+                        break;
 
-                    if (!isSuspended)
-                        continue;
+                    case StateMachineFieldKind.BuilderField:
+                        if (starter is not null)
+                            throw FailException.ForFailure($"Multiple async method builder fields found on type '{typeof(TStateMachine).Name}'.");
 
-                    if (awaiterField is not null)
-                        throw FailException.ForFailure($"Multiple suspended awaiters fouund on type '{typeof(TStateMachine).Name}'.");
+                        MethodInfo coreMethod = s_createStateMachineStarterGenericMethod.MakeGenericMethod(typeof(TStateMachine), field.FieldType);
+                        starter = (StateMachineStarter)coreMethod.Invoke(null, [field])!;
+                        break;
 
-                    awaiterField = field;
-                }
-                else
-                {
-                    if (StateMachineFacts.IsStateField(field))
-                    {
-                        state = (int?)field.GetValue(boxedStateMachine);
-                    }
+                    case StateMachineFieldKind.DAsyncAwaiterField:
+                        MethodInfo isSuspendedMethod = s_isSuspendedGenericMethod.MakeGenericMethod(field.FieldType);
+                        bool isSuspended = (bool)isSuspendedMethod.Invoke(null, [boxedStateMachine, field, suspensionContext])!;
 
-                    MethodInfo createFieldHydratorMethod = s_createFieldHydratorGenericMethod.MakeGenericMethod(typeof(TStateMachine), field.FieldType);
-                    FieldHydrator hydrator = (FieldHydrator)createFieldHydratorMethod.Invoke(null, [marshaler, boxedStateMachine, field])!;
-                    fieldHydrators.Add(hydrator);
+                        if (!isSuspended)
+                            continue;
+
+                        if (awaiterField is not null)
+                            throw FailException.ForFailure($"Multiple suspended awaiters fouund on type '{typeof(TStateMachine).Name}'.");
+
+                        awaiterField = field;
+                        break;
                 }
             }
 
@@ -194,12 +200,9 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler) : IDAsy
                 throw FailException.ForFailure($"No async method builder fields found on type '{typeof(TStateMachine).Name}'.");
 
             if (awaiterField is null)
-            {
-                if (state is not -1)
-                    throw FailException.ForFailure($"No suspender awaiter found on type '{typeof(TStateMachine).Name}'.");
-
-                return new PendingDehydratedRunnable(parentId, boxedStateMachine, fieldHydrators, starter);
-            }
+                return state is -1
+                    ? (DehydratedRunnable)new PendingDehydratedRunnable(parentId, boxedStateMachine, fieldHydrators, starter)
+                    : throw FailException.ForFailure($"No suspender awaiter found on type '{typeof(TStateMachine).Name}'.");
 
             Type suspendedAwaiterType = awaiterField.FieldType;
             if (suspendedAwaiterType == typeof(DTask.Awaiter))

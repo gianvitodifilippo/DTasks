@@ -123,7 +123,7 @@ public abstract class DTask : IDAsyncRunnable
     }
 
     [DoesNotReturn]
-    internal static void InvalidAwait()
+    internal static void ThrowInvalidAwait()
     {
         throw new InvalidOperationException("D-awaitables may be awaited in d-async methods only.");
     }
@@ -160,13 +160,13 @@ public abstract class DTask : IDAsyncRunnable
         public void OnCompleted(Action continuation)
         {
             ThrowHelper.ThrowIfNull(continuation);
-            InvalidAwait();
+            ThrowInvalidAwait();
         }
 
         public void UnsafeOnCompleted(Action continuation)
         {
             ThrowHelper.ThrowIfNull(continuation);
-            InvalidAwait();
+            ThrowInvalidAwait();
         }
     }
 
@@ -239,13 +239,13 @@ public abstract class DTask<TResult> : DTask
         public void OnCompleted(Action continuation)
         {
             ThrowHelper.ThrowIfNull(continuation);
-            InvalidAwait();
+            ThrowInvalidAwait();
         }
 
         public void UnsafeOnCompleted(Action continuation)
         {
             ThrowHelper.ThrowIfNull(continuation);
-            InvalidAwait();
+            ThrowInvalidAwait();
         }
     }
 

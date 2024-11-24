@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace DTasks.Hosting;
+namespace DTasks.Marshaling;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface ISuspensionContext
