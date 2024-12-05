@@ -38,6 +38,11 @@ public partial class DynamicStateMachineInspectorTests
             method.DeclaringType == typeof(IAwaiterManager);
     }
 
+    private static Expression<Predicate<ConstructorInfo>> ObjectConstructor()
+    {
+        return constructor => constructor.DeclaringType == typeof(object);
+    }
+
     private static Expression<Predicate<MethodInfo>> CreateMethod()
     {
         return method => method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>) && method.Name == nameof(AsyncDTaskMethodBuilder<int>.Create);

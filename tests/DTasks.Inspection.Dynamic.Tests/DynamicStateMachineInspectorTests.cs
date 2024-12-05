@@ -97,6 +97,17 @@ public partial class DynamicStateMachineInspectorTests
         converter.Should().BeAssignableTo(expectedConverterType);
         Received.InOrder(() =>
         {
+            #region Constructor
+
+            _il.Emit(OpCodes.Ldarg_0);
+            _il.Emit(OpCodes.Ldarg_1);
+            _il.Emit(OpCodes.Stfld, Arg.Is(ConverterField("_awaiterManager")));
+            _il.Emit(OpCodes.Ldarg_0);
+            _il.Emit(OpCodes.Call, Arg.Is(ObjectConstructor()));
+            _il.Emit(OpCodes.Ret);
+
+            #endregion
+
             #region Suspend
 
             _il.Emit(OpCodes.Ldarg_3);
