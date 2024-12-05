@@ -4,9 +4,9 @@ namespace DTasks.Utils;
 
 internal static class ReflectionExtensions
 {
-    public static MethodInfo GetRequiredMethod(this Type type, string name, BindingFlags bindingAttr, Type[] parameterTypes)
+    public static MethodInfo GetRequiredMethod(this Type type, string name, int genericParameterCount, BindingFlags bindingAttr, Type[] parameterTypes)
     {
-        return type.GetMethod(name, bindingAttr, null, parameterTypes, null) ?? throw new MissingMethodException(type.Name, name);
+        return type.GetMethod(name, genericParameterCount, bindingAttr, null, parameterTypes, null) ?? throw new MissingMethodException(type.Name, name);
     }
 
     public static ConstructorInfo GetRequiredConstructor(this Type type, BindingFlags bindingAttr, Type[] parameterTypes)

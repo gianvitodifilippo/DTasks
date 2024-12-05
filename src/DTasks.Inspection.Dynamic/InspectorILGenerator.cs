@@ -12,17 +12,17 @@ internal readonly ref struct InspectorILGenerator(
     bool loadCallbackByAddress,
     OpCode callMethodOpCode)
 {
-    private const string TypeIdPrefix = "tid:";
-
     private static readonly MethodInfo s_isSuspendedGenericMethod = typeof(ISuspensionContext).GetRequiredMethod(
         name: nameof(ISuspensionContext.IsSuspended),
+        genericParameterCount: 1,
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [Type.MakeGenericMethodParameter(0).MakeByRefType()]);
 
-    private static readonly MethodInfo s_getReferenceAwaiterId = typeof(InspectorILGenerator).GetRequiredMethod(
-        name: nameof(GetReferenceAwaiterId),
-        bindingAttr: BindingFlags.Static | BindingFlags.NonPublic,
-        parameterTypes: [typeof(ITypeResolver), typeof(object)]);
+    private static readonly MethodInfo s_getTypeIdMethod = typeof(IAwaiterManager).GetRequiredMethod(
+        name: nameof(IAwaiterManager.GetTypeId),
+        genericParameterCount: 0,
+        bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+        parameterTypes: [typeof(object)]);
 
     public void LoadThis()
     {
@@ -65,6 +65,18 @@ internal readonly ref struct InspectorILGenerator(
         CallCallbackMethod(method);
     }
 
+    public void CallIsSuspendedMethod(Type awaiterType)
+    {
+        MethodInfo isSuspendedMethod = s_isSuspendedGenericMethod.MakeGenericMethod(awaiterType);
+
+        il.Emit(OpCodes.Callvirt, isSuspendedMethod);
+    }
+
+    public void CallGetTypeIdMethod()
+    {
+        il.Emit(OpCodes.Callvirt, s_getTypeIdMethod);
+    }
+
     public void LoadField(FieldInfo field)
     {
         il.Emit(OpCodes.Ldfld, field);
@@ -95,21 +107,9 @@ internal readonly ref struct InspectorILGenerator(
         il.Emit(OpCodes.Ret);
     }
 
-    public void CallIsSuspendedMethod(Type awaiterType)
-    {
-        MethodInfo isSuspendedMethod = s_isSuspendedGenericMethod.MakeGenericMethod(awaiterType);
-
-        il.Emit(OpCodes.Callvirt, isSuspendedMethod);
-    }
-
     public void BranchIfFalse(Label label)
     {
         il.Emit(OpCodes.Brfalse_S, label);
-    }
-
-    public void CallGetReferenceAwaiterId()
-    {
-        il.Emit(OpCodes.Call, s_getReferenceAwaiterId);
     }
 
     public void LoadInt(int value)
@@ -170,14 +170,5 @@ internal readonly ref struct InspectorILGenerator(
             stateMachineIsClass: !stateMachineType.IsValueType,
             loadCallbackByAddress: callbackType.IsValueType && !callbackParameterType.IsByRef,
             callMethodOpCode: callbackType.IsValueType ? OpCodes.Call : OpCodes.Callvirt);
-    }
-
-    private static string GetReferenceAwaiterId(ITypeResolver typeResolver, object awaiter)
-    {
-        Type awaiterType = awaiter.GetType();
-        TypeId typeId = typeResolver.GetTypeId(awaiterType);
-        string typeIdValue = typeId.Value;
-
-        return TypeIdPrefix + typeIdValue;
     }
 }

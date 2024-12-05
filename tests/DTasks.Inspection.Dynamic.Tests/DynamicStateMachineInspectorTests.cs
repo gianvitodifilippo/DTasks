@@ -39,9 +39,11 @@ public partial class DynamicStateMachineInspectorTests
         _converterDescriptor.Writer.Returns(_writerDescriptor);
 
         var converterDescriptorFactory = Substitute.For<IConverterDescriptorFactory>();
-        converterDescriptorFactory.CreateDescriptor(StateMachineType).Returns(_converterDescriptor);
+        converterDescriptorFactory
+            .CreateDescriptor(StateMachineType)
+            .Returns(_converterDescriptor);
 
-        _sut = new(converterDescriptorFactory, _typeResolver);
+        _sut = new(new DynamicAssembly(), Substitute.For<IAwaiterManager>(), converterDescriptorFactory);
     }
 
     [Fact]
@@ -49,9 +51,9 @@ public partial class DynamicStateMachineInspectorTests
 
     // IL reference
     // DEBUG
-    // - Suspend: https://sharplab.io/#v2:C4LglgNgNAJiDUAfAAgJgIwFgBQyAMABMugHQBKArgHbBgC2ApiQMID2dADpAwE4DKvAG5gAxgwDOAbhw40BZgAoAkgBUAnhwZkJrCIN4EeOvbwCUOAN44CNogBYCfCuM1UYCowDNHwAIbAGAFlfEQALMCoGAnE/AOCwiIYoAiUnFwYqcTBWKjYaBgAPYGjnVyycvICi5IB1HjAAngIAd3rG82xbAitOrttWht4SOsGAMTAGCHcAIgAeAD50AH0lmP8GaeS1uJDwyJIV5dXYhlNpXr6WtqGRgPHJmd8eAHNN6JP4vaYn57PrS6ugx4w2u9ymCjm8zsK2A4XEb22QV2iQOS2hS1hYHEfwufQGjRBYwm4LmEFYIl8EHmAFZDgiPsj9ksyRSIEtaUt0DiAYCCbcGGCZrMjOIKBBgDSVqh6etPiiliKxcB2VLuQD8TdQcShfNxCsAMwynYJJmrA1qy7/S5gbwKUXpTLZXI5KrAEhKcRpVwwBjuLzvWWMpgrCiHUwdHk9HldDXA/mCiEAYmQAE5eG9pnhphbo8gAOznHkAXytfVLXRtBDtpQy5Wd+SK7s9Nbcvo8DG8iLlptDS314fLtij0ZsscJd21SdT6eSIt0+mBAHEGMB1JolO4u0HUb39SRl6uNAwFOGSAA1SkUU6FkdEAuDmwl3FdB8ESvVh11yqFN0er0ZH0/Q7ANjS+HcVjsAdnyHV8Y2uOMtQeKc0x4DN0GzG8R3zTC+ifLonyfHAIkaTwQiiVIWy/F0f0sUsACNWF0FJmwdQDZhUABBZpfCBeZ228TjuKBIgUJxQjsGI3hSLEFI1y0YwF1o3E5IIA85IUOSNzfGAcVLTSYFUld9I0o8CGAI8xJkbAYh4CgRGKfSlK6ZB9SIdBCAvCAr26AhnhXSQCAIqy5D4BkTQYJzbBct8aAIQ4VkRHDoo48Q1CoERkAANkCFdQlYGAACEKEgH0eFmYj5jijEVjo4qpl4JLXMCNQVJ+RqCBStKRBy2F8sqHjIiaCCYThdriEIZlyUpFVOXa4i4sVcUZtQObYoSg12oATW1AARLieL8OiICYfbhJDQ4xsy07Giq3sVtLaLWDogArBh7NujaHtcnasvKmh5hIa6DHOtFznEySeGk8i9tS9LRjJZpziI/JIbIlIYa6oGeEimwGKYj02E4Y6AgMixfP8wKHocSoIivZQMbhhGCE8BHLOwWRUAIZq5KR3BOc69KerymB+sSHhebkflsewYcbGi5AHHjbV2MFPjxuZ7UADlfEYZIVEFAhBEvU4fKC9m+YIH7MvY+YcaIVyscM4AsZPAgAF5Kp9UilV55zXKMXwYByCA1HeWz3sdkB0YFkQseSJRmDaURKU11haE8NRCY4YmnVLWW+mivGIGYrPid9d3PY7XwfdfaKVCd7RRXFV2PYIL3q/FABCHC/fseQXVp48lAZkR4dYZpmdZ03a9chWCAAeWdImVzbYhOZEAeqAofwnVMafoLl2eHAAVUyXxPAYRfS5X9w14IDeaFpnecj3sm8NsM2cADoOqBDsO7OKNtB4e0hKHWOnbZKoCDAHhdnvVu7ca64i+oYBggdg6hxsgAjqUCmhR2HjHOOKRE4NGThAVO6dM7sGziuXOuJ869yLiXKhZcDLwKrognk8sHAHkbkqV2b8Z59xplvIeI8x4TxZuPV+lMD72z7lfZhN8FB3wfrQLez8qDSPfpcLhBBT7iHPpfJe1CSbKPQOvTe29aAv33vhHARYgA===
+    // - Suspend: https://sharplab.io/#v2:C4LglgNgNAJiDUAfAAgJgIwFgBQyAMABMugHQBKArgHbBgC2ApiQMID2dADpAwE4DKvAG5gAxgwDOAbhw40BPsACGwBgFlFIgBZgqDNlUG8VPABQBJAIIB3RWGPqqigOa8iATl4PnvAJQ4A3jgEwUQALPIU4hwMVDAmPAwAZvJKKupaOgwE4qlqGtq6UARmfJHRVOJgrFT6KgAewNllMZXVtQwNRQDqPHauVr3GftghBIEjoyEDfTwkPX0AYmAMEHEARAA8AHzoAPq7OcoMa0WHafmZJPt7B7k+0hOTBNPGc4MMSyvrijxOJ9m5dIFJg/Jz3IJPZ7vWbzFSfVYmTZbUL7YDacT/M55DK6K67FG7NFgcTgx6TF68N6LZYIzYQVgiRQQLYAVmumMBF1xu3pjIguzZu3QpMhUJmVLhNPWGwS4goEGArP2qA5RyBl12svlwAFypFkIpMPe8OlW3E+wAzKrzjimPtzbsLfqnhCnmBkiY5VEWlUatV6sASGZxKVvbEGHEEskserubsKNcfMNReNRaNDRKPlLEQBiZAeHj/PDOtPIADsD1FAF9XZNa6N3QRPc0Kr72g0gyGWzAI/EkgC1Vy7fHLUn6yFU2nghnYVmvrn87xNUl/oueF4XLMAOIMYAAFQAntEzHEY0O8QnHUnK1OiBXx8Ea2TRg+CI3m2HWn6aB1A8HQ+UPaRv2Z62he+yhGOz4Tq+6bQpmJoLgW/zCjeU7lmhkxPqMT5PjgOjGIkGhZCULZfu2wABLWABGrCsBAxRdmGQEbHu1i2MYWx9skbE2DM7i+A8eHYARvBEWIxTsTMG68FRZKHseMAEDu+5HgwJ4mKw1EAFYMCIjRrqSwk5DwFD6QQCnqTADyyKgKSDracmjMgFpvjQBDXPauSYS5BAWOIB5UCIyAAGyqLumisDAABCFCQD2PAbARWweYS+zUXFqy8D5rmqAelkEKCOV+QFQXhWiUW1LYug8KlBJElIta+cQhA8gyTK6kKxUER5WoKp1qDde59qWsVACaUoACJSUo1EQEwM2uPsl7oMVoWLbVy3KsVWm6eZW2OsVk2hUlNBbCQG2pZeoRCTIIk/jw4kkdNpUiAs9JWDZ92EcRxQvYFIgbU5IS0fRjFsJw80qEp/gEC4wCSAQ2EhMg4S1DoFAMOY/1Be9rBWAQiQfUZd1yHlllfXI/kA+VkUwFVmQ8JTdmzjwwPBM14SziarEmlxLWE1KAByiiMEUe4mgQghMpjPhjEjODCXIx0haxWzs0QrmXSpG0mHLAC8KU9kR2pfc5rkJIoMDVBAB4AqZ5mXSAf3U0FG1FGYzCDKITJC6wtCJAeEMcFDvq1pOTy+aDDHBsHUMRgQhsEMbiim6+vl7spu5kBI2p64nRtJKnCoAISYebYQEOjVCY9jrtvR9hPE/LyOR65qMEAA8n6kO7r2xB2SI/oY8ovpy7DreTJzBAAKoVIoiQMN3cd93EA8EEPNAj7Q1TjwrZK4XdlvW1Qtv22ZjQTV8018bN80a752u7rrBuFybCqYU1FsMFbNt2yZF8/K31cM7MwONAbAJ4B7L2dgfYQD9gHIO7AQ67jDmSCOU9XLR3Bsg+OSkk4pzTtBDm7dwgqRznKBU+cJ7p1IVXYeNcsZgPrnjAmRN8Z70nhXDuy9cGrxMOvTetAa6j13i3Whlc57iAXkvHuKDoYCPQIPBhFBRFUE4bWXCQA===
     // RELEASE
-    // - Suspend: https://sharplab.io/#v2:C4LglgNgPgAgTARgLACgYAYAEMEDoBKArgHbBgC2AprgMID25ADpJQE4DKbAbmAMaUBnANypU8TDQAUASQAqAT0aV8guhC5tMrVerYBKVAG9UmU9gAsmdoQFLiAE0naAZleABDYJQCy73gAswYkpMAQ8vXwCgygAaTGlrW0piATA6YnpSSgAPYFCbO1T0zK9cuIB1VjAvVkwAdyqagxQzTGMW1rMG6rZcSp6AMTBKCEcAIgAeAD4EAH1ZsM9KMbjFiL9A4Nx5uYXwyj0RDs76xt7+ryGR8fdWAHMV0P3Izepbu8OTE9Oe1j6zq6jSSTKbmebAQICR5rHwbaLbWZg2YQsACT7HTrdGr/QbDIGTCB0XjuCBTACs8zg0OecK2s0JxIgswpszg6O+mC+JzArkkAgKySKGXSpWAuGkAkSdnslEcLieSxe8PmhB2emaHPaHNaWPOALx4wAxDAAJxsR5jdBjdna0wwADsRw5AF8uZ03a0eZg+QKUmlhVlcuLJb6ZXLKK4YUq6bNVbMAMzqj1mLW2n7Yi6UQFG03muLaARqDR/ADilGACiU0kcUdp1BV83juDLFcUlEk6twADUSYQDk60w6BydXRjWsnTF6fUk/cURTkxRKpckw04Iwr1lEY3HzEmxymJ5izn9M9ngcazawLQhrcPtUPD6PWqPR6ggjVnH4QglfUKSgujDdAAjOg1HiEMZzDCZZAAQTqdxfimNdXFg+DfmwS90VfFB3zYT9+HiStlB0YtAIxIjMBbIjJCI6tMDAex0TdWj7Eo8sWJottMGANssNEFAwlYQheDyFiyNaGB42wBAsB7CA+zaTA7nLIRMBffjBOEvJ2BpLdKHEsxJPo0hMB2eYYTvIyYIEeRiF4GAADZvHLfw6HsAAhQhIBlVgJnfKZTOReYgK80Y2EsqTvHkCj3gizBrNs3hnIhNySgQ4JanmJEUWEN0jJwLB6SJElmUpOKAE0DQAETghCPCAiBqFq9CG1mBA4sc5qakCuM4DiuggIAK0oESesbOKqscvzSCmXAus0VrzCObDcNYfDvxqmy7IGQk6iON8sjWr94k2xL5tYAzTBAsCJXoJhGq8VjDCUlS1LyywSiCPsZFO7bdswZxdr4lAxDgTAoqI/a0DBhK7OS1z7DS6JWCh8RMwulBUztKSYEsU8DWg7MkIKgGDQAOXcKg4lkbNMC4XsDkU9SQehzBJoc6Cpku7ApPOtjgHOjtMAAXgCmVP0ICBgChiSpO0dx7HSCB5CeITRr5kATth3hzriaQaEaPgSTJugyGceQ7sYB7/TdLHOiM66IHAy2HtlEWxYjdxJelw8jNkfmVH5KWhdFzBxa9qWAEI71liwJBFL722kX7eB2ug6gBoGmd9nHLAAeWFe7y1lSQcDB3gE+IQhPH9PRs/3bG44AVRSdxnEoAuXeLxwy8wCvSC+mv0jr56nzMZnUHlxXiGV1WtMwSrrhqtD6sa7mrJXzQW0FuvQ/D727zyuXKAVpWVc09XN9qTXk+13X4gN6ojYgE2zYthgrfLG2MTt2PHedj+rtWJ709gfHOccWyB29kLUe4DcbxwHlXJOKc04Z0BunEeb0G48zjp3QB3dS4IHLpXauZBh71w5PlSwLcBBtw7oXT+j1CHEMQaQ2uFDx6oGdEAA
+    // - Suspend: https://sharplab.io/#v2:C4LglgNgPgAgTARgLACgYAYAEMEDoBKArgHbBgC2AprgMID25ADpJQE4DKbAbmAMaUBnANypU8TO2ABDYJQCyU3gAswxSvWJc2s1gAoAkgEEA7lLA6FxKQHM22AJxtLNtgEpUAb1SYf2ACwShAKMlMQAJrqslABmEtKyCsqqlJgC8fKKKmoANJj67EEhxAJgdMQasgAewKmFoSVlFZTVuQDqrOZ2xh067ii+mF79A77dnay47Z0AYmCUEBEARAA8AHwIAPobaTKUi7k7CZnJuFub2+muIsMjmGM6kz2Us/NLUqzW+6npiVnU79Yrt5bncnhMprIXgtdCtVn4tsAVAIvocMkk1KcNvCNoiwAIgTcRvc2I8ZnNoSsIHReFIIKsAKxbOAon7HDEbKk0iAbRkbOAEkGYYG3MCxXQCOrFUrlMpVYC4fQCArBUJhSgRKKxVG/E5bQhnVx9QVDQUDYngp5QpYAYhgjlYX3QAtNPhgAHZroKAL7Cka+gaizDiyUNGWkZryxXKopqjUxb67HXsjb6jYAZkN/t8JpdoPGpMh5JtdrYG01XxLrGctgmAHFKMAACoATxC+gi2rZ1D1Wwzzpd7s9IJ9hIGWZ8geDKqljVlEYVSslsci8c76O7Ka2fkzo+z46JYILzyLMNt9q+CH7psH+5HAxHI9Qqh00UUKXyIelTWqnl9ACM6DoCA8kXadY2WRsTDMHRVhXWJINMcYHDca5HxQZ82Fffg8ig8ZqzYX9CRbNswkwesm1bSh210Og/wAK0oXgakrAk0LSVhCCYzBiKosJrlQdjOJqSREy7QiBhgNNMGfTAzi2VEh1dKTDAEZtiF4GAADY5AbJQ6DCAAhQhIDVVhlmfVZZJxLY/2MhY2EU7ApLkZseMwAFHMkzAVLU3gdMRfSKjMNRWCs7FcWEX0vJwLAOWpWkeSZTypIATSLAARXDpD/CBqCyuwew2BBkuwTT8tCwq4BK2iGK4wq0xK9KtPM0hVlwcqrNTPxUNEdDw1YLD30y1T1OmKljH4vqXzfPJht88rxN8ACgJA+gmFy2RSI8TBbGAIRMDvXwYACCpVEISgDDm0bxswaJxtY3rxBcnjJvEHz1P8vSwiC5JWFeuBMAhAiUBzJT/EBy0iwgq1YJi26iwAOSkKhckbK1MC4WlztcQYDtQNDxCazSINWRawY68jyt0HGAF5LLVV9CAgPbeokqSoikMIyggZtvg4riOpAWb3t4crcn0Ggej4WkEboMhombNbGA26VfVBkYvOW4DFSVjb1UwOnMAZqQmZZ3cwcbMiG3wQRTepg36ZiE3mYAQkctnwdO4hzsukWxroYxbvu3HDtuaKAgAeRldaG3VXQcAB3hZTOmRpRx7bQ41qTjswABVYopGiSgo912OIgTzAk9IFOyDKdO8cJB9eo5rniB5vmhMwNLXkyxDstysmnO8vu7Epke9Fpx3GeZxyovZyhOe53nBIF8fMCF/QrtF8fxcl8xpYgWX5cVhhlYbVXCXVj2tdW0+9dIw3jdN92juzgJyJtiVmftjP93DzAvY+03n7G6d0A710zh7HOJc75l3jggROydvapzriHP+b884FyLjAmOm14GIOrsg2uxAIG+gfEAA
     private void _GetConverter_ShouldBuildCorrectMethods_WhenCallbackIsClass<TStateMachine>()
     {
         // Arrange
@@ -160,8 +162,8 @@ public partial class DynamicStateMachineInspectorTests
             _il.Emit(OpCodes.Brfalse_S, Arg.Any<Label>());
             _il.Emit(OpCodes.Ldarg_3);
             _il.Emit(OpCodes.Ldstr, InspectionConstants.AwaiterFieldName);
-            _il.Emit(OpCodes.Ldstr, "0");
-            _il.Emit(OpCodes.Callvirt, writeFieldMethods[typeof(string)]);
+            _il.Emit(OpCodes.Ldc_I4_0);
+            _il.Emit(OpCodes.Callvirt, writeFieldMethods[typeof(int)]);
             _il.Emit(OpCodes.Ret);
 
             _il.MarkLabel(Arg.Any<Label>());
@@ -175,16 +177,16 @@ public partial class DynamicStateMachineInspectorTests
             _il.Emit(OpCodes.Callvirt, Arg.Is(IsSuspendedMethod(typeof(object))));
             _il.Emit(OpCodes.Brfalse_S, Arg.Any<Label>());
             _il.Emit(OpCodes.Ldarg_3);
-            _il.Emit(OpCodes.Ldstr, InspectionConstants.AwaiterFieldName);
+            _il.Emit(OpCodes.Ldstr, InspectionConstants.RefAwaiterFieldName);
             _il.Emit(OpCodes.Ldarg_0);
-            _il.Emit(OpCodes.Ldfld, Arg.Is(ConverterField("_typeResolver")));
+            _il.Emit(OpCodes.Ldfld, Arg.Is(ConverterField("_awaiterManager")));
             _il.Emit(OpCodes.Ldarg_1);
 #if DEBUG
             _il.Emit(OpCodes.Ldind_Ref);
 #endif
             _il.Emit(OpCodes.Ldfld, Arg.Is(StateMachineField("<>u__3")));
-            _il.Emit(OpCodes.Call, Arg.Is(GetReferenceAwaiterIdMethod()));
-            _il.Emit(OpCodes.Callvirt, writeFieldMethods[typeof(string)]);
+            _il.Emit(OpCodes.Callvirt, Arg.Is(GetTypeIdMethod()));
+            _il.Emit(OpCodes.Callvirt, writeFieldMethods[typeof(TypeId)]);
             _il.Emit(OpCodes.Ret);
 
             _il.MarkLabel(Arg.Any<Label>());
@@ -199,8 +201,8 @@ public partial class DynamicStateMachineInspectorTests
             _il.Emit(OpCodes.Brfalse_S, Arg.Any<Label>());
             _il.Emit(OpCodes.Ldarg_3);
             _il.Emit(OpCodes.Ldstr, InspectionConstants.AwaiterFieldName);
-            _il.Emit(OpCodes.Ldstr, "1");
-            _il.Emit(OpCodes.Callvirt, writeFieldMethods[typeof(string)]);
+            _il.Emit(OpCodes.Ldc_I4_1);
+            _il.Emit(OpCodes.Callvirt, writeFieldMethods[typeof(int)]);
 
             _il.MarkLabel(Arg.Any<Label>());
             _il.Emit(OpCodes.Ret);
@@ -225,6 +227,7 @@ public partial class DynamicStateMachineInspectorTests
     {
         MethodInfo method = typeof(DynamicStateMachineInspectorTests).GetRequiredMethod(
             name: "_" + methodName,
+            genericParameterCount: 1,
             bindingAttr: BindingFlags.Instance | BindingFlags.NonPublic,
             parameterTypes: []);
 

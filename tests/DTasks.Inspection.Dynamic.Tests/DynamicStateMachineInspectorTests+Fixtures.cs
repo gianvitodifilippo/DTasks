@@ -31,12 +31,11 @@ public partial class DynamicStateMachineInspectorTests
             method.DeclaringType == typeof(ISuspensionContext);
     }
 
-    private static Expression<Predicate<MethodInfo>> GetReferenceAwaiterIdMethod()
+    private static Expression<Predicate<MethodInfo>> GetTypeIdMethod()
     {
         return method =>
-            method.Name == "GetReferenceAwaiterId" &&
-            method.DeclaringType != null &&
-            method.DeclaringType.Name == nameof(InspectorILGenerator);
+            method.Name == nameof(IAwaiterManager.GetTypeId) &&
+            method.DeclaringType == typeof(IAwaiterManager);
     }
 
     private static Expression<Predicate<MethodInfo>> CreateMethod()

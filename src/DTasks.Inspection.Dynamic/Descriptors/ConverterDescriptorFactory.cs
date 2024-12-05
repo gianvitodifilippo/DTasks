@@ -20,16 +20,19 @@ internal class ConverterDescriptorFactory(
 
         MethodInfo suspendMethod = converterType.GetRequiredMethod(
             name: InspectionConstants.SuspendMethodName,
+            genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [stateMachineType.MakeByRefType(), typeof(ISuspensionContext), writerParameterType]);
 
         MethodInfo resumeWithVoidMethod = converterType.GetRequiredMethod(
             name: InspectionConstants.ResumeMethodName,
+            genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [readerParameterType]);
 
         MethodInfo resumeWithResultMethod = converterType.GetRequiredMethod(
             name: InspectionConstants.ResumeMethodName,
+            genericParameterCount: 1,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [readerParameterType, Type.MakeGenericMethodParameter(0)]);
 

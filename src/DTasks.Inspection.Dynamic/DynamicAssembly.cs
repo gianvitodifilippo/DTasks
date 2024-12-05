@@ -87,6 +87,11 @@ internal sealed class DynamicAssembly
         return _module.DefineType(stateMachineType.FullName + "Converter", TypeAttributes.Public | TypeAttributes.Class);
     }
 
+    public TypeBuilder DefineAwaiterFactoryType(Type awaiterType)
+    {
+        return _module.DefineType(awaiterType.FullName + "Factory", TypeAttributes.NestedAssembly | TypeAttributes.Class);
+    }
+
     private void EnsureAccess(Assembly assembly)
     {
         if (_userAssemblies.Contains(assembly))

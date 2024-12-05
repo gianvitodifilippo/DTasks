@@ -16,17 +16,20 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: []);
 
-    private readonly IConverterDescriptorFactory _converterDescriptorFactory;
-    private readonly ITypeResolver _typeResolver;
-    private readonly ConcurrentDictionary<Type, object> _converters;
     private readonly DynamicAssembly _assembly;
+    private readonly IAwaiterManager _awaiterManager;
+    private readonly IConverterDescriptorFactory _converterDescriptorFactory;
+    private readonly ConcurrentDictionary<Type, object> _converters;
 
-    internal DynamicStateMachineInspector(IConverterDescriptorFactory converterDescriptorFactory, ITypeResolver typeResolver)
+    internal DynamicStateMachineInspector(
+        DynamicAssembly assembly,
+        IAwaiterManager awaiterManager,
+        IConverterDescriptorFactory converterDescriptorFactory)
     {
+        _assembly = assembly;
+        _awaiterManager = awaiterManager;
         _converterDescriptorFactory = converterDescriptorFactory;
-        _typeResolver = typeResolver;
         _converters = [];
-        _assembly = new();
     }
 
     public object GetConverter(Type stateMachineType)
@@ -48,12 +51,12 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
         TypeBuilder converterType = _assembly.DefineConverterType(stateMachineType);
         converterType.AddInterfaceImplementation(converterDescriptor.Type);
 
-        FieldBuilder typeResolverField = DefineTypeResolverField(converterType);
-        DefineConstructor(converterType, typeResolverField);
+        FieldBuilder awaiterManagerField = DefineAwaiterManagerField(converterType);
+        DefineConstructor(converterType, awaiterManagerField);
         
-        MethodBuilder suspendMethod = DefineMethodOverride(converterType, converterDescriptor.SuspendMethod);
-        MethodBuilder resumeWithVoidMethod = DefineMethodOverride(converterType, converterDescriptor.ResumeWithVoidMethod);
-        MethodBuilder resumeWithResultMethod = DefineMethodOverride(converterType, converterDescriptor.ResumeWithResultMethod);
+        MethodBuilder suspendMethod = converterType.DefineMethodOverride(converterDescriptor.SuspendMethod);
+        MethodBuilder resumeWithVoidMethod = converterType.DefineMethodOverride(converterDescriptor.ResumeWithVoidMethod);
+        MethodBuilder resumeWithResultMethod = converterType.DefineMethodOverride(converterDescriptor.ResumeWithResultMethod);
 
         SuspendMethodImplementor suspendImplementor = new(suspendMethod, stateMachineType, converterDescriptor);
         ResumeWithVoidMethodImplementor resumeWithVoidImplementor = new(resumeWithVoidMethod, stateMachineType, converterDescriptor);
@@ -90,91 +93,38 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
             }
         }
 
-        suspendImplementor.OnAwaiterFields(dAsyncAwaiterFields, typeResolverField);
+        suspendImplementor.OnAwaiterFields(dAsyncAwaiterFields, awaiterManagerField);
 
         suspendImplementor.Return();
         resumeWithVoidImplementor.Return();
         resumeWithResultImplementor.Return();
 
-        return Activator.CreateInstance(converterType.CreateTypeInfo(), [_typeResolver]);
+        return Activator.CreateInstance(converterType.CreateType(), [_awaiterManager])!;
     }
 
-    private static FieldBuilder DefineTypeResolverField(TypeBuilder converterType)
+    private static FieldBuilder DefineAwaiterManagerField(TypeBuilder converterType)
     {
-        return converterType.DefineField("_typeResolver", typeof(ITypeResolver), FieldAttributes.Private | FieldAttributes.InitOnly);
+        return converterType.DefineField("_awaiterManager", typeof(IAwaiterManager), FieldAttributes.Private | FieldAttributes.InitOnly);
     }
 
-    private static ConstructorBuilder DefineConstructor(TypeBuilder converterType, FieldInfo typeResolverField)
+    private static ConstructorBuilder DefineConstructor(TypeBuilder converterType, FieldInfo awaiterManagerField)
     {
-        ConstructorBuilder constructor = converterType.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, [typeof(ITypeResolver)]);
+        ConstructorBuilder constructor = converterType.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, [typeof(IAwaiterManager)]);
         constructor.DefineParameter(
             iSequence: 1,
             attributes: ParameterAttributes.None,
-            strParamName: "typeBuilder");
+            strParamName: "awaiterManager");
         
         ILGenerator il = constructor.GetILGenerator();
 
-        il.Emit(OpCodes.Ldarg_0);                   // Stack: this
-        il.Emit(OpCodes.Ldarg_1);                   // Stack: this, $typeBuilder
-        il.Emit(OpCodes.Stfld, typeResolverField);  // Stack: -
-        il.Emit(OpCodes.Ldarg_0);                   // Stack: this
-        il.Emit(OpCodes.Call, s_objectConstructor); // Stack: -
-        il.Emit(OpCodes.Ret);                       // Stack: -
+        il.Emit(OpCodes.Ldarg_0);                     // Stack: this
+        il.Emit(OpCodes.Ldarg_1);                     // Stack: this, $awaiterManager
+        il.Emit(OpCodes.Stfld, awaiterManagerField);  // Stack: -
+        il.Emit(OpCodes.Ldarg_0);                     // Stack: this
+        il.Emit(OpCodes.Call, s_objectConstructor);   // Stack: -
+        il.Emit(OpCodes.Ret);                         // Stack: -
 
         return constructor;
-    }
-
-    private static MethodBuilder DefineMethodOverride(TypeBuilder converterType, MethodInfo declaration)
-    {
-        ParameterInfo[] parameters = declaration.GetParameters();
-
-        MethodBuilder method = converterType.DefineMethod(
-            name: declaration.Name,
-            attributes: MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.Final,
-            callingConvention: CallingConventions.HasThis,
-            returnType: declaration.ReturnType,
-            returnTypeRequiredCustomModifiers: declaration.ReturnParameter.GetRequiredCustomModifiers(),
-            returnTypeOptionalCustomModifiers: declaration.ReturnParameter.GetOptionalCustomModifiers(),
-            parameterTypes: parameters.Map(parameter => parameter.ParameterType),
-            parameterTypeRequiredCustomModifiers: parameters.Map(parameter => parameter.GetRequiredCustomModifiers()),
-            parameterTypeOptionalCustomModifiers: parameters.Map(parameter => parameter.GetOptionalCustomModifiers()));
-
-        if (declaration.IsGenericMethodDefinition)
-        {
-            Type[] genericParameterTypes = declaration.GetGenericArguments();
-            GenericTypeParameterBuilder[] genericTypeParameters = method.DefineGenericParameters(genericParameterTypes.Map(type => type.Name));
-            
-            Debug.Assert(genericParameterTypes.Length == genericTypeParameters.Length);
-            for (int i = 0; i < genericParameterTypes.Length; i++)
-            {
-                Type genericParameterType = genericParameterTypes[i];
-                var genericTypeParameter = genericTypeParameters[i];
-
-                if (genericParameterType.BaseType is Type baseType && baseType != typeof(object))
-                {
-                    genericTypeParameter.SetBaseTypeConstraint(baseType);
-                }
-
-                genericTypeParameter.SetGenericParameterAttributes(genericParameterType.GenericParameterAttributes);
-
-                if (genericParameterType.GetInterfaces() is { Length: > 0 } interfaceTypes)
-                {
-                    genericTypeParameter.SetInterfaceConstraints(interfaceTypes);
-                }
-            }
-        }
-
-        foreach (ParameterInfo parameter in parameters)
-        {
-            method.DefineParameter(
-                position: parameter.Position + 1,
-                attributes: parameter.Attributes,
-                strParamName: parameter.Name);
-        }
-
-        converterType.DefineMethodOverride(method, declaration);
-
-        return method;
     }
 
     public static DynamicStateMachineInspector Create(Type converterType, ITypeResolver typeResolver)
@@ -182,7 +132,10 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
         if (!ConverterDescriptorFactory.TryCreate(converterType, out ConverterDescriptorFactory? converterDescriptorFactory))
             throw new ArgumentException("The provided converter type is not compliant.", nameof(converterType));
 
-        return new(converterDescriptorFactory, typeResolver);
+        DynamicAssembly assembly = new();
+        AwaiterManager awaiterManager = new(assembly, typeResolver);
+
+        return new(assembly, awaiterManager, converterDescriptorFactory);
     }
 
     private readonly ref struct SuspendMethodImplementor(MethodBuilder suspendMethod, Type stateMachineType, IConverterDescriptor converterDescriptor)
@@ -211,8 +164,6 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
             bool wasLabelDefined = false;
             foreach ((FieldInfo field, int index) in indexedFields)
             {
-                MethodInfo writeFieldMethod = converterDescriptor.Writer.GetWriteFieldMethod(typeof(string));
-
                 if (wasLabelDefined)
                 {
                     // return;
@@ -232,25 +183,29 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
 
                 if (field.FieldType.IsValueType)
                 {
+                    MethodInfo writeFieldMethod = converterDescriptor.Writer.GetWriteFieldMethod(typeof(int));
+
                     // writer.WriteField($InspectionConstants.AwaiterFieldName, $field.Name);
                     _il.LoadWriter();                                     // Stack: writer
                     _il.LoadString(InspectionConstants.AwaiterFieldName); // Stack: writer, $InspectionConstants.AwaiterFieldName
-                    _il.LoadString(index.ToString());                     // Stack: writer, $InspectionConstants.AwaiterFieldName, $index.ToString()
+                    _il.LoadInt(index);                                   // Stack: writer, $InspectionConstants.AwaiterFieldName, $index
                     _il.CallWriterMethod(writeFieldMethod);               // Stack: -
                 }
                 else
                 {
                     Debug.Assert(field.FieldType == typeof(object));
 
-                    // writer.WriteField($InspectionConstants.AwaiterFieldName, _typeResolver.GetTypeId(stateMachine.$field.GetType()).Value);
-                    _il.LoadWriter();                                     // Stack: writer
-                    _il.LoadString(InspectionConstants.AwaiterFieldName); // Stack: writer, $InspectionConstants.AwaiterFieldName
-                    _il.LoadThis();                                       // Stack: writer, $InspectionConstants.AwaiterFieldName, this
-                    _il.LoadField(typeResolverField);                     // Stack: writer, $InspectionConstants.AwaiterFieldName, _typeResolver
-                    _il.LoadStateMachineArg();                            // Stack: writer, $InspectionConstants.AwaiterFieldName, _typeResolver, stateMachine
-                    _il.LoadField(field);                                 // Stack: writer, $InspectionConstants.AwaiterFieldName, _typeResolver, stateMachine.$field
-                    _il.CallGetReferenceAwaiterId();                      // Stack: writer, $InspectionConstants.AwaiterFieldName, @result[InspectorILGenerator.GetReferenceAwaiterId(_typeResolver, stateMachine.$field)]
-                    _il.CallWriterMethod(writeFieldMethod);               // Stack: -
+                    MethodInfo writeFieldMethod = converterDescriptor.Writer.GetWriteFieldMethod(typeof(TypeId));
+
+                    // writer.WriteField($InspectionConstants.AwaiterFieldName, _awaiterManager.GetTypeId(stateMachine.$field));
+                    _il.LoadWriter();                                        // Stack: writer
+                    _il.LoadString(InspectionConstants.RefAwaiterFieldName); // Stack: writer, $InspectionConstants.RefAwaiterFieldName
+                    _il.LoadThis();                                          // Stack: writer, $InspectionConstants.RefAwaiterFieldName, this
+                    _il.LoadField(typeResolverField);                        // Stack: writer, $InspectionConstants.RefAwaiterFieldName, _awaiterManager
+                    _il.LoadStateMachineArg();                               // Stack: writer, $InspectionConstants.RefAwaiterFieldName, _awaiterManager, stateMachine
+                    _il.LoadField(field);                                    // Stack: writer, $InspectionConstants.RefAwaiterFieldName, _awaiterManager, stateMachine.$field
+                    _il.CallGetTypeIdMethod();                               // Stack: writer, $InspectionConstants.RefAwaiterFieldName, @result[_awaiterManager.GetTypeId(stateMachine.$field)]
+                    _il.CallWriterMethod(writeFieldMethod);                  // Stack: -
                 }
             }
 

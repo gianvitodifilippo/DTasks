@@ -27,6 +27,7 @@ public static class InspectionFixtures
     {
         MethodInfo method = typeof(AsyncMethodContainer).GetRequiredMethod(
             name: nameof(AsyncMethodContainer.Method),
+            genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(MyType)]);
 
@@ -88,16 +89,19 @@ public static class InspectionFixtures
     {
         public static readonly MethodInfo SuspendMethod = typeof(IStateMachineConverter1<TStateMachine>).GetRequiredMethod(
             name: nameof(Suspend),
+            genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(TStateMachine).MakeByRefType(), typeof(ISuspensionContext), typeof(ClassWriter)]);
 
         public static readonly MethodInfo ResumeWithVoidMethod = typeof(IStateMachineConverter1<TStateMachine>).GetRequiredMethod(
             name: nameof(Resume),
+            genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(ClassReader)]);
 
         public static readonly MethodInfo ResumeWithResultMethod = typeof(IStateMachineConverter1<TStateMachine>).GetRequiredMethod(
             name: nameof(Resume),
+            genericParameterCount: 1,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(ClassReader), Type.MakeGenericMethodParameter(0)]);
 
@@ -112,16 +116,19 @@ public static class InspectionFixtures
     {
         public static readonly MethodInfo SuspendMethod = typeof(IStateMachineConverter2<TStateMachine>).GetRequiredMethod(
             name: nameof(Suspend),
+            genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(TStateMachine).MakeByRefType(), typeof(ISuspensionContext), typeof(StructWriter)]);
 
         public static readonly MethodInfo ResumeWithVoidMethod = typeof(IStateMachineConverter2<TStateMachine>).GetRequiredMethod(
             name: nameof(Resume),
+            genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(StructReader)]);
 
         public static readonly MethodInfo ResumeWithResultMethod = typeof(IStateMachineConverter2<TStateMachine>).GetRequiredMethod(
             name: nameof(Resume),
+            genericParameterCount: 1,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(StructReader), Type.MakeGenericMethodParameter(0)]);
 
@@ -136,16 +143,19 @@ public static class InspectionFixtures
     {
         public static readonly MethodInfo SuspendMethod = typeof(IStateMachineConverter3<TStateMachine>).GetRequiredMethod(
             name: nameof(Suspend),
+            genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(TStateMachine).MakeByRefType(), typeof(ISuspensionContext), typeof(StructWriter).MakeByRefType()]);
 
         public static readonly MethodInfo ResumeWithVoidMethod = typeof(IStateMachineConverter3<TStateMachine>).GetRequiredMethod(
             name: nameof(Resume),
+            genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(StructReader).MakeByRefType()]);
 
         public static readonly MethodInfo ResumeWithResultMethod = typeof(IStateMachineConverter3<TStateMachine>).GetRequiredMethod(
             name: nameof(Resume),
+            genericParameterCount: 1,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(StructReader).MakeByRefType(), Type.MakeGenericMethodParameter(0)]);
 
@@ -160,16 +170,19 @@ public static class InspectionFixtures
     {
         public static readonly MethodInfo SuspendMethod = typeof(IStateMachineConverter4<TStateMachine>).GetRequiredMethod(
             name: nameof(Suspend),
+            genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(TStateMachine).MakeByRefType(), typeof(ISuspensionContext), typeof(WriterWithSpecializedMethod)]);
 
         public static readonly MethodInfo ResumeWithVoidMethod = typeof(IStateMachineConverter4<TStateMachine>).GetRequiredMethod(
             name: nameof(Resume),
+            genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(ReaderWithSpecializedMethod)]);
 
         public static readonly MethodInfo ResumeWithResultMethod = typeof(IStateMachineConverter4<TStateMachine>).GetRequiredMethod(
             name: nameof(Resume),
+            genericParameterCount: 1,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(ReaderWithSpecializedMethod), Type.MakeGenericMethodParameter(0)]);
 
@@ -184,6 +197,7 @@ public static class InspectionFixtures
     {
         public static readonly MethodInfo WriteFieldMethod = typeof(ClassWriter).GetRequiredMethod(
             name: nameof(WriteField),
+            genericParameterCount: 1,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(string), Type.MakeGenericMethodParameter(0)]);
 
@@ -194,6 +208,7 @@ public static class InspectionFixtures
     {
         public static readonly MethodInfo WriteFieldMethod = typeof(StructWriter).GetRequiredMethod(
             name: nameof(WriteField),
+            genericParameterCount: 1,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(string), Type.MakeGenericMethodParameter(0)]);
 
@@ -204,11 +219,13 @@ public static class InspectionFixtures
     {
         public static readonly MethodInfo WriteFieldMethod = typeof(WriterWithSpecializedMethod).GetRequiredMethod(
             name: nameof(WriteField),
+            genericParameterCount: 1,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(string), Type.MakeGenericMethodParameter(0)]);
 
         public static readonly MethodInfo SpecializedWriteFieldMethod = typeof(WriterWithSpecializedMethod).GetRequiredMethod(
             name: nameof(WriteField),
+            genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(string), typeof(int)]);
 
@@ -220,6 +237,7 @@ public static class InspectionFixtures
     {
         public static readonly MethodInfo ReadFieldMethod = typeof(ClassReader).GetRequiredMethod(
             name: nameof(ReadField),
+            genericParameterCount: 1,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(string), Type.MakeGenericMethodParameter(0).MakeByRefType()]);
 
@@ -230,6 +248,7 @@ public static class InspectionFixtures
     {
         public static readonly MethodInfo ReadFieldMethod = typeof(StructReader).GetRequiredMethod(
             name: nameof(ReadField),
+            genericParameterCount: 1,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(string), Type.MakeGenericMethodParameter(0).MakeByRefType()]);
 
@@ -240,11 +259,13 @@ public static class InspectionFixtures
     {
         public static readonly MethodInfo ReadFieldMethod = typeof(ReaderWithSpecializedMethod).GetRequiredMethod(
             name: nameof(ReadField),
+            genericParameterCount: 1,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(string), Type.MakeGenericMethodParameter(0).MakeByRefType()]);
 
         public static readonly MethodInfo SpecializedReadFieldMethod = typeof(ReaderWithSpecializedMethod).GetRequiredMethod(
             name: nameof(ReadField),
+            genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [typeof(string), typeof(int).MakeByRefType()]);
 
