@@ -1,4 +1,5 @@
-﻿using DTasks.Marshaling;
+﻿using DTasks.Inspection.Dynamic.Descriptors;
+using DTasks.Marshaling;
 using DTasks.Utils;
 using System.Diagnostics;
 using System.Reflection;
@@ -8,7 +9,7 @@ namespace DTasks.Inspection.Dynamic;
 
 internal readonly ref struct InspectorILGenerator(
     ILGenerator il,
-    bool stateMachineIsClass,
+    StateMachineDescriptor stateMachineDescriptor,
     bool loadCallbackByAddress,
     OpCode callMethodOpCode)
 {
@@ -24,6 +25,69 @@ internal readonly ref struct InspectorILGenerator(
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [typeof(object)]);
 
+    private static readonly MethodInfo s_completedDTaskGetter = typeof(DTask).GetRequiredMethod(
+        name: $"get_{nameof(DTask.CompletedDTask)}",
+        genericParameterCount: 0,
+        bindingAttr: BindingFlags.Static | BindingFlags.Public,
+        parameterTypes: []);
+
+    private static readonly MethodInfo s_getAwaiterMethod = typeof(DTask).GetRequiredMethod(
+        name: nameof(DTask.GetAwaiter),
+        genericParameterCount: 0,
+        bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+        parameterTypes: []);
+
+    private static readonly ConstructorInfo s_invalidOperationExceptionConstructor = typeof(InvalidOperationException).GetRequiredConstructor(
+        bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+        parameterTypes: [typeof(string)]);
+
+    private static readonly MethodInfo s_createFromVoidMethod = typeof(IAwaiterManager).GetRequiredMethod(
+        name: nameof(IAwaiterManager.CreateFromResult),
+        genericParameterCount: 0,
+        bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+        parameterTypes: [typeof(TypeId)]);
+
+    public void DeclareStateMachineLocal()
+    {
+        il.DeclareLocal(stateMachineDescriptor.Type);
+    }
+
+    public void DeclareAwaiterIndexLocal()
+    {
+        il.DeclareLocal(typeof(int));
+    }
+
+    public void DeclareAwaiterIdLocal()
+    {
+        il.DeclareLocal(typeof(TypeId));
+    }
+
+    public void InitStateMachine()
+    {
+        if (stateMachineDescriptor.IsValueType)
+        {
+            il.Emit(OpCodes.Ldloca_S, 0);
+            il.Emit(OpCodes.Initobj, stateMachineDescriptor.Type);
+        }
+        else
+        {
+            il.Emit(OpCodes.Newobj, stateMachineDescriptor.Constructor);
+            il.Emit(OpCodes.Stloc_0);
+        }
+    }
+
+    public void InitAwaiterIndex()
+    {
+        il.Emit(OpCodes.Ldc_I4_0);
+        il.Emit(OpCodes.Stloc_1);
+    }
+
+    public void InitAwaiterId()
+    {
+        il.Emit(OpCodes.Ldloca_S, 2);
+        il.Emit(OpCodes.Initobj, typeof(TypeId));
+    }
+
     public void LoadThis()
     {
         il.Emit(OpCodes.Ldarg_0);
@@ -32,7 +96,7 @@ internal readonly ref struct InspectorILGenerator(
     public void LoadStateMachineArg()
     {
         il.Emit(OpCodes.Ldarg_1);
-        if (stateMachineIsClass)
+        if (!stateMachineDescriptor.IsValueType)
         {
             il.Emit(OpCodes.Ldind_Ref);
         }
@@ -53,6 +117,64 @@ internal readonly ref struct InspectorILGenerator(
         {
             il.Emit(OpCodes.Ldarg_3);
         }
+    }
+
+    public void LoadReader()
+    {
+        if (loadCallbackByAddress)
+        {
+            il.Emit(OpCodes.Ldarga_S, 1);
+        }
+        else
+        {
+            il.Emit(OpCodes.Ldarg_1);
+        }
+    }
+
+    public void LoadStateMachineLocal()
+    {
+        if (stateMachineDescriptor.IsValueType)
+        {
+            il.Emit(OpCodes.Ldloca_S, 0);
+        }
+        else
+        {
+            il.Emit(OpCodes.Ldloc_0);
+        }
+    }
+
+    public void LoadStateMachineLocalAddress()
+    {
+        il.Emit(OpCodes.Ldloca_S, 0);
+    }
+
+    public void LoadAwaiterIndex()
+    {
+        il.Emit(OpCodes.Ldloc_1);
+    }
+
+    public void LoadAwaiterIndexAddress()
+    {
+        il.Emit(OpCodes.Ldloca_S, 1);
+    }
+
+    public void LoadAwaiterId()
+    {
+        il.Emit(OpCodes.Ldloc_2);
+    }
+
+    public void LoadAwaiterIdAddress()
+    {
+        il.Emit(OpCodes.Ldloca_S, 2);
+    }
+
+    public void Call(MethodInfo method)
+    {
+        OpCode opCode = method.IsStatic || method.DeclaringType.IsValueType
+            ? OpCodes.Call
+            : OpCodes.Callvirt;
+
+        il.Emit(opCode);
     }
 
     public void CallWriterMethod(MethodInfo method)
@@ -77,6 +199,49 @@ internal readonly ref struct InspectorILGenerator(
         il.Emit(OpCodes.Callvirt, s_getTypeIdMethod);
     }
 
+    public void CallCompletedDTaskGetter()
+    {
+        il.Emit(OpCodes.Call, s_completedDTaskGetter);
+    }
+
+    public void CallGetAwaiterMethod()
+    {
+        il.Emit(OpCodes.Callvirt, s_getAwaiterMethod);
+    }
+
+    public void CallCreateFromVoidMethod()
+    {
+        il.Emit(OpCodes.Callvirt, s_createFromVoidMethod);
+    }
+
+    public void CallBuilderCreateMethod()
+    {
+        il.Emit(OpCodes.Call, stateMachineDescriptor.BuilderCreateMethod);
+    }
+
+    public void CallBuilderStartMethod()
+    {
+        OpCode opCode = stateMachineDescriptor.BuilderField.FieldType.IsValueType
+            ? OpCodes.Call
+            : OpCodes.Callvirt;
+
+        il.Emit(opCode, stateMachineDescriptor.BuilderStartMethod);
+    }
+
+    public void CallBuilderTaskGetter()
+    {
+        OpCode opCode = stateMachineDescriptor.BuilderField.FieldType.IsValueType
+            ? OpCodes.Call
+            : OpCodes.Callvirt;
+
+        il.Emit(opCode, stateMachineDescriptor.BuilderTaskGetter);
+    }
+
+    public void NewInvalidOperationException()
+    {
+        il.Emit(OpCodes.Newobj, s_invalidOperationExceptionConstructor);
+    }
+
     public void LoadField(FieldInfo field)
     {
         il.Emit(OpCodes.Ldfld, field);
@@ -85,6 +250,11 @@ internal readonly ref struct InspectorILGenerator(
     public void LoadFieldAddress(FieldInfo field)
     {
         il.Emit(OpCodes.Ldflda, field);
+    }
+
+    public void StoreField(FieldInfo field)
+    {
+        il.Emit(OpCodes.Stfld, field);
     }
 
     public void LoadString(string str)
@@ -107,9 +277,36 @@ internal readonly ref struct InspectorILGenerator(
         il.Emit(OpCodes.Ret);
     }
 
-    public void BranchIfFalse(Label label)
+    public void Throw()
     {
-        il.Emit(OpCodes.Brfalse_S, label);
+        il.Emit(OpCodes.Throw);
+    }
+
+    public void BranchIfFalse(Label label, bool shortForm = false)
+    {
+        OpCode opCode = shortForm ? OpCodes.Brfalse_S : OpCodes.Brfalse;
+        il.Emit(opCode, label);
+    }
+
+    public void Switch(Label[] labels)
+    {
+        il.Emit(OpCodes.Switch, labels);
+    }
+
+    public void Branch(Label label, bool shortForm = false)
+    {
+        OpCode opCode = shortForm ? OpCodes.Br_S : OpCodes.Br;
+        il.Emit(opCode, label);
+    }
+
+    public void Pop()
+    {
+        il.Emit(OpCodes.Pop);
+    }
+
+    public void Subtract()
+    {
+        il.Emit(OpCodes.Sub);
     }
 
     public void LoadInt(int value)
@@ -163,11 +360,11 @@ internal readonly ref struct InspectorILGenerator(
     }
 
     // callback: reader or writer
-    public static InspectorILGenerator Create(MethodBuilder method, Type stateMachineType, Type callbackParameterType, Type callbackType)
+    public static InspectorILGenerator Create(MethodBuilder method, StateMachineDescriptor stateMachineDescriptor, Type callbackParameterType, Type callbackType)
     {
         return new(
             il: method.GetILGenerator(),
-            stateMachineIsClass: !stateMachineType.IsValueType,
+            stateMachineDescriptor: stateMachineDescriptor,
             loadCallbackByAddress: callbackType.IsValueType && !callbackParameterType.IsByRef,
             callMethodOpCode: callbackType.IsValueType ? OpCodes.Call : OpCodes.Callvirt);
     }

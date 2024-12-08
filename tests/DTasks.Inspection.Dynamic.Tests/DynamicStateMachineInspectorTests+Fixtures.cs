@@ -38,9 +38,51 @@ public partial class DynamicStateMachineInspectorTests
             method.DeclaringType == typeof(IAwaiterManager);
     }
 
+    private static Expression<Predicate<MethodInfo>> CreateFromVoidMethod()
+    {
+        return method =>
+            method.Name == nameof(IAwaiterManager.CreateFromResult) &&
+            !method.IsGenericMethod &&
+            method.DeclaringType == typeof(IAwaiterManager);
+    }
+
+    private static Expression<Predicate<MethodInfo>> CreateFromResultMethod()
+    {
+        return method =>
+            method.Name == nameof(IAwaiterManager.CreateFromResult) &&
+            method.IsGenericMethod &&
+            method.DeclaringType == typeof(IAwaiterManager);
+    }
+
+    private static Expression<Predicate<MethodInfo>> BuilderCreateMethod()
+    {
+        return method =>
+            method.Name == nameof(AsyncDTaskMethodBuilder<int>.Create) &&
+            method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>);
+    }
+
+    private static Expression<Predicate<MethodInfo>> BuilderStartMethod()
+    {
+        return method =>
+            method.Name == nameof(AsyncDTaskMethodBuilder<int>.Start) &&
+            method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>);
+    }
+
+    private static Expression<Predicate<MethodInfo>> BuilderTaskGetter()
+    {
+        return method =>
+            method.Name == $"get_{nameof(AsyncDTaskMethodBuilder<int>.Task)}" &&
+            method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>);
+    }
+
     private static Expression<Predicate<ConstructorInfo>> ObjectConstructor()
     {
         return constructor => constructor.DeclaringType == typeof(object);
+    }
+
+    private static Expression<Predicate<ConstructorInfo>> InvalidOperationExceptionConstructor()
+    {
+        return constructor => constructor.DeclaringType == typeof(InvalidOperationException);
     }
 
     private static Expression<Predicate<MethodInfo>> CreateMethod()

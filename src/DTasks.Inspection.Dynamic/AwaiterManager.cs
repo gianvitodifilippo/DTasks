@@ -33,17 +33,17 @@ internal class AwaiterManager(DynamicAssembly assembly, ITypeResolver typeResolv
         return typeResolver.GetTypeId(awaiter.GetType());
     }
 
-    public object CreateFromResult<TStateMachine>(TypeId awaiterId)
+    public object CreateFromResult(TypeId awaiterId)
     {
         return GetFactory(awaiterId).FromResult();
     }
 
-    public object CreateFromResult<TStateMachine, TResult>(TypeId awaiterId, TResult result)
+    public object CreateFromResult<TResult>(TypeId awaiterId, TResult result)
     {
         return GetFactory(awaiterId).FromResult(result);
     }
 
-    public object CreateFromException<TStateMachine>(TypeId awaiterId, Exception exception)
+    public object CreateFromException(TypeId awaiterId, Exception exception)
     {
         return GetFactory(awaiterId).FromException(exception);
     }
