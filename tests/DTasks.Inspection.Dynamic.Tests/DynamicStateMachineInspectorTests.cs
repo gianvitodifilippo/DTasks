@@ -53,9 +53,11 @@ public partial class DynamicStateMachineInspectorTests
     // DEBUG
     // - Suspend: https://sharplab.io/#v2:C4LglgNgNAJiDUAfAAgJgIwFgBQyAMABMugHQBKArgHbBgC2ApiQMID2dADpAwE4DKvAG5gAxgwDOAbhw40BPsACGwBgFlFIgBZgqDNlUG8VPABQBJAIIB3RWGPqqigOa8iATl4PnvAJQ4A3jgEwUQALPIU4hwMVDAmPAwAZvJKKupaOgwE4qlqGtq6UARmfJHRVOJgrFT6KgAewNllMZXVtQwNRQDqPHauVr3GftghBIEjoyEDfTwkPX0AYmAMEHEARAA8AHzoAPq7OcoMa0WHafmZJPt7B7k+0hOTBNPGc4MMSyvrijxOJ9m5dIFJg/Jz3IJPZ7vWbzFSfVYmTZbUL7YDacT/M55DK6K67FG7NFgcTgx6TF68N6LZYIzYQVgiRQQLYAVmumMBF1xu3pjIguzZu3QpMhUJmVLhNPWGwS4goEGArP2qA5RyBl12svlwAFypFkIpMPe8OlW3E+wAzKrzjimPtzbsLfqnhCnmBkiY5VEWlUatV6sASGZxKVvbEGHEEskserubsKNcfMNReNRaNDRKPlLEQBiZAeHj/YUPNMhZAAdhLkIAvq7JnXRu6CJ7mhVfe0GkGQ62YBH4kkAWquXb45akw2QqnS2LXrCs19c/neJqkv8lzwvC5ZgBxBjAAAqAE9omY4jHh3iE46k1XSxXb5Na2TRhPgk2W2HWn6aB1A8HQ+UvaRgO562pe+yhOOz6Tq+5LQpmJqLgW/yoM6ab3rBT6jE+T44DoxiJBoWQlK2X4dsAAR1gARqwrAQMU3ZhkBGz7tYtjGFs/bJKxNgzO4vgPLh2D4bwhFiMUbEzJuvCUWSR4njABC7gex4MKeJisFRABWDAiI066kkJOQ8BQekEPJakwA8sioCkQ62rJozIBaBD4QQ1z2rkD7OQQFjiIeVAiMgABsqh7porAwAAQhQkC9jwGz4Vs7mEvsVGxasvDeS5qiHhZBCgtlvn+YFYVopFtS2LoPApQSRJSHWPnEIQPIMkyupCkVbkrnKCodagXU0ClDoWkVACaUoACKSUoVEQEwM2uPsV7oEVIWLTVy3KkVmk6WZW2OkVk0hYlNBbCQG0pVeoSCTIwk/jwYnEdNJUiAs9JWNZ90EURxQvQFIgbY5IQ0XRDFsJw80qIp/gEC4wCSAQWFluEtQ6BQDDmP9gXvawVgEIkH2GXdci5RZX1yH5ANlRFMCVZkPAU7Zc48MDwRNeEc4mixJqcc1BNSgAcoojBFPuJoEIITIYz4YxIzgQlyMdwUsVsbNEC5l3KRtJiywAvMlvaEdqX1OS5CSKDA1QQIeAImWZl0gH9VOBRtRRmMwgyiEygusLQiSHhDHBQ76dZTk8Pmg/RwZB1DEYEAbBBG4oJuwT5+5KXuZASNqusJ4bSQpwqACED5m2EBBo1QGNYy7b0fQTRNy8jEcucg4QAPJ+pDe59sQtkiP66PKL6suwy3kwcwQACqFSKIkDBd7HvdxP3BCDzQw+0NUY/y2SOF3RbVtUDbdumY0E1fNNvGzfN6s+Vre46/rBfGwqD6NebDCW9btvGefvkb6uCdmYbGgMgE8Hdp7Ow3sIC+39oHdgwc9yhzJOHSeLko7gyQXHRSidk6p2guzNu4RlLZ16sAPO4804kMrkPaumNQF11xvjQmeNd4T3Lu3AgS8cErxMGvDetBq4jx3s3GhFdZ7iHnovbuyDoYCPQAPehFBRFUA4XWHCQA===
     // - Resume (with void): https://sharplab.io/#v2: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
+    // - Resume (with result): https://sharplab.io/#v2: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
     // RELEASE
     // - Suspend: https://sharplab.io/#v2:C4LglgNgPgAgTARgLACgYAYAEMEDoBKArgHbBgC2AprgMID25ADpJQE4DKbAbmAMaUBnANypU8TO2ABDYJQCyU3gAswxSvWJc2s1gAoAkgEEA7lLA6FxKQHM22AJxtLNtgEpUAb1SYf2ACwShAKMlMQAJrqslABmEtKyCsqqlJgC8fKKKmoANJj67EEhxAJgdMQasgAewKmFoSVlFZTVuQDqrOZ2xh067ii+mF79A77dnay47Z0AYmCUEBEARAA8AHwIAPobaTKUi7k7CZnJuFub2+muIsMjmGM6kz2Us/NLUqzW+6npiVnU79Yrt5bncnhMprIXgtdCtVn4tsAVAIvocMkk1KcNvCNoiwAIgTcRvc2I8ZnNoSsIHReFIIKsAKxbOAon7HDEbKk0iAbRkbOAEkGYYG3MCxXQCOrFUrlMpVYC4fQCArBUJhSgRKKxVG/E5bQhnVx9QVDQUDYngp5QpYAYhgjlYXwQAtNPhgAHZroKAL7Cka+gaizDiyUNGWkZryxXKopqjUxb67HXsjb6jYAZkN/t8JpdoPGpMh5JtdrYG01XxLrGctgmAHFKMAACoATxC+gi2rZ1D1Wwzzpd7s9IJ9hIGWZ8geDKqljVlEYVSslsci8c76O7Ka2fkzo+z46JYILzyLMNt9q+/KHA49+5HAxHI9Qqh00UUKXyIelTWqnl9ACM6DoCA8kXadY2WRsTDMHRVhXWJINMcYHDca5HxQZ82Fffg8ig8ZqzYX9CRbNswkwesm1bSh210Og/wAK0oXgakrAk0LSVhCCYzBiKosJrlQdjOJqSREy7QiBhgNNMGfTAzi2VEr2wKTDAEZtiF4GAADY5AbJQ6DCAAhQhIDVVhlmfVZZJxLY/2MhY2EUyTMDkZseMwAFHOU1T1J0xF9IqMw1FYKzsVxYRfScnAsA5alaR5JlPMwABNIsABFcOkP8IGoDK7B7DYEESrTcuC/K4ES2iGK4/K00S1KtPM0hVlwEqrNTPxUNEdDw1YLD33S7zeGmKljH47qXzfPIBrU3gSvE3wAKAkD6CYbLZFIjxMFsYAhEwO9fBgAIKlUQhKAMab1OGuhjEwaIRtYrrxBcnixvEFSZt8vSwgC5JWFeuBMAhAiUBzV0pMOwHLSLCCrVgqLbqLAA5KQqFyRsrUwLhaVO1xBj21A0PEerNIg1Z5rBzBWvIkrdFxgBeSy1VfQgIB2rqJKkqIpDCMoIGbb4OK41qQCm971JK3J9BoHo+FpRG6DIaJmxWxg1ulX1QZGJzFuAxUVbW9VMAZzAmakFm2d3CnGzIht8EEc3aaNxmYjN1mAEJFI5/xMGO4hTvOsWhpG277rx/bbkigIAHkZVWht1V0HAAd4WUTpkaVcc28OtfBgIAFViikaJKBj/X44iJPMBT0g07IMpM/xwkHy6rmeeIPmBaE5K0oyqQssocmlMpxCdBt4Aafp53mdZxSIs5yhud5/nBKFke7BF/QLtmtfWEl6XzFliB5cV5WGFVht1cJTWvZ15az4N0jjdN83PYO3Ox7tiVWcdrP90jn3U5+zOpvQOV0bp3Wug3bOXsIal3vuXROCBk6AMIOneuYc/7vwLgIIuJdY7n3Wog5BNc/ZoOIFA30D4gA===
     // - Resume (with void): https://sharplab.io/#v2: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
+    // - Resume (with result): https://sharplab.io/#v2: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
     private void _GetConverter_ShouldBuildCorrectMethods_WhenCallbackIsClass<TStateMachine>()
     {
         // Arrange
@@ -241,33 +243,54 @@ public partial class DynamicStateMachineInspectorTests
 
             #region Resume (with void)
 
+#if DEBUG
             _il.Emit(OpCodes.Newobj, StateMachineConstructor);
             _il.Emit(OpCodes.Stloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+            _il.Emit(OpCodes.Initobj, typeof(TStateMachine));
+#endif
 
             _il.Emit(OpCodes.Ldarg_1);
             _il.Emit(OpCodes.Ldstr, "<>1__state");
+#if DEBUG
             _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
             _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField("<>1__state")));
             _il.Emit(OpCodes.Callvirt, Arg.Is(readFieldMethods[typeof(int)]));
             _il.Emit(OpCodes.Pop);
 
             _il.Emit(OpCodes.Ldarg_1);
             _il.Emit(OpCodes.Ldstr, "arg");
+#if DEBUG
             _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
             _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField("arg")));
             _il.Emit(OpCodes.Callvirt, Arg.Is(readFieldMethods[typeof(MyType)]));
             _il.Emit(OpCodes.Pop);
 
             _il.Emit(OpCodes.Ldarg_1);
             _il.Emit(OpCodes.Ldstr, "<>4__this");
+#if DEBUG
             _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
             _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField("<>4__this")));
             _il.Emit(OpCodes.Callvirt, Arg.Is(readFieldMethods[typeof(AsyncMethodContainer)]));
             _il.Emit(OpCodes.Pop);
 
             _il.Emit(OpCodes.Ldarg_1);
             _il.Emit(OpCodes.Ldstr, LocalFieldName);
+#if DEBUG
             _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
             _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField(LocalFieldName)));
             _il.Emit(OpCodes.Callvirt, Arg.Is(readFieldMethods[typeof(string)]));
             _il.Emit(OpCodes.Pop);
@@ -333,7 +356,11 @@ public partial class DynamicStateMachineInspectorTests
             _il.Emit(OpCodes.Callvirt, Arg.Is(readFieldMethods[typeof(TypeId)]));
             _il.Emit(OpCodes.Brfalse_S, Arg.Any<Label>());
 
+#if DEBUG
             _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
             _il.Emit(OpCodes.Ldarg_0);
             _il.Emit(OpCodes.Ldfld, Arg.Is(ConverterField("_awaiterManager")));
             _il.Emit(OpCodes.Ldloc_2);
@@ -347,25 +374,214 @@ public partial class DynamicStateMachineInspectorTests
             _il.Emit(OpCodes.Throw);
 
             _il.MarkLabel(Arg.Any<Label>());
+#if DEBUG
             _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
             _il.Emit(OpCodes.Call, Arg.Is(BuilderCreateMethod()));
             _il.Emit(OpCodes.Stfld, Arg.Is(StateMachineField("<>t__builder")));
 
+#if DEBUG
             _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
             _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField("<>t__builder")));
             _il.Emit(OpCodes.Ldloca_S, 0);
             _il.Emit(OpCodes.Call, Arg.Is(BuilderStartMethod()));
 
+#if DEBUG
             _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
             _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField("<>t__builder")));
             _il.Emit(OpCodes.Call, Arg.Is(BuilderTaskGetter()));
 
             _il.Emit(OpCodes.Ret);
-            
+
             #endregion
 
             #region Resume (with result)
-            
+
+#if DEBUG
+            _il.Emit(OpCodes.Newobj, StateMachineConstructor);
+            _il.Emit(OpCodes.Stloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+            _il.Emit(OpCodes.Initobj, typeof(TStateMachine));
+#endif
+
+            _il.Emit(OpCodes.Ldarg_1);
+            _il.Emit(OpCodes.Ldstr, "<>1__state");
+#if DEBUG
+            _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
+            _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField("<>1__state")));
+            _il.Emit(OpCodes.Callvirt, Arg.Is(readFieldMethods[typeof(int)]));
+            _il.Emit(OpCodes.Pop);
+
+            _il.Emit(OpCodes.Ldarg_1);
+            _il.Emit(OpCodes.Ldstr, "arg");
+#if DEBUG
+            _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
+            _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField("arg")));
+            _il.Emit(OpCodes.Callvirt, Arg.Is(readFieldMethods[typeof(MyType)]));
+            _il.Emit(OpCodes.Pop);
+
+            _il.Emit(OpCodes.Ldarg_1);
+            _il.Emit(OpCodes.Ldstr, "<>4__this");
+#if DEBUG
+            _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
+            _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField("<>4__this")));
+            _il.Emit(OpCodes.Callvirt, Arg.Is(readFieldMethods[typeof(AsyncMethodContainer)]));
+            _il.Emit(OpCodes.Pop);
+
+            _il.Emit(OpCodes.Ldarg_1);
+            _il.Emit(OpCodes.Ldstr, LocalFieldName);
+#if DEBUG
+            _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
+            _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField(LocalFieldName)));
+            _il.Emit(OpCodes.Callvirt, Arg.Is(readFieldMethods[typeof(string)]));
+            _il.Emit(OpCodes.Pop);
+
+#if DEBUG
+            _il.Emit(OpCodes.Ldarg_1);
+            _il.Emit(OpCodes.Ldstr, "<result>5__2");
+            _il.Emit(OpCodes.Ldloc_0);
+            _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField("<result>5__2")));
+            _il.Emit(OpCodes.Callvirt, Arg.Is(readFieldMethods[typeof(int)]));
+            _il.Emit(OpCodes.Pop);
+
+            _il.Emit(OpCodes.Ldarg_1);
+            _il.Emit(OpCodes.Ldstr, "<>s__3");
+            _il.Emit(OpCodes.Ldloc_0);
+            _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField("<>s__3")));
+            _il.Emit(OpCodes.Callvirt, Arg.Is(readFieldMethods[typeof(int)]));
+            _il.Emit(OpCodes.Pop);
+#endif
+
+            _il.DefineLabel();
+            _il.DefineLabel();
+            _il.DefineLabel();
+            _il.DefineLabel();
+            _il.DefineLabel();
+            _il.DefineLabel();
+
+            _il.Emit(OpCodes.Ldc_I4_0);
+            _il.Emit(OpCodes.Stloc_1);
+
+            _il.Emit(OpCodes.Ldloca_S, 2);
+            _il.Emit(OpCodes.Initobj, typeof(TypeId));
+
+            _il.Emit(OpCodes.Ldarg_1);
+            _il.Emit(OpCodes.Ldstr, InspectionConstants.AwaiterFieldName);
+            _il.Emit(OpCodes.Ldloca_S, 1);
+            _il.Emit(OpCodes.Callvirt, Arg.Is(readFieldMethods[typeof(int)]));
+            _il.Emit(OpCodes.Brfalse, Arg.Any<Label>());
+
+            _il.Emit(OpCodes.Ldloc_1);
+            _il.Emit(OpCodes.Ldc_I4_1);
+            _il.Emit(OpCodes.Sub);
+            _il.Emit(OpCodes.Switch, Arg.Is<Label[]>(labels => labels.Length == 2));
+            _il.Emit(OpCodes.Br, Arg.Any<Label>());
+
+            _il.MarkLabel(Arg.Any<Label>());
+            _il.Emit(OpCodes.Ldstr, "Invalid attempt to resume a d-async method.");
+            _il.Emit(OpCodes.Newobj, Arg.Is(InvalidOperationExceptionConstructor()));
+            _il.Emit(OpCodes.Throw);
+
+            _il.MarkLabel(Arg.Any<Label>());
+            _il.DefineLabel();
+            _il.Emit(OpCodes.Ldtoken, Arg.Is(GenericMethodParameter(0)));
+            _il.Emit(OpCodes.Ldtoken, typeof(int));
+            _il.Emit(OpCodes.Call, Arg.Is(RuntimeTypeHandleEqualsMethod()));
+            _il.Emit(OpCodes.Brfalse_S, Arg.Any<Label>());
+
+            _il.Emit(OpCodes.Ldstr, "Invalid attempt to resume a d-async method.");
+            _il.Emit(OpCodes.Newobj, Arg.Is(InvalidOperationExceptionConstructor()));
+            _il.Emit(OpCodes.Throw);
+
+            _il.MarkLabel(Arg.Any<Label>());
+#if DEBUG
+            _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
+            _il.Emit(OpCodes.Ldarg_2);
+            _il.Emit(OpCodes.Call, Arg.Is(DTaskFromResultMethod(typeof(int))));
+            _il.Emit(OpCodes.Callvirt, Arg.Is(GetAwaiterMethod()));
+            _il.Emit(OpCodes.Stfld, Arg.Is(StateMachineField("<>u__4")));
+            _il.Emit(OpCodes.Br, Arg.Any<Label>());
+
+            _il.MarkLabel(Arg.Any<Label>());
+            _il.Emit(OpCodes.Ldstr, "InvalidDAsyncStateException");
+            _il.Emit(OpCodes.Newobj, Arg.Is(InvalidOperationExceptionConstructor()));
+            _il.Emit(OpCodes.Throw);
+
+            _il.MarkLabel(Arg.Any<Label>());
+            _il.Emit(OpCodes.Ldarg_1);
+            _il.Emit(OpCodes.Ldstr, InspectionConstants.RefAwaiterFieldName);
+            _il.Emit(OpCodes.Ldloca_S, 2);
+            _il.Emit(OpCodes.Callvirt, Arg.Is(readFieldMethods[typeof(TypeId)]));
+            _il.Emit(OpCodes.Brfalse_S, Arg.Any<Label>());
+
+#if DEBUG
+            _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
+            _il.Emit(OpCodes.Ldarg_0);
+            _il.Emit(OpCodes.Ldfld, Arg.Is(ConverterField("_awaiterManager")));
+            _il.Emit(OpCodes.Ldloc_2);
+            _il.Emit(OpCodes.Ldarg_2);
+            _il.Emit(OpCodes.Callvirt, Arg.Is(CreateFromResultMethod()));
+            _il.Emit(OpCodes.Stfld, Arg.Is(StateMachineField("<>u__3")));
+            _il.Emit(OpCodes.Br_S, Arg.Any<Label>());
+
+            _il.MarkLabel(Arg.Any<Label>());
+            _il.Emit(OpCodes.Ldstr, "InvalidDAsyncStateException");
+            _il.Emit(OpCodes.Newobj, Arg.Is(InvalidOperationExceptionConstructor()));
+            _il.Emit(OpCodes.Throw);
+
+            _il.MarkLabel(Arg.Any<Label>());
+#if DEBUG
+            _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
+            _il.Emit(OpCodes.Call, Arg.Is(BuilderCreateMethod()));
+            _il.Emit(OpCodes.Stfld, Arg.Is(StateMachineField("<>t__builder")));
+
+#if DEBUG
+            _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
+            _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField("<>t__builder")));
+            _il.Emit(OpCodes.Ldloca_S, 0);
+            _il.Emit(OpCodes.Call, Arg.Is(BuilderStartMethod()));
+
+#if DEBUG
+            _il.Emit(OpCodes.Ldloc_0);
+#else
+            _il.Emit(OpCodes.Ldloca_S, 0);
+#endif
+            _il.Emit(OpCodes.Ldflda, Arg.Is(StateMachineField("<>t__builder")));
+            _il.Emit(OpCodes.Call, Arg.Is(BuilderTaskGetter()));
+
             _il.Emit(OpCodes.Ret);
             
             #endregion

@@ -73,6 +73,13 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
         resumeWithVoidImplementor.OnAwaiterFields(stateMachineDescriptor.AwaiterFields);
         resumeWithVoidImplementor.Return();
 
+        resumeWithResultImplementor.DeclareLocals();
+        resumeWithResultImplementor.InitStateMachine();
+        foreach (FieldInfo userField in stateMachineDescriptor.UserFields)
+        {
+            resumeWithResultImplementor.OnUserField(userField);
+        }
+        resumeWithResultImplementor.OnAwaiterFields(stateMachineDescriptor.AwaiterFields);
         resumeWithResultImplementor.Return();
 
         return Activator.CreateInstance(converterType.CreateType(), [_awaiterManager])!;
@@ -360,7 +367,7 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
                 _il.LoadThis();                              // Stack: stateMachine, this
                 _il.LoadField(awaiterManagerField);          // Stack: stateMachine, _awaiterManager
                 _il.LoadAwaiterId();                         // Stack: stateMachine, _awaiterManager, awaiterId
-                _il.CallCreateFromVoidMethod();              // Stack: stateMachine, @result[_awaiterManager.CreateFromVoid(awaiterId)]
+                _il.CallCreateFromVoidMethod();              // Stack: stateMachine, @result[_awaiterManager.CreateFromResult(awaiterId)]
                 _il.StoreField(refAwaiterField);             // Stack: -
                 _il.Branch(methodEndLabel, shortForm: true); // Stack: -
             }
@@ -404,6 +411,202 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
             stateMachineDescriptor,
             converterDescriptor.ResumeWithResultMethod.GetParameters()[0].ParameterType,
             converterDescriptor.Reader.Type);
+
+        public void DeclareLocals()
+        {
+            _il.DeclareStateMachineLocal();
+            _il.DeclareAwaiterIndexLocal();
+            _il.DeclareAwaiterIdLocal();
+        }
+
+        public void InitStateMachine()
+        {
+            _il.InitStateMachine(); // Stack: -
+        }
+
+
+        public void OnUserField(FieldInfo field)
+        {
+            MethodInfo readFieldMethod = converterDescriptor.Reader.GetReadFieldMethod(field.FieldType);
+
+            _il.LoadReader();                      // Stack: reader
+            _il.LoadString(field.Name);            // Stack: reader, $field.Name
+            _il.LoadStateMachineLocal();           // Stack: reader, $field.Name, stateMachine
+            _il.LoadFieldAddress(field);           // Stack: reader, $field.Name, stateMachine.$field
+            _il.CallReaderMethod(readFieldMethod); // Stack: @result[reader.ReadField($field.Name, stateMachine.$field)]
+            _il.Pop();                             // Stack: -
+        }
+
+        public void OnAwaiterFields(IReadOnlyCollection<IndexedFieldInfo> indexedFields)
+        {
+            Type resultType = converterDescriptor.ResumeWithResultMethod.GetGenericArguments()[0];
+            MethodInfo readIntFieldMethod = converterDescriptor.Reader.GetReadFieldMethod(typeof(int));
+            MethodInfo readTypeIdFieldMethod = converterDescriptor.Reader.GetReadFieldMethod(typeof(TypeId));
+            FieldInfo? refAwaiterField = stateMachineDescriptor.RefAwaiterField;
+            bool hasRefAwaiterField = refAwaiterField is not null;
+
+            int switchCaseCount = hasRefAwaiterField
+                ? indexedFields.Count - 1
+                : indexedFields.Count;
+
+            Label refAwaiterLabel = hasRefAwaiterField
+                ? _il.DefineLabel()
+                : default;
+            Label invalidStateLabel = _il.DefineLabel();
+            Label[] switchCaseLabels = new Label[switchCaseCount];
+            Label switchDefaultCaseLabel = _il.DefineLabel();
+            Label methodEndLabel = _il.DefineLabel();
+
+            for (int i = 0; i < switchCaseCount; i++)
+            {
+                switchCaseLabels[i] = _il.DefineLabel();
+            }
+
+            Label awaiterIndexNextLabel = hasRefAwaiterField
+                ? refAwaiterLabel
+                : invalidStateLabel;
+
+            // if (reader.ReadField(InspectionConstants.AwaiterFieldName, ref awaiterIndex))
+            _il.InitAwaiterIndex();                               // Stack: -
+            _il.InitAwaiterId();                                  // Stack: -
+            _il.LoadReader();                                     // Stack: reader
+            _il.LoadString(InspectionConstants.AwaiterFieldName); // Stack: reader, $AwaiterFieldName
+            _il.LoadAwaiterIndexAddress();                        // Stack: reader, $AwaiterFieldName, ref awaiterIndex
+            _il.CallReaderMethod(readIntFieldMethod);             // Stack: @result[reader.ReadField($AwaiterFieldName, ref awaiterIndex)]
+            _il.BranchIfFalse(awaiterIndexNextLabel);             // Stack: -
+
+            // switch (awaiterIndex - 1)
+            _il.LoadAwaiterIndex();             // Stack: awaiterIndex
+            _il.LoadInt(1);                     // Stack: awaiterIndex, 1
+            _il.Subtract();                     // Stack: awaiterIndex - 1
+            _il.Switch(switchCaseLabels);       // Stack: -
+            _il.Branch(switchDefaultCaseLabel); // Stack: -
+
+            foreach ((FieldInfo field, int index) in indexedFields)
+            {
+                if (index == -1)
+                {
+                    refAwaiterField = field;
+                    continue;
+                }
+
+                Debug.Assert(index >= 1 && index <= switchCaseLabels.Length, "Awaiter indexes should be in the range [1, count].");
+
+                Type awaiterType = field.FieldType;
+
+                // case n:
+                _il.MarkLabel(switchCaseLabels[index - 1]);
+                if (awaiterType.IsGenericType && awaiterType.GetGenericTypeDefinition() == typeof(DTask<>.Awaiter))
+                {
+                    Label fromResultLabel = _il.DefineLabel();
+                    Type expectedResultType = awaiterType.GetGenericArguments()[0];
+
+                    // if (typeof(TResult) != $expectedResultType)
+                    _il.LoadToken(resultType);
+                    _il.LoadToken(expectedResultType);
+                    _il.CallRuntimeTypeHandleEqualsMethod();
+                    _il.BranchIfFalse(fromResultLabel, shortForm: true);
+
+                    // throw new InvalidOperationException("...");
+                    _il.LoadString("Invalid attempt to resume a d-async method.");
+                    _il.NewInvalidOperationException();
+                    _il.Throw();
+
+                    // else
+                    // stateMachine.$field = DTask.FromResult(result).GetAwaiter();
+                    _il.MarkLabel(fromResultLabel);
+                    _il.LoadStateMachineLocal();                  // Stack: stateMachine
+                    _il.LoadResult();                             // Stack: stateMachine, result
+                    _il.CallFromResultMethod(expectedResultType); // Stack: stateMachine, DTask.FromResult(result)
+                    _il.CallGetAwaiterMethod();                   // Stack: stateMachine, DTask.FromResult(result).GetAwaiter()
+                    _il.StoreField(field);                        // Stack: -
+                    _il.Branch(methodEndLabel);                   // Stack: -
+                }
+                else if (awaiterType == typeof(YieldDAwaitable.Awaiter))
+                {
+                    // throw new InvalidOperationException("...");
+                    _il.LoadString("Invalid attempt to resume a d-async method.");
+                    _il.NewInvalidOperationException();
+                    _il.Throw();
+                }
+                else
+                {
+                    MethodInfo? awaiterFromVoidMethod = awaiterType.GetMethod(
+                        name: "FromResult",
+                        genericParameterCount: 0,
+                        bindingAttr: BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic,
+                        binder: null,
+                        types: [],
+                        modifiers: null);
+
+                    if (awaiterFromVoidMethod is null)
+                    {
+                        // throw new InvalidOperationException("...");
+                        _il.LoadString("Invalid attempt to resume a d-async method.");
+                        _il.NewInvalidOperationException();
+                        _il.Throw();
+                    }
+                    else
+                    {
+                        // stateMachine.$field = $awaiterType.FromResult();
+                        _il.LoadStateMachineLocal();     // Stack: stateMachine
+                        _il.Call(awaiterFromVoidMethod); // Stack: stateMachine, @result[$awaiterType.FromResult]
+                        _il.StoreField(field);           // Stack: -
+                        _il.Branch(methodEndLabel);      // Stack: -
+                    }
+                }
+            }
+
+            // TODO: InvalidDAsyncStateException
+            // default:
+            _il.MarkLabel(switchDefaultCaseLabel);
+            _il.LoadString("InvalidDAsyncStateException");
+            _il.NewInvalidOperationException();
+            _il.Throw();
+
+            if (refAwaiterField is not null)
+            {
+                _il.MarkLabel(refAwaiterLabel);
+
+                // else if (reader.ReadField(InspectionConstants.RefAwaiterFieldName, ref awaiterId))
+                _il.LoadReader();                                        // Stack: reader
+                _il.LoadString(InspectionConstants.RefAwaiterFieldName); // Stack: reader, $RefAwaiterFieldName
+                _il.LoadAwaiterIdAddress();                              // Stack: reader, $RefAwaiterFieldName, ref awaiterId
+                _il.CallReaderMethod(readTypeIdFieldMethod);             // Stack: @result[reader.ReadField($RefAwaiterFieldName, ref awaiterId)
+                _il.BranchIfFalse(invalidStateLabel, shortForm: true);   // Stack: -
+
+                // stateMachine.$field = _awaiterManager.CreateFromResult(awaiterId, result);
+                _il.LoadStateMachineLocal();                 // Stack: stateMachine
+                _il.LoadThis();                              // Stack: stateMachine, this
+                _il.LoadField(awaiterManagerField);          // Stack: stateMachine, _awaiterManager
+                _il.LoadAwaiterId();                         // Stack: stateMachine, _awaiterManager, awaiterId
+                _il.LoadResult();                            // Stack: stateMachine, _awaiterManager, awaiterId, result
+                _il.CallCreateFromResultMethod(resultType);  // Stack: stateMachine, @result[_awaiterManager.CreateFromResult(awaiterId, result)]
+                _il.StoreField(refAwaiterField);             // Stack: -
+                _il.Branch(methodEndLabel, shortForm: true); // Stack: -
+            }
+
+            // TODO: InvalidDAsyncStateException
+            // else throw new InvalidOperationException("InvalidDAsyncStateException");
+            _il.MarkLabel(invalidStateLabel);
+            _il.LoadString("InvalidDAsyncStateException"); // Stack: "InvalidDAsyncStateException"
+            _il.NewInvalidOperationException();            // Stack: new InvalidOperationException("InvalidDAsyncStateException")
+            _il.Throw();                                   // Stack: -
+
+            _il.MarkLabel(methodEndLabel);
+            _il.LoadStateMachineLocal();                         // Stack: stateMachine
+            _il.CallBuilderCreateMethod();                       // Stack: stateMachine, @result[$builderType.Create()]
+            _il.StoreField(stateMachineDescriptor.BuilderField); // Stack: -
+
+            _il.LoadStateMachineLocal();                               // Stack: stateMachine
+            _il.LoadFieldAddress(stateMachineDescriptor.BuilderField); // Stack: ref stateMachine.$builderField
+            _il.LoadStateMachineLocalAddress();                        // Stack: ref stateMachine.$builderField, ref stateMachine
+            _il.CallBuilderStartMethod();                              // Stack: -
+
+            _il.LoadStateMachineLocal();                               // Stack: stateMachine
+            _il.LoadFieldAddress(stateMachineDescriptor.BuilderField); // Stack: ref stateMachine.$builderField
+            _il.CallBuilderTaskGetter();                               // Stack: stateMachine.$builderField.Task
+        }
 
         public void Return()
         {

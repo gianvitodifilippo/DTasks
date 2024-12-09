@@ -51,6 +51,7 @@ public partial class DynamicStateMachineInspectorTests
         return method =>
             method.Name == nameof(IAwaiterManager.CreateFromResult) &&
             method.IsGenericMethod &&
+            method.GetGenericArguments()[0].IsGenericParameter &&
             method.DeclaringType == typeof(IAwaiterManager);
     }
 
@@ -75,6 +76,21 @@ public partial class DynamicStateMachineInspectorTests
             method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>);
     }
 
+    private static Expression<Predicate<MethodInfo>> RuntimeTypeHandleEqualsMethod()
+    {
+        return method =>
+            method.Name == nameof(RuntimeTypeHandle.Equals) &&
+            method.DeclaringType == typeof(RuntimeTypeHandle);
+    }
+
+    private static Expression<Predicate<MethodInfo>> DTaskFromResultMethod(Type resultType)
+    {
+        return method =>
+            method.Name == nameof(DTask.FromResult) &&
+            method.GetGenericArguments()[0] == resultType &&
+            method.DeclaringType == typeof(DTask);
+    }
+
     private static Expression<Predicate<ConstructorInfo>> ObjectConstructor()
     {
         return constructor => constructor.DeclaringType == typeof(object);
@@ -85,23 +101,15 @@ public partial class DynamicStateMachineInspectorTests
         return constructor => constructor.DeclaringType == typeof(InvalidOperationException);
     }
 
-    private static Expression<Predicate<MethodInfo>> CreateMethod()
+    private static Expression<Predicate<Type>> GenericMethodParameter(int position)
     {
-        return method => method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>) && method.Name == nameof(AsyncDTaskMethodBuilder<int>.Create);
-    }
-
-    private static Expression<Predicate<MethodInfo>> StartMethod()
-    {
-        return method => method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>) && method.Name == nameof(AsyncDTaskMethodBuilder<int>.Start);
-    }
-
-    private static Expression<Predicate<MethodInfo>> TaskGetter()
-    {
-        return method => method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>) && method.Name == $"get_{nameof(AsyncDTaskMethodBuilder<int>.Task)}";
+        return type => type.IsGenericMethodParameter && type.GenericParameterPosition == position;
     }
 
     private static Expression<Predicate<MethodInfo>> GetAwaiterMethod()
     {
-        return method => method.DeclaringType == typeof(DTask) && method.Name == nameof(DTask.GetAwaiter);
+        return method =>
+            method.Name == nameof(DTask.GetAwaiter) &&
+            method.DeclaringType == typeof(DTask);
     }
 }

@@ -31,6 +31,12 @@ internal readonly ref struct InspectorILGenerator(
         bindingAttr: BindingFlags.Static | BindingFlags.Public,
         parameterTypes: []);
 
+    private static readonly MethodInfo s_fromResultGenericMethod = typeof(DTask).GetRequiredMethod(
+        name: nameof(DTask.FromResult),
+        genericParameterCount: 1,
+        bindingAttr: BindingFlags.Static | BindingFlags.Public,
+        parameterTypes: [Type.MakeGenericMethodParameter(0)]);
+
     private static readonly MethodInfo s_getAwaiterMethod = typeof(DTask).GetRequiredMethod(
         name: nameof(DTask.GetAwaiter),
         genericParameterCount: 0,
@@ -46,6 +52,18 @@ internal readonly ref struct InspectorILGenerator(
         genericParameterCount: 0,
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [typeof(TypeId)]);
+
+    private static readonly MethodInfo s_createFromResultMethod = typeof(IAwaiterManager).GetRequiredMethod(
+        name: nameof(IAwaiterManager.CreateFromResult),
+        genericParameterCount: 1,
+        bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+        parameterTypes: [typeof(TypeId), Type.MakeGenericMethodParameter(0)]);
+
+    private static readonly MethodInfo s_runtimeTypeHandleEqualsMethod = typeof(RuntimeTypeHandle).GetRequiredMethod(
+        name: nameof(RuntimeTypeHandle.Equals),
+        genericParameterCount: 0,
+        bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+        parameterTypes: [typeof(RuntimeTypeHandle)]);
 
     public void DeclareStateMachineLocal()
     {
@@ -131,6 +149,11 @@ internal readonly ref struct InspectorILGenerator(
         }
     }
 
+    public void LoadResult()
+    {
+        il.Emit(OpCodes.Ldarg_2);
+    }
+
     public void LoadStateMachineLocal()
     {
         if (stateMachineDescriptor.IsValueType)
@@ -214,6 +237,13 @@ internal readonly ref struct InspectorILGenerator(
         il.Emit(OpCodes.Callvirt, s_createFromVoidMethod);
     }
 
+    public void CallCreateFromResultMethod(Type resultType)
+    {
+        MethodInfo createFromResultMethod = s_createFromResultMethod.MakeGenericMethod(resultType);
+
+        il.Emit(OpCodes.Callvirt, createFromResultMethod);
+    }
+
     public void CallBuilderCreateMethod()
     {
         il.Emit(OpCodes.Call, stateMachineDescriptor.BuilderCreateMethod);
@@ -235,6 +265,18 @@ internal readonly ref struct InspectorILGenerator(
             : OpCodes.Callvirt;
 
         il.Emit(opCode, stateMachineDescriptor.BuilderTaskGetter);
+    }
+
+    public void CallFromResultMethod(Type resultType)
+    {
+        MethodInfo fromResultMethod = s_fromResultGenericMethod.MakeGenericMethod(resultType);
+
+        il.Emit(OpCodes.Call, fromResultMethod);
+    }
+
+    public void CallRuntimeTypeHandleEqualsMethod()
+    {
+        il.Emit(OpCodes.Call, s_runtimeTypeHandleEqualsMethod);
     }
 
     public void NewInvalidOperationException()
@@ -260,6 +302,11 @@ internal readonly ref struct InspectorILGenerator(
     public void LoadString(string str)
     {
         il.Emit(OpCodes.Ldstr, str);
+    }
+
+    public void LoadToken(Type type)
+    {
+        il.Emit(OpCodes.Ldtoken, type);
     }
 
     public Label DefineLabel()
