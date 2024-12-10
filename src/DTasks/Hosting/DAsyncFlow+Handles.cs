@@ -87,9 +87,12 @@ internal partial class DAsyncFlow
     {
         public IDAsyncRunnable Task { get; private set; }
 
-        public void Start(ref HandleStateMachine stateMachine)
+        public void Start<TStateMachine>(ref TStateMachine stateMachine)
         {
-            Task = stateMachine.Awaiter.Runnable;
+            // TODO: Inspector should support non-generic start method
+            Assert.Is<HandleStateMachine>(stateMachine);
+
+            Task = Unsafe.As<TStateMachine, HandleStateMachine>(ref stateMachine).Awaiter.Runnable;
         }
 
         public static HandleRunnableBuilder Create() => default;
@@ -148,9 +151,12 @@ internal partial class DAsyncFlow
     {
         public IDAsyncRunnable Task { get; private set; }
 
-        public void Start(ref CompletedHandleStateMachine stateMachine)
+        public void Start<TStateMachine>(ref TStateMachine stateMachine)
         {
-            Task = stateMachine.Runnable;
+            // TODO: Inspector should support non-generic start method
+            Assert.Is<CompletedHandleStateMachine>(stateMachine);
+
+            Task = Unsafe.As<TStateMachine, CompletedHandleStateMachine>(ref stateMachine).Runnable;
         }
 
         public static CompletedHandleRunnableBuilder Create() => default;

@@ -1,4 +1,6 @@
 ﻿using DTasks.Inspection;
+using DTasks.Utils;
+using System.Runtime.CompilerServices;
 
 namespace DTasks.Hosting;
 
@@ -17,9 +19,12 @@ internal partial class DAsyncFlow
     {
         public IDAsyncRunnable Task { get; private set; }
 
-        public void Start(ref HostIndirectionStateMachine stateMachine)
+        public void Start<TStateMachine>(ref TStateMachine stateMachine)
         {
-            Task = stateMachine.Awaiter.Runnable;
+            // TODO: Inspector should support non-generic start method
+            Assert.Is<HostIndirectionStateMachine>(stateMachine);
+
+            Task = Unsafe.As<TStateMachine, HostIndirectionStateMachine>(ref stateMachine).Awaiter.Runnable;
         }
 
         public static HostIndirectionRunnableBuilder Create() => default;

@@ -13,7 +13,7 @@ internal sealed class DynamicAssembly
     private readonly ConstructorInfo _ignoresAccessChecksToAttributeConstructor;
     private readonly HashSet<Assembly> _userAssemblies;
 
-    public DynamicAssembly()
+    public DynamicAssembly(Type converterType)
     {
         AssemblyName assemblyName = new(Name);
 
@@ -78,6 +78,8 @@ internal sealed class DynamicAssembly
         _ignoresAccessChecksToAttributeConstructor = ignoresAccessChecksToAttributeType.CreateTypeInfo()!.GetRequiredConstructor(
             bindingAttr: BindingFlags.Public | BindingFlags.Instance,
             parameterTypes: [typeof(string)]);
+
+        EnsureAccess(converterType.Assembly);
     }
 
     public TypeBuilder DefineConverterType(Type stateMachineType)

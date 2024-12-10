@@ -197,7 +197,7 @@ internal readonly ref struct InspectorILGenerator(
             ? OpCodes.Call
             : OpCodes.Callvirt;
 
-        il.Emit(opCode);
+        il.Emit(opCode, method);
     }
 
     public void CallWriterMethod(MethodInfo method)
@@ -229,6 +229,7 @@ internal readonly ref struct InspectorILGenerator(
 
     public void CallGetAwaiterMethod()
     {
+        // Relies on DTask.Awaiter and DTask<TResult>.Awaiter having the same layout
         il.Emit(OpCodes.Callvirt, s_getAwaiterMethod);
     }
 
@@ -255,7 +256,7 @@ internal readonly ref struct InspectorILGenerator(
             ? OpCodes.Call
             : OpCodes.Callvirt;
 
-        il.Emit(opCode, stateMachineDescriptor.BuilderStartMethod);
+        il.Emit(opCode, stateMachineDescriptor.BuilderStartMethod.MakeGenericMethod(stateMachineDescriptor.Type));
     }
 
     public void CallBuilderTaskGetter()

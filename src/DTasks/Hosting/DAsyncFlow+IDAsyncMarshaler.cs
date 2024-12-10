@@ -30,6 +30,7 @@ internal partial class DAsyncFlow : IDAsyncMarshaler
         {
             Debug.Assert(handleRunnable is not CompletedHandleRunnable);
             handleRunnable.Write<T, TAction>(ref action);
+            return true;
         }
 
         return _marshaler.TryMarshal(fieldName, in value, ref action);

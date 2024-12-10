@@ -1,13 +1,99 @@
 ﻿using DTasks.Inspection;
+using DTasks.Inspection.Dynamic;
 using DTasks.Marshaling;
 using System.Diagnostics;
-using System.Reflection;
 using Xunit.Sdk;
 
 namespace DTasks.Hosting;
 
-internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler) : IDAsyncStateManager
+internal interface IFakeStateMachineConverter<TStateMachine>
+    where TStateMachine : notnull
 {
+    void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext, FakeStateMachineWriter writer);
+
+    IDAsyncRunnable Resume(FakeStateMachineReader reader);
+
+    IDAsyncRunnable Resume<TResult>(FakeStateMachineReader reader, TResult result);
+}
+
+internal abstract class MarshaledValue(TypeId typeId)
+{
+    public TypeId TypeId { get; } = typeId;
+
+    public abstract TField Convert<TField>(Type tokenType, ITokenConverter converter);
+}
+
+internal sealed class MarshaledValue<TToken>(TypeId typeId, TToken token) : MarshaledValue(typeId)
+{
+    public override TField Convert<TField>(Type tokenType, ITokenConverter converter)
+    {
+        if (!tokenType.IsInstanceOfType(token))
+            throw FailException.ForFailure($"Expected {token} to be assignable to {tokenType}.");
+
+        return converter.Convert<TToken, TField>(token);
+    }
+}
+
+internal class FakeStateMachineWriter(Dictionary<string, object?> values, IDAsyncMarshaler marshaler)
+{
+    public void WriteField<TField>(string fieldName, TField value)
+    {
+        FakeMarshalingAction action = new(fieldName, values);
+        if (marshaler.TryMarshal(fieldName, in value, ref action))
+            return;
+
+        values.Add(fieldName, value);
+    }
+}
+
+internal class FakeStateMachineReader(Dictionary<string, object?> values, IDAsyncMarshaler marshaler)
+{
+    public bool ReadField<TField>(string fieldName, ref TField value)
+    {
+        if (!values.Remove(fieldName, out object? untypedValue))
+            return false;
+
+        if (untypedValue is MarshaledValue marshaledValue)
+        {
+            FakeUnmarshalingAction<TField> action = new(marshaledValue, ref value);
+            if (!marshaler.TryUnmarshal<TField, FakeUnmarshalingAction<TField>>(fieldName, marshaledValue.TypeId, ref action))
+                throw FailException.ForFailure("Marshaler should be able to unmarshal its own token.");
+
+            return true;
+        }
+
+        value = (TField)untypedValue!;
+        return true;
+    }
+}
+
+internal readonly ref struct FakeMarshalingAction(string fieldName, Dictionary<string, object?> values) : IMarshalingAction
+{
+    public void MarshalAs<TToken>(TypeId typeId, TToken token)
+    {
+        values[fieldName] = new MarshaledValue<TToken>(typeId, token);
+    }
+}
+
+internal readonly ref struct FakeUnmarshalingAction<TField>(MarshaledValue marshaledValue, ref TField value) : IUnmarshalingAction
+{
+    private readonly ref TField _value = ref value;
+
+    public void UnmarshalAs<TConverter>(Type tokenType, scoped ref TConverter converter)
+        where TConverter : struct, ITokenConverter
+    {
+        UnmarshalAs(tokenType, converter);
+    }
+
+    public void UnmarshalAs(Type tokenType, ITokenConverter converter)
+    {
+        _value = marshaledValue.Convert<TField>(tokenType, converter);
+    }
+}
+
+internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeResolver typeResolver) : IDAsyncStateManager
+{
+    private readonly DynamicStateMachineInspector _inspector = DynamicStateMachineInspector.Create(typeof(IFakeStateMachineConverter<>), typeResolver);
     private readonly Dictionary<DAsyncId, DehydratedRunnable> _runnables = [];
     private Action<DAsyncId>? _onDehydrate;
 
@@ -29,7 +115,10 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler) : IDAsy
 
         Debug.WriteLine($"Dehydrating runnable {id} ({stateMachine}) with parent {parentId}.");
         _onDehydrate?.Invoke(id);
-        DehydratedRunnable runnable = DehydratedRunnable.Create<TStateMachine>(parentId, stateMachine, suspensionContext, marshaler);
+        
+        DehydratedRunnable<TStateMachine> runnable = new(_inspector, marshaler, parentId);
+        runnable.Suspend(ref stateMachine, suspensionContext);
+
         _runnables[id] = runnable;
         return ValueTask.CompletedTask;
     }
@@ -38,7 +127,8 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler) : IDAsy
     {
         DehydratedRunnable runnable = _runnables[id];
         _runnables.Remove(id);
-        DAsyncLink link = runnable.Hydrate(marshaler);
+
+        DAsyncLink link = runnable.Resume();
         Debug.WriteLine($"Hydrated task {id} with parent {link.ParentId}.");
         return ValueTask.FromResult(link);
     }
@@ -47,18 +137,15 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler) : IDAsy
     {
         DehydratedRunnable runnable = _runnables[id];
         _runnables.Remove(id);
-        DAsyncLink link = runnable.Hydrate(result, marshaler);
+
+        DAsyncLink link = runnable.Resume(result);
         Debug.WriteLine($"Hydrated task {id} with parent {link.ParentId}.");
         return ValueTask.FromResult(link);
     }
 
     public ValueTask<DAsyncLink> HydrateAsync(DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
     {
-        DehydratedRunnable runnable = _runnables[id];
-        _runnables.Remove(id);
-        DAsyncLink link = runnable.Hydrate(exception, marshaler);
-        Debug.WriteLine($"Hydrated task {id} with parent {link.ParentId}.");
-        return ValueTask.FromResult(link);
+        throw new NotImplementedException();
     }
 
     public ValueTask<DAsyncId> DeleteAsync(DAsyncId id, CancellationToken cancellationToken = default)
@@ -74,461 +161,48 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler) : IDAsy
         return ValueTask.CompletedTask;
     }
 
-    private delegate void FieldHydrator(object boxedStateMachine, IDAsyncMarshaler marshaler);
-
-    private delegate void StartAction<TBuilder, TStateMachine>(ref TBuilder builder, ref TStateMachine stateMachine);
-
-    private delegate IDAsyncRunnable StateMachineStarter(object boxedStateMachine);
-
-    private abstract class DehydratedRunnable(
-        DAsyncId parentId,
-        object boxedStateMachine,
-        IEnumerable<FieldHydrator> fieldHydrators,
-        StateMachineStarter starter)
+    private abstract class DehydratedRunnable
     {
-        private static readonly MethodInfo s_createStateMachineStarterGenericMethod = typeof(DehydratedRunnable).GetMethod(
-            name: nameof(CreateStateMachineStarter),
-            bindingAttr: BindingFlags.Static | BindingFlags.NonPublic)!;
+        public abstract DAsyncId ParentId { get; }
 
-        private static readonly MethodInfo s_isSuspendedGenericMethod = typeof(DehydratedRunnable).GetMethod(
-            name: nameof(IsSuspended),
-            bindingAttr: BindingFlags.Static | BindingFlags.NonPublic)!;
+        public abstract DAsyncLink Resume();
 
-        private static readonly MethodInfo s_createFieldHydratorGenericMethod = typeof(DehydratedRunnable).GetMethod(
-            nameof(CreateFieldHydrator),
-            BindingFlags.NonPublic | BindingFlags.Static)!;
+        public abstract DAsyncLink Resume<TResult>(TResult result);
+    }
 
-        private static readonly Type s_genericParameterType = Type.MakeGenericMethodParameter(0);
+    private sealed class DehydratedRunnable<TStateMachine>(IStateMachineInspector inspector, IDAsyncMarshaler marshaler, DAsyncId parentId) : DehydratedRunnable
+        where TStateMachine : notnull
+    {
+        private readonly Dictionary<string, object?> _values = [];
 
-        public DAsyncId ParentId => parentId;
+        public override DAsyncId ParentId => parentId;
 
-        protected abstract void DehydrateAwaiter(object boxedStateMachine);
-
-        protected abstract void DehydrateAwaiter<TResult>(object boxedStateMachine, TResult result);
-
-        protected abstract void DehydrateAwaiter(object boxedStateMachine, Exception exception);
-
-        public DAsyncLink Hydrate(IDAsyncMarshaler marshaler)
+        public void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext)
         {
-            DehydrateAwaiter(boxedStateMachine);
-            foreach (FieldHydrator fieldHydrator in fieldHydrators)
-            {
-                fieldHydrator(boxedStateMachine, marshaler);
-            }
+            FakeStateMachineWriter writer = new(_values, marshaler);
 
-            IDAsyncRunnable runnable = starter(boxedStateMachine);
+            var converter = (IFakeStateMachineConverter<TStateMachine>)inspector.GetConverter(typeof(TStateMachine));
+            converter.Suspend(ref stateMachine, suspensionContext, writer);
+        }
+
+        public override DAsyncLink Resume()
+        {
+            FakeStateMachineReader reader = new(_values, marshaler);
+
+            var converter = (IFakeStateMachineConverter<TStateMachine>)inspector.GetConverter(typeof(TStateMachine));
+            IDAsyncRunnable runnable = converter.Resume(reader);
+
             return new DAsyncLink(parentId, runnable);
         }
 
-        public DAsyncLink Hydrate<TResult>(TResult result, IDAsyncMarshaler marshaler)
+        public override DAsyncLink Resume<TResult>(TResult result)
         {
-            DehydrateAwaiter(boxedStateMachine, result);
-            foreach (FieldHydrator fieldHydrator in fieldHydrators)
-            {
-                fieldHydrator(boxedStateMachine, marshaler);
-            }
+            FakeStateMachineReader reader = new(_values, marshaler);
 
-            IDAsyncRunnable runnable = starter(boxedStateMachine);
+            var converter = (IFakeStateMachineConverter<TStateMachine>)inspector.GetConverter(typeof(TStateMachine));
+            IDAsyncRunnable runnable = converter.Resume(reader, result);
+
             return new DAsyncLink(parentId, runnable);
-        }
-
-        public DAsyncLink Hydrate(Exception exception, IDAsyncMarshaler marshaler)
-        {
-            DehydrateAwaiter(boxedStateMachine, exception);
-            foreach (FieldHydrator fieldHydrator in fieldHydrators)
-            {
-                fieldHydrator(boxedStateMachine, marshaler);
-            }
-
-            IDAsyncRunnable runnable = starter(boxedStateMachine);
-            return new DAsyncLink(parentId, runnable);
-        }
-
-        public static DehydratedRunnable Create<TStateMachine>(DAsyncId parentId, object boxedStateMachine, ISuspensionContext suspensionContext, IDAsyncMarshaler marshaler)
-            where TStateMachine : notnull
-        {
-            Type stateMachineType = typeof(TStateMachine);
-            FieldInfo[] fields = stateMachineType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            List<FieldHydrator> fieldHydrators = [];
-            StateMachineStarter? starter = null;
-            FieldInfo? awaiterField = null;
-            int? state = null;
-
-            foreach (FieldInfo field in fields)
-            {
-                StateMachineFieldKind kind = StateMachineFacts.GetFieldKind(field);
-
-                switch (kind)
-                {
-                    case StateMachineFieldKind.UserField:
-                    case StateMachineFieldKind.StateField:
-                        if (kind is StateMachineFieldKind.StateField)
-                        {
-                            state = (int?)field.GetValue(boxedStateMachine);
-                        }
-
-                        MethodInfo createFieldHydratorMethod = s_createFieldHydratorGenericMethod.MakeGenericMethod(typeof(TStateMachine), field.FieldType);
-                        FieldHydrator hydrator = (FieldHydrator)createFieldHydratorMethod.Invoke(null, [marshaler, boxedStateMachine, field])!;
-                        fieldHydrators.Add(hydrator);
-                        break;
-
-                    case StateMachineFieldKind.BuilderField:
-                        if (starter is not null)
-                            throw FailException.ForFailure($"Multiple async method builder fields found on type '{typeof(TStateMachine).Name}'.");
-
-                        MethodInfo coreMethod = s_createStateMachineStarterGenericMethod.MakeGenericMethod(typeof(TStateMachine), field.FieldType);
-                        starter = (StateMachineStarter)coreMethod.Invoke(null, [field])!;
-                        break;
-
-                    case StateMachineFieldKind.DAsyncAwaiterField:
-                        MethodInfo isSuspendedMethod = s_isSuspendedGenericMethod.MakeGenericMethod(field.FieldType);
-                        bool isSuspended = (bool)isSuspendedMethod.Invoke(null, [boxedStateMachine, field, suspensionContext])!;
-
-                        if (!isSuspended)
-                            continue;
-
-                        if (awaiterField is not null)
-                            throw FailException.ForFailure($"Multiple suspended awaiters fouund on type '{typeof(TStateMachine).Name}'.");
-
-                        awaiterField = field;
-                        break;
-                }
-            }
-
-            if (starter is null)
-                throw FailException.ForFailure($"No async method builder fields found on type '{typeof(TStateMachine).Name}'.");
-
-            if (awaiterField is null)
-                return state is -1
-                    ? (DehydratedRunnable)new PendingDehydratedRunnable(parentId, boxedStateMachine, fieldHydrators, starter)
-                    : throw FailException.ForFailure($"No suspender awaiter found on type '{typeof(TStateMachine).Name}'.");
-
-            Type suspendedAwaiterType = awaiterField.FieldType;
-            if (suspendedAwaiterType == typeof(DTask.Awaiter))
-                return new DTaskAwaiterDehydratedRunnable(parentId, boxedStateMachine, fieldHydrators, awaiterField, starter);
-
-            if (suspendedAwaiterType.IsGenericType && suspendedAwaiterType.GetGenericTypeDefinition() == typeof(DTask<>.Awaiter))
-            {
-                Type dehydratedRunnableType = typeof(DTaskAwaiterDehydratedRunnable<>).MakeGenericType(suspendedAwaiterType.GenericTypeArguments);
-                return (DehydratedRunnable)Activator.CreateInstance(dehydratedRunnableType, [parentId, boxedStateMachine, fieldHydrators, awaiterField, starter])!;
-            }
-
-            if (suspendedAwaiterType == typeof(YieldDAwaitable.Awaiter))
-                return new YieldAwaiterDehydratedRunnable(parentId, boxedStateMachine, fieldHydrators, starter);
-
-            MethodInfo? fromVoidResultMethod = GetFromVoidResultMethod(suspendedAwaiterType);
-            Dictionary<Type, MethodInfo> fromResultMethods = GetFromResultMethods(suspendedAwaiterType);
-            MethodInfo? fromExceptionMethod = GetFromExceptionMethod(suspendedAwaiterType);
-
-            return new OtherAwaiterDehydratedRunnable(parentId, boxedStateMachine, fieldHydrators, awaiterField, fromVoidResultMethod, fromResultMethods, fromExceptionMethod, starter);
-        }
-
-        private static bool IsSuspended<TAwaiter>(object boxedStateMachine, FieldInfo awaiterField, ISuspensionContext suspensionContext)
-        {
-            TAwaiter awaiter = (TAwaiter)awaiterField.GetValue(boxedStateMachine)!;
-            return suspensionContext.IsSuspended(ref awaiter);
-        }
-
-        private static FieldHydrator CreateFieldHydrator<TStateMachine, TField>(IDAsyncMarshaler marshaler, object boxedStateMachine, FieldInfo field)
-            where TStateMachine : notnull
-        {
-            TField? value = (TField?)field.GetValue(boxedStateMachine);
-            MarshalingAction<TField> action = new(field);
-            _ = marshaler.TryMarshal(field.Name, in value, action);
-
-            return action.Hydrator;
-        }
-
-        private static StateMachineStarter CreateStateMachineStarter<TStateMachine, TBuilder>(FieldInfo builderField)
-        {
-            Type stateMachineType = typeof(TStateMachine);
-            Type builderType = typeof(TBuilder);
-
-            MethodInfo createMethod = GetCreateMethod(builderType);
-            MethodInfo startMethod = GetStartMethod(builderType, stateMachineType);
-            MethodInfo taskGetter = GetTaskGetter(builderType);
-            if (startMethod.IsGenericMethod)
-            {
-                startMethod = startMethod.MakeGenericMethod(stateMachineType);
-            }
-
-            StartAction<TBuilder, TStateMachine> start = startMethod.CreateDelegate<StartAction<TBuilder, TStateMachine>>();
-
-            return delegate (object boxedStateMachine)
-            {
-                TBuilder builder = (TBuilder)createMethod.Invoke(null, null)!;
-
-                builderField.SetValue(boxedStateMachine, builder);
-                TStateMachine stateMachine = (TStateMachine)boxedStateMachine;
-                start(ref builder, ref stateMachine);
-                builderField.SetValue(boxedStateMachine, builder);
-
-                return (IDAsyncRunnable)taskGetter.Invoke(builder, null)!;
-            };
-        }
-
-        private static MethodInfo GetCreateMethod(Type builderType)
-        {
-            return builderType.GetMethod("Create", BindingFlags.Static | BindingFlags.Public, []) ?? throw new MissingMethodException($"No 'Start' method found on type '{builderType.Name}'.");
-        }
-
-        private static MethodInfo GetStartMethod(Type builderType, Type stateMachineType)
-        {
-            MethodInfo? result = null;
-
-            foreach (MethodInfo method in builderType.GetMethods(BindingFlags.Instance | BindingFlags.Public))
-            {
-                if (method.Name != "Start")
-                    continue;
-
-                Type[] genericParameters = method.GetGenericArguments();
-                int arity = genericParameters.Length;
-                if (arity is not 0 and not 1)
-                    continue;
-
-                if (method.GetParameters() is not [ParameterInfo parameter])
-                    continue;
-
-                Type parameterType = parameter.ParameterType;
-                if (!parameterType.IsByRef)
-                    continue;
-
-                Type elementType = parameterType.GetElementType()!;
-                if (elementType != stateMachineType && (arity == 0 || elementType != genericParameters[0]))
-                    continue;
-
-                if (result is not null)
-                    throw new AmbiguousMatchException($"Multiple 'Start' methods found on type '{builderType.Name}'.");
-
-                result = method;
-            }
-
-            return result ?? throw new MissingMethodException($"No 'Start' method found on type '{builderType.Name}'.");
-        }
-
-        private static MethodInfo GetTaskGetter(Type builderType)
-        {
-            MethodInfo? getter = builderType.GetMethod("get_Task", BindingFlags.Instance | BindingFlags.Public);
-            if (getter is null || !getter.ReturnType.IsAssignableTo(typeof(IDAsyncRunnable)))
-                throw new MissingMethodException($"No Task getter found on type '{builderType.Name}'.");
-
-            return getter;
-        }
-
-        private static MethodInfo? GetFromVoidResultMethod(Type awaiterType)
-        {
-            return awaiterType.GetMethod("FromResult", BindingFlags.Static | BindingFlags.Public, []);
-        }
-
-        private static MethodInfo? GetFromExceptionMethod(Type awaiterType)
-        {
-            return awaiterType.GetMethod("FromException", BindingFlags.Static | BindingFlags.Public, [typeof(Exception)]);
-        }
-
-        private static Dictionary<Type, MethodInfo> GetFromResultMethods(Type awaiterType)
-        {
-            Dictionary<Type, MethodInfo> result = [];
-
-            foreach (MethodInfo method in awaiterType.GetMethods(BindingFlags.Static | BindingFlags.Public))
-            {
-                if (method.Name != "FromResult")
-                    continue;
-
-                if (method.GetParameters() is not [{ ParameterType: Type parameterType }])
-                    continue;
-
-                Type[] genericArguments = method.GetGenericArguments();
-                switch (genericArguments.Length)
-                {
-                    case 0:
-                        result.Add(parameterType, method);
-                        break;
-
-                    case 1:
-                        if (parameterType != genericArguments[0])
-                            break;
-
-                        result.Add(s_genericParameterType, method);
-                        break;
-                }
-            }
-
-            return result;
-        }
-
-        private sealed class PendingDehydratedRunnable(
-            DAsyncId parentId,
-            object boxedStateMachine,
-            IEnumerable<FieldHydrator> fieldHydrators,
-            StateMachineStarter starter) : DehydratedRunnable(parentId, boxedStateMachine, fieldHydrators, starter)
-        {
-            protected override void DehydrateAwaiter(object boxedStateMachine)
-            {
-            }
-
-            protected override void DehydrateAwaiter<TResult>(object boxedStateMachine, TResult result)
-            {
-                throw FailException.ForFailure("Cannot resume a pending runnable with a result.");
-            }
-
-            protected override void DehydrateAwaiter(object boxedStateMachine, Exception exception)
-            {
-                throw FailException.ForFailure("Cannot resume a pending runnable with an exception.");
-            }
-        }
-
-        private sealed class OtherAwaiterDehydratedRunnable(
-            DAsyncId parentId,
-            object boxedStateMachine,
-            IEnumerable<FieldHydrator> fieldHydrators,
-            FieldInfo awaiterField,
-            MethodInfo? fromVoidResultMethod,
-            Dictionary<Type, MethodInfo> fromResultMethods,
-            MethodInfo? fromExceptionMethod,
-            StateMachineStarter starter) : DehydratedRunnable(parentId, boxedStateMachine, fieldHydrators, starter)
-        {
-            protected override void DehydrateAwaiter(object boxedStateMachine)
-            {
-                if (fromVoidResultMethod is null)
-                    throw FailException.ForFailure($"'{awaiterField.FieldType.Name}' does not support resuming without a result.");
-
-                object? awaiter = fromVoidResultMethod.Invoke(null, null);
-                awaiterField.SetValue(boxedStateMachine, awaiter);
-            }
-
-            protected override void DehydrateAwaiter<TResult>(object boxedStateMachine, TResult result)
-            {
-                object? awaiter;
-                if (fromResultMethods.TryGetValue(typeof(TResult), out MethodInfo? fromResultMethod))
-                {
-                    awaiter = fromResultMethod.Invoke(null, [result]);
-                }
-                else if (fromResultMethods.TryGetValue(s_genericParameterType, out MethodInfo? fromResultGenericMethod))
-                {
-                    awaiter = fromResultGenericMethod.MakeGenericMethod(typeof(TResult)).Invoke(null, [result]);
-                }
-                else
-                {
-                    throw FailException.ForFailure($"'{awaiterField.FieldType.Name}' does not support resuming with result of type '{typeof(TResult)}'.");
-                }
-
-                awaiterField.SetValue(boxedStateMachine, awaiter);
-            }
-
-            protected override void DehydrateAwaiter(object boxedStateMachine, Exception exception)
-            {
-                if (fromExceptionMethod is null)
-                    throw FailException.ForFailure($"'{awaiterField.FieldType.Name}' does not support resuming with an exception.");
-
-                object? awaiter = fromExceptionMethod.Invoke(null, [exception]);
-                awaiterField.SetValue(boxedStateMachine, awaiter);
-            }
-        }
-
-        private sealed class DTaskAwaiterDehydratedRunnable(
-            DAsyncId parentId,
-            object boxedStateMachine,
-            IEnumerable<FieldHydrator> fieldHydrators,
-            FieldInfo awaiterField,
-            StateMachineStarter starter) : DehydratedRunnable(parentId, boxedStateMachine, fieldHydrators, starter)
-        {
-            protected override void DehydrateAwaiter(object boxedStateMachine)
-            {
-                DTask.Awaiter awaiter = DTask.CompletedDTask.GetAwaiter();
-                awaiterField.SetValue(boxedStateMachine, awaiter);
-            }
-
-            protected override void DehydrateAwaiter<TResult>(object boxedStateMachine, TResult result)
-            {
-                DTask.Awaiter awaiter = DTask.CompletedDTask.GetAwaiter();
-                awaiterField.SetValue(boxedStateMachine, awaiter);
-            }
-
-            protected override void DehydrateAwaiter(object boxedStateMachine, Exception exception)
-            {
-                DTask.Awaiter awaiter = DTask.FromException(exception).GetAwaiter();
-                awaiterField.SetValue(boxedStateMachine, awaiter);
-            }
-        }
-
-        private sealed class DTaskAwaiterDehydratedRunnable<TResult>(
-            DAsyncId parentId,
-            object boxedStateMachine,
-            IEnumerable<FieldHydrator> fieldHydrators,
-            FieldInfo awaiterField,
-            StateMachineStarter starter) : DehydratedRunnable(parentId, boxedStateMachine, fieldHydrators, starter)
-        {
-            protected override void DehydrateAwaiter(object boxedStateMachine)
-            {
-                DTask.Awaiter awaiter = DTask.CompletedDTask.GetAwaiter();
-                awaiterField.SetValue(boxedStateMachine, awaiter);
-            }
-
-            protected override void DehydrateAwaiter<TActualResult>(object boxedStateMachine, TActualResult actualResult)
-            {
-                if (actualResult is not TResult result)
-                    throw FailException.ForFailure($"Invalid result type. Expected a type assignable to '{typeof(TResult)}'.");
-
-                DTask<TResult>.Awaiter awaiter = DTask.FromResult(result).GetAwaiter();
-                awaiterField.SetValue(boxedStateMachine, awaiter);
-            }
-
-            protected override void DehydrateAwaiter(object boxedStateMachine, Exception exception)
-            {
-                DTask<TResult>.Awaiter awaiter = DTask<TResult>.FromException(exception).GetAwaiter();
-                awaiterField.SetValue(boxedStateMachine, awaiter);
-            }
-        }
-
-        private sealed class YieldAwaiterDehydratedRunnable(
-            DAsyncId parentId,
-            object boxedStateMachine,
-            IEnumerable<FieldHydrator> fieldHydrators,
-            StateMachineStarter starter) : DehydratedRunnable(parentId, boxedStateMachine, fieldHydrators, starter)
-        {
-            protected override void DehydrateAwaiter(object boxedStateMachine)
-            {
-            }
-
-            protected override void DehydrateAwaiter<TResult>(object boxedStateMachine, TResult result)
-            {
-                throw FailException.ForFailure("DTask.Yield should be resumed without a result.");
-            }
-
-            protected override void DehydrateAwaiter(object boxedStateMachine, Exception exception)
-            {
-                throw FailException.ForFailure("DTask.Yield cannot be resumed with an exception.");
-            }
-        }
-
-        private class MarshalingAction<T>(FieldInfo field) : IMarshalingAction
-        {
-            private FieldHydrator? _hydrator;
-
-            public FieldHydrator Hydrator => _hydrator ?? static delegate (object boxedStateMachine, IDAsyncMarshaler marshaler) { };
-
-            public void MarshalAs<TToken>(TypeId typeId, TToken token)
-            {
-                _hydrator = delegate (object boxedStateMachine, IDAsyncMarshaler marshaler)
-                {
-                    UnmarshalingAction<TToken, T> action = new(token);
-                    if (!marshaler.TryUnmarshal<T>(field.Name, typeId, action))
-                        throw FailException.ForFailure("Expected the marshaler to be able to unmarshal its own token.");
-
-                    field.SetValue(boxedStateMachine, action.Value);
-                };
-            }
-        }
-
-        private class UnmarshalingAction<TToken, T>(TToken token) : IUnmarshalingAction
-        {
-            public T? Value;
-
-            public void UnmarshalAs<TConverter>(Type tokenType, ref TConverter converter)
-                where TConverter : struct, ITokenConverter
-            {
-                Value = converter.Convert<TToken, T>(token);
-            }
         }
     }
 }

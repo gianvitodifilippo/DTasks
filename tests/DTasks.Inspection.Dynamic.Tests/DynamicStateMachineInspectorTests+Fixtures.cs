@@ -83,11 +83,11 @@ public partial class DynamicStateMachineInspectorTests
             method.DeclaringType == typeof(RuntimeTypeHandle);
     }
 
-    private static Expression<Predicate<MethodInfo>> DTaskFromResultMethod(Type resultType)
+    private static Expression<Predicate<MethodInfo>> DTaskFromResultMethod()
     {
         return method =>
             method.Name == nameof(DTask.FromResult) &&
-            method.GetGenericArguments()[0] == resultType &&
+            method.GetGenericArguments()[0].IsGenericParameter &&
             method.DeclaringType == typeof(DTask);
     }
 

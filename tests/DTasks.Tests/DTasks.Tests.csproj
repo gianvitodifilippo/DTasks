@@ -33,6 +33,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\src\DTasks.Inspection.Dynamic\DTasks.Inspection.Dynamic.csproj" />
         <ProjectReference Include="..\..\src\DTasks\DTasks.csproj" />
     </ItemGroup>
 

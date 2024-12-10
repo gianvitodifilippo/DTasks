@@ -128,10 +128,13 @@ internal partial class DAsyncFlow
     {
         public IDAsyncRunnable Task { get; private set; }
 
-        public void Start(ref WhenAllResultBranchStateMachine stateMachine)
+        public void Start<TStateMachine>(ref TStateMachine stateMachine)
         {
-            WhenAllResultBranchRunnable runnable = stateMachine.Awaiter.Runnable;
-            runnable.BranchIndex = stateMachine.BranchIndex;
+            // TODO: Inspector should support non-generic start method
+            Assert.Is<WhenAllResultBranchStateMachine>(stateMachine);
+
+            WhenAllResultBranchRunnable runnable = Unsafe.As<TStateMachine, WhenAllResultBranchStateMachine>(ref stateMachine).Awaiter.Runnable;
+            runnable.BranchIndex = Unsafe.As<TStateMachine, WhenAllResultBranchStateMachine>(ref stateMachine).BranchIndex;
             Task = runnable;
         }
 
@@ -207,9 +210,12 @@ internal partial class DAsyncFlow
     {
         public IDAsyncRunnable Task { get; private set; }
 
-        public void Start(ref WhenAnyStateMachine stateMachine)
+        public void Start<TStateMachine>(ref TStateMachine stateMachine)
         {
-            Task = new CompletedWhenAnyRunnable(ref stateMachine);
+            // TODO: Inspector should support non-generic start method
+            Assert.Is<WhenAnyStateMachine>(stateMachine);
+
+            Task = new CompletedWhenAnyRunnable(ref Unsafe.As<TStateMachine, WhenAnyStateMachine>(ref stateMachine));
         }
 
         public static WhenAnyRunnableBuilder Create() => default;
