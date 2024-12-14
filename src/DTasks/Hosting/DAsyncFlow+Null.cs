@@ -88,13 +88,13 @@ internal sealed partial class DAsyncFlow
     [ExcludeFromCodeCoverage]
     private sealed class NullDAsyncMarshaler : IDAsyncMarshaler
     {
-        bool IDAsyncMarshaler.TryMarshal<T, TAction>(string fieldName, in T value, scoped ref TAction action)
+        bool IDAsyncMarshaler.TryMarshal<T, TAction>(in T value, scoped ref TAction action)
         {
             FailForNull(nameof(_marshaler));
             throw new UnreachableException();
         }
 
-        bool IDAsyncMarshaler.TryUnmarshal<T, TAction>(string fieldName, TypeId typeId, scoped ref TAction action)
+        bool IDAsyncMarshaler.TryUnmarshal<T, TAction>(TypeId typeId, scoped ref TAction action)
         {
             FailForNull(nameof(_marshaler));
             throw new UnreachableException();

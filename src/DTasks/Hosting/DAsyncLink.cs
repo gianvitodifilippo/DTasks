@@ -9,6 +9,7 @@ public readonly struct DAsyncLink(DAsyncId parentId, IDAsyncRunnable runnable)
 
     public IDAsyncRunnable Runnable { get; } = runnable;
 
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public void Deconstruct(out DAsyncId parentId, out IDAsyncRunnable runnable)
     {
         parentId = ParentId;

@@ -8,7 +8,7 @@ public static class UnmarshalingActionExtensions
         action.UnmarshalAs(tokenType, ref wrapper);
     }
 
-    public static void UnmarshalAs<TAction, TToken, T>(this scoped ref TAction action, Type tokenType, Func<TToken, T> converter)
+    public static void UnmarshalAs<TAction, TToken, T>(this ref TAction action, Type tokenType, Func<TToken, T> converter)
         where TAction : struct, IUnmarshalingAction
 #if NET9_0_OR_GREATER
         , allows ref struct

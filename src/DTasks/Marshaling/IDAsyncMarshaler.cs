@@ -5,7 +5,7 @@ namespace DTasks.Marshaling;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IDAsyncMarshaler
 {
-    bool TryMarshal<T, TAction>(string fieldName, in T value, scoped ref TAction action)
+    bool TryMarshal<T, TAction>(in T value, scoped ref TAction action)
         where TAction : struct, IMarshalingAction
 #if NET9_0_OR_GREATER
         , allows ref struct;
@@ -13,7 +13,7 @@ public interface IDAsyncMarshaler
         ;
 #endif
 
-    bool TryUnmarshal<T, TAction>(string fieldName, TypeId typeId, scoped ref TAction action)
+    bool TryUnmarshal<T, TAction>(TypeId typeId, scoped ref TAction action)
         where TAction : struct, IUnmarshalingAction
 #if NET9_0_OR_GREATER
         , allows ref struct;

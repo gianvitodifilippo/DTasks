@@ -39,7 +39,7 @@ internal class FakeStateMachineWriter(Dictionary<string, object?> values, IDAsyn
     public void WriteField<TField>(string fieldName, TField value)
     {
         FakeMarshalingAction action = new(fieldName, values);
-        if (marshaler.TryMarshal(fieldName, in value, ref action))
+        if (marshaler.TryMarshal(in value, ref action))
             return;
 
         values.Add(fieldName, value);
@@ -56,7 +56,7 @@ internal class FakeStateMachineReader(Dictionary<string, object?> values, IDAsyn
         if (untypedValue is MarshaledValue marshaledValue)
         {
             FakeUnmarshalingAction<TField> action = new(marshaledValue, ref value);
-            if (!marshaler.TryUnmarshal<TField, FakeUnmarshalingAction<TField>>(fieldName, marshaledValue.TypeId, ref action))
+            if (!marshaler.TryUnmarshal<TField, FakeUnmarshalingAction<TField>>(marshaledValue.TypeId, ref action))
                 throw FailException.ForFailure("Marshaler should be able to unmarshal its own token.");
 
             return true;

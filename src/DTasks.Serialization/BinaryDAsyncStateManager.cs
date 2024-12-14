@@ -1,9 +1,9 @@
 ﻿using DTasks.Hosting;
-using DTasks.Serialization;
+using DTasks.Marshaling;
 using DTasks.Storage;
 using System.Buffers;
 
-namespace DTasks.Marshaling;
+namespace DTasks.Serialization;
 
 public class BinaryDAsyncStateManager(IDAsyncSerializer serializer, IDAsyncStorage storage) : IDAsyncStateManager
 {
