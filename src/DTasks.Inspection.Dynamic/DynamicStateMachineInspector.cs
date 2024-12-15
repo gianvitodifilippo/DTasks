@@ -1,6 +1,7 @@
 ﻿using DTasks.Inspection.Dynamic.Descriptors;
 using DTasks.Marshaling;
 using DTasks.Utils;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
@@ -17,7 +18,8 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
     private readonly DynamicAssembly _assembly;
     private readonly IAwaiterManager _awaiterManager;
     private readonly IConverterDescriptorFactory _converterDescriptorFactory;
-    private readonly ConcurrentDictionary<Type, object> _converters;
+    private readonly ConcurrentDictionary<Type, object> _suspenders;
+    private readonly ConcurrentDictionary<Type, object> _resumers;
 
     internal DynamicStateMachineInspector(
         DynamicAssembly assembly,
@@ -27,35 +29,39 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
         _assembly = assembly;
         _awaiterManager = awaiterManager;
         _converterDescriptorFactory = converterDescriptorFactory;
-        _converters = [];
+        _suspenders = [];
+        _resumers = [];
     }
 
-    public object GetConverter(Type stateMachineType)
+    public object GetSuspender(Type stateMachineType)
     {
-        return _converters.GetOrAdd(stateMachineType, CreateConverter, this);
+        return _suspenders.GetOrAdd(stateMachineType, CreateSuspender, this);
 
-        static object CreateConverter(Type stateMachineType, DynamicStateMachineInspector self)
-            => self.CreateConverter(stateMachineType);
+        static object CreateSuspender(Type stateMachineType, DynamicStateMachineInspector self)
+            => self.CreateSuspender(stateMachineType);
     }
 
-    private object CreateConverter(Type stateMachineType)
+    public object GetResumer(Type stateMachineType)
+    {
+        return _resumers.GetOrAdd(stateMachineType, CreateResumer, this);
+
+        static object CreateResumer(Type stateMachineType, DynamicStateMachineInspector self)
+            => self.CreateResumer(stateMachineType);
+    }
+
+    private object CreateSuspender(Type stateMachineType)
     {
         StateMachineDescriptor stateMachineDescriptor = StateMachineDescriptor.Create(stateMachineType);
+        ISuspenderDescriptor suspenderDescriptor = _converterDescriptorFactory.CreateSuspenderDescriptor(stateMachineType);
 
-        IConverterDescriptor converterDescriptor = _converterDescriptorFactory.CreateDescriptor(stateMachineType);
-        TypeBuilder converterType = _assembly.DefineConverterType(stateMachineType);
-        converterType.AddInterfaceImplementation(converterDescriptor.Type);
+        TypeBuilder suspenderType = _assembly.DefineSuspenderType(stateMachineType);
+        suspenderType.AddInterfaceImplementation(suspenderDescriptor.Type);
 
-        FieldBuilder awaiterManagerField = DefineAwaiterManagerField(converterType);
-        DefineConstructor(converterType, awaiterManagerField);
-        
-        MethodBuilder suspendMethod = converterType.DefineMethodOverride(converterDescriptor.SuspendMethod);
-        MethodBuilder resumeWithVoidMethod = converterType.DefineMethodOverride(converterDescriptor.ResumeWithVoidMethod);
-        MethodBuilder resumeWithResultMethod = converterType.DefineMethodOverride(converterDescriptor.ResumeWithResultMethod);
+        FieldBuilder awaiterManagerField = DefineAwaiterManagerField(suspenderType);
+        DefineConstructor(suspenderType, awaiterManagerField);
 
-        SuspendMethodImplementor suspendImplementor = new(suspendMethod, awaiterManagerField, stateMachineDescriptor, converterDescriptor);
-        ResumeWithVoidMethodImplementor resumeWithVoidImplementor = new(resumeWithVoidMethod, awaiterManagerField, stateMachineDescriptor, converterDescriptor);
-        ResumeWithResultMethodImplementor resumeWithResultImplementor = new(resumeWithResultMethod, awaiterManagerField, stateMachineDescriptor, converterDescriptor);
+        MethodBuilder suspendMethod = suspenderType.DefineMethodOverride(suspenderDescriptor.SuspendMethod);
+        SuspendMethodImplementor suspendImplementor = new(suspendMethod, awaiterManagerField, stateMachineDescriptor, suspenderDescriptor);
 
         foreach (FieldInfo userField in stateMachineDescriptor.UserFields)
         {
@@ -63,6 +69,26 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
         }
         suspendImplementor.OnAwaiterFields(stateMachineDescriptor.AwaiterFields);
         suspendImplementor.Return();
+
+        return Activator.CreateInstance(suspenderType.CreateType(), [_awaiterManager])!;
+    }
+
+    private object CreateResumer(Type stateMachineType)
+    {
+        StateMachineDescriptor stateMachineDescriptor = StateMachineDescriptor.Create(stateMachineType);
+        IResumerDescriptor resumerDescriptor = _converterDescriptorFactory.ResumerDescriptor;
+
+        TypeBuilder resumerType = _assembly.DefineResumerType(stateMachineType);
+        resumerType.AddInterfaceImplementation(resumerDescriptor.Type);
+
+        FieldBuilder awaiterManagerField = DefineAwaiterManagerField(resumerType);
+        DefineConstructor(resumerType, awaiterManagerField);
+        
+        MethodBuilder resumeWithVoidMethod = resumerType.DefineMethodOverride(resumerDescriptor.ResumeWithVoidMethod);
+        MethodBuilder resumeWithResultMethod = resumerType.DefineMethodOverride(resumerDescriptor.ResumeWithResultMethod);
+
+        ResumeWithVoidMethodImplementor resumeWithVoidImplementor = new(resumeWithVoidMethod, awaiterManagerField, stateMachineDescriptor, resumerDescriptor);
+        ResumeWithResultMethodImplementor resumeWithResultImplementor = new(resumeWithResultMethod, awaiterManagerField, stateMachineDescriptor, resumerDescriptor);
 
         resumeWithVoidImplementor.DeclareLocals();
         resumeWithVoidImplementor.InitStateMachine();
@@ -82,7 +108,7 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
         resumeWithResultImplementor.OnAwaiterFields(stateMachineDescriptor.AwaiterFields);
         resumeWithResultImplementor.Return();
 
-        return Activator.CreateInstance(converterType.CreateType(), [_awaiterManager])!;
+        return Activator.CreateInstance(resumerType.CreateType(), [_awaiterManager])!;
     }
 
     private static FieldBuilder DefineAwaiterManagerField(TypeBuilder converterType)
@@ -101,7 +127,7 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
         ILGenerator il = constructor.GetILGenerator();
 
         il.Emit(OpCodes.Ldarg_0);                    // Stack: this
-        il.Emit(OpCodes.Ldarg_1);                    // Stack: this, $awaiterManager
+        il.Emit(OpCodes.Ldarg_1);                    // Stack: this, awaiterManager
         il.Emit(OpCodes.Stfld, awaiterManagerField); // Stack: -
         il.Emit(OpCodes.Ldarg_0);                    // Stack: this
         il.Emit(OpCodes.Call, s_objectConstructor);  // Stack: -
@@ -110,13 +136,12 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
         return constructor;
     }
 
-    // TODO: Separate converter into suspender and resumer, since callers of Resume are not generic methods
-    public static DynamicStateMachineInspector Create(Type converterType, ITypeResolver typeResolver)
+    public static DynamicStateMachineInspector Create(Type suspenderType, Type resumerType, ITypeResolver typeResolver)
     {
-        if (!ConverterDescriptorFactory.TryCreate(converterType, out ConverterDescriptorFactory? converterDescriptorFactory))
-            throw new ArgumentException("The provided converter type is not compliant.", nameof(converterType));
+        if (!ConverterDescriptorFactory.TryCreate(suspenderType, resumerType, out ConverterDescriptorFactory? converterDescriptorFactory))
+            throw new ArgumentException("The provided converter type is not compliant.", nameof(suspenderType));
 
-        DynamicAssembly assembly = new(converterType);
+        DynamicAssembly assembly = new(suspenderType);
         AwaiterManager awaiterManager = new(assembly, typeResolver);
 
         return new(assembly, awaiterManager, converterDescriptorFactory);
@@ -126,17 +151,17 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
         MethodBuilder suspendMethod,
         FieldInfo awaiterManagerField,
         StateMachineDescriptor stateMachineDescriptor,
-        IConverterDescriptor converterDescriptor)
+        ISuspenderDescriptor suspenderDescriptor)
     {
         private readonly InspectorILGenerator _il = InspectorILGenerator.Create(
             suspendMethod,
             stateMachineDescriptor,
-            converterDescriptor.SuspendMethod.GetParameters()[^1].ParameterType,
-            converterDescriptor.Writer.Type);
+            suspenderDescriptor.SuspendMethod.GetParameters()[^1].ParameterType,
+            suspenderDescriptor.Writer.Type);
 
         public void OnUserField(FieldInfo field)
         {
-            MethodInfo writeFieldMethod = converterDescriptor.Writer.GetWriteFieldMethod(field.FieldType);
+            MethodInfo writeFieldMethod = suspenderDescriptor.Writer.GetWriteFieldMethod(field.FieldType);
 
             // writer.WriteField($fieldName, stateMachine.$field);
             _il.LoadWriter();                       // Stack: writer
@@ -171,7 +196,7 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
 
                 if (field.FieldType.IsValueType)
                 {
-                    MethodInfo writeFieldMethod = converterDescriptor.Writer.GetWriteFieldMethod(typeof(int));
+                    MethodInfo writeFieldMethod = suspenderDescriptor.Writer.GetWriteFieldMethod(typeof(int));
 
                     // writer.WriteField($AwaiterFieldName, $field.Name);
                     _il.LoadWriter();                                     // Stack: writer
@@ -183,7 +208,7 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
                 {
                     Debug.Assert(field.FieldType == typeof(object));
 
-                    MethodInfo writeFieldMethod = converterDescriptor.Writer.GetWriteFieldMethod(typeof(TypeId));
+                    MethodInfo writeFieldMethod = suspenderDescriptor.Writer.GetWriteFieldMethod(typeof(TypeId));
 
                     // writer.WriteField($AwaiterFieldName, _awaiterManager.GetTypeId(stateMachine.$field));
                     _il.LoadWriter();                                        // Stack: writer
@@ -213,13 +238,13 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
         MethodBuilder resumeWithVoidMethod,
         FieldInfo awaiterManagerField,
         StateMachineDescriptor stateMachineDescriptor,
-        IConverterDescriptor converterDescriptor)
+        IResumerDescriptor resumerDescriptor)
     {
         private readonly InspectorILGenerator _il = InspectorILGenerator.Create(
             resumeWithVoidMethod,
             stateMachineDescriptor,
-            converterDescriptor.ResumeWithVoidMethod.GetParameters()[0].ParameterType,
-            converterDescriptor.Reader.Type);
+            resumerDescriptor.ResumeWithVoidMethod.GetParameters()[0].ParameterType,
+            resumerDescriptor.Reader.Type);
 
         public void DeclareLocals()
         {
@@ -235,7 +260,7 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
 
         public void OnUserField(FieldInfo field)
         {
-            MethodInfo readFieldMethod = converterDescriptor.Reader.GetReadFieldMethod(field.FieldType);
+            MethodInfo readFieldMethod = resumerDescriptor.Reader.GetReadFieldMethod(field.FieldType);
 
             _il.LoadReader();                      // Stack: reader
             _il.LoadString(field.Name);            // Stack: reader, $field.Name
@@ -247,8 +272,8 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
 
         public void OnAwaiterFields(IReadOnlyCollection<IndexedFieldInfo> indexedFields)
         {
-            MethodInfo readIntFieldMethod = converterDescriptor.Reader.GetReadFieldMethod(typeof(int));
-            MethodInfo readTypeIdFieldMethod = converterDescriptor.Reader.GetReadFieldMethod(typeof(TypeId));
+            MethodInfo readIntFieldMethod = resumerDescriptor.Reader.GetReadFieldMethod(typeof(int));
+            MethodInfo readTypeIdFieldMethod = resumerDescriptor.Reader.GetReadFieldMethod(typeof(TypeId));
             FieldInfo? refAwaiterField = stateMachineDescriptor.RefAwaiterField;
             bool hasRefAwaiterField = refAwaiterField is not null;
 
@@ -397,13 +422,13 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
         MethodBuilder resumeWithResultMethod,
         FieldInfo awaiterManagerField,
         StateMachineDescriptor stateMachineDescriptor,
-        IConverterDescriptor converterDescriptor)
+        IResumerDescriptor resumerDescriptor)
     {
         private readonly InspectorILGenerator _il = InspectorILGenerator.Create(
             resumeWithResultMethod,
             stateMachineDescriptor,
-            converterDescriptor.ResumeWithResultMethod.GetParameters()[0].ParameterType,
-            converterDescriptor.Reader.Type);
+            resumerDescriptor.ResumeWithResultMethod.GetParameters()[0].ParameterType,
+            resumerDescriptor.Reader.Type);
 
         public void DeclareLocals()
         {
@@ -419,7 +444,7 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
 
         public void OnUserField(FieldInfo field)
         {
-            MethodInfo readFieldMethod = converterDescriptor.Reader.GetReadFieldMethod(field.FieldType);
+            MethodInfo readFieldMethod = resumerDescriptor.Reader.GetReadFieldMethod(field.FieldType);
 
             _il.LoadReader();                      // Stack: reader
             _il.LoadString(field.Name);            // Stack: reader, $field.Name
@@ -431,9 +456,9 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
 
         public void OnAwaiterFields(IReadOnlyCollection<IndexedFieldInfo> indexedFields)
         {
-            Type resultType = converterDescriptor.ResumeWithResultMethod.GetGenericArguments()[0];
-            MethodInfo readIntFieldMethod = converterDescriptor.Reader.GetReadFieldMethod(typeof(int));
-            MethodInfo readTypeIdFieldMethod = converterDescriptor.Reader.GetReadFieldMethod(typeof(TypeId));
+            Type resultType = resumerDescriptor.ResumeWithResultMethod.GetGenericArguments()[0];
+            MethodInfo readIntFieldMethod = resumerDescriptor.Reader.GetReadFieldMethod(typeof(int));
+            MethodInfo readTypeIdFieldMethod = resumerDescriptor.Reader.GetReadFieldMethod(typeof(TypeId));
             FieldInfo? refAwaiterField = stateMachineDescriptor.RefAwaiterField;
             bool hasRefAwaiterField = refAwaiterField is not null;
 

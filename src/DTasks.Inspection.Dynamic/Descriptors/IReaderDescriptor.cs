@@ -2,7 +2,7 @@
 
 namespace DTasks.Inspection.Dynamic.Descriptors;
 
-public interface IReaderDescriptor
+internal interface IReaderDescriptor
 {
     Type Type { get; }
 

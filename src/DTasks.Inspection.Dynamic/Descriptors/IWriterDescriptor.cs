@@ -2,7 +2,7 @@
 
 namespace DTasks.Inspection.Dynamic.Descriptors;
 
-public interface IWriterDescriptor
+internal interface IWriterDescriptor
 {
     Type Type { get; }
 

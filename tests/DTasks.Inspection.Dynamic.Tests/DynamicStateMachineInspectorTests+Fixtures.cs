@@ -13,11 +13,19 @@ public partial class DynamicStateMachineInspectorTests
         return field => field.DeclaringType == StateMachineType && field.Name == name;
     }
 
-    private static Expression<Predicate<FieldInfo>> ConverterField(string name)
+    private static Expression<Predicate<FieldInfo>> SuspenderField(string name)
     {
         return field =>
             field.DeclaringType != null &&
-            field.DeclaringType.Name.EndsWith("Converter") &&
+            field.DeclaringType.Name.EndsWith("Suspender") &&
+            field.Name == name;
+    }
+
+    private static Expression<Predicate<FieldInfo>> ResumerField(string name)
+    {
+        return field =>
+            field.DeclaringType != null &&
+            field.DeclaringType.Name.EndsWith("Resumer") &&
             field.Name == name;
     }
 

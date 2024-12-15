@@ -43,6 +43,29 @@ public static class InspectionFixtures
 #endif
     }
 
+    public static MethodInfo GetSuspendMethod(Type suspenderType, Type writerParameterType)
+    {
+        Type stateMachineType = suspenderType.GetGenericArguments()[0];
+
+        return suspenderType.GetRequiredMethod(
+            name: InspectionConstants.SuspendMethodName,
+            genericParameterCount: 0,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            parameterTypes: [stateMachineType.MakeByRefType(), typeof(ISuspensionContext), writerParameterType]);
+    }
+
+    public static MethodInfo GetResumeWithVoidMethod(Type resumerType, Type readerParameterType) => resumerType.GetRequiredMethod(
+        name: InspectionConstants.ResumeMethodName,
+        genericParameterCount: 0,
+        bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+        parameterTypes: [readerParameterType]);
+
+    public static MethodInfo GetResumeWithResultMethod(Type resumerType, Type readerParameterType) => resumerType.GetRequiredMethod(
+        name: InspectionConstants.ResumeMethodName,
+        genericParameterCount: 1,
+        bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+        parameterTypes: [readerParameterType, Type.MakeGenericMethodParameter(0)]);
+
     public class AsyncMethodContainer
     {
         private int _field = 0;
@@ -85,109 +108,49 @@ public static class InspectionFixtures
     }
 
 
-    public interface IStateMachineConverter1<TStateMachine>
+    public interface IStateMachineSuspender1<TStateMachine>
     {
-        public static readonly MethodInfo SuspendMethod = typeof(IStateMachineConverter1<TStateMachine>).GetRequiredMethod(
-            name: nameof(Suspend),
-            genericParameterCount: 0,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [typeof(TStateMachine).MakeByRefType(), typeof(ISuspensionContext), typeof(ClassWriter)]);
-
-        public static readonly MethodInfo ResumeWithVoidMethod = typeof(IStateMachineConverter1<TStateMachine>).GetRequiredMethod(
-            name: nameof(Resume),
-            genericParameterCount: 0,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [typeof(ClassReader)]);
-
-        public static readonly MethodInfo ResumeWithResultMethod = typeof(IStateMachineConverter1<TStateMachine>).GetRequiredMethod(
-            name: nameof(Resume),
-            genericParameterCount: 1,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [typeof(ClassReader), Type.MakeGenericMethodParameter(0)]);
-
         void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext, ClassWriter writer);
+    }
 
+    public interface IStateMachineResumer1
+    {
         IDAsyncRunnable Resume(ClassReader reader);
 
         IDAsyncRunnable Resume<TResult>(ClassReader reader, TResult result);
     }
 
-    public interface IStateMachineConverter2<TStateMachine>
+    public interface IStateMachineSuspender2<TStateMachine>
     {
-        public static readonly MethodInfo SuspendMethod = typeof(IStateMachineConverter2<TStateMachine>).GetRequiredMethod(
-            name: nameof(Suspend),
-            genericParameterCount: 0,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [typeof(TStateMachine).MakeByRefType(), typeof(ISuspensionContext), typeof(StructWriter)]);
-
-        public static readonly MethodInfo ResumeWithVoidMethod = typeof(IStateMachineConverter2<TStateMachine>).GetRequiredMethod(
-            name: nameof(Resume),
-            genericParameterCount: 0,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [typeof(StructReader)]);
-
-        public static readonly MethodInfo ResumeWithResultMethod = typeof(IStateMachineConverter2<TStateMachine>).GetRequiredMethod(
-            name: nameof(Resume),
-            genericParameterCount: 1,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [typeof(StructReader), Type.MakeGenericMethodParameter(0)]);
-
         void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext, StructWriter writer);
+    }
 
+    public interface IStateMachineResumer2
+    {
         IDAsyncRunnable Resume(StructReader reader);
 
         IDAsyncRunnable Resume<TResult>(StructReader reader, TResult result);
     }
 
-    public interface IStateMachineConverter3<TStateMachine>
+    public interface IStateMachineSuspender3<TStateMachine>
     {
-        public static readonly MethodInfo SuspendMethod = typeof(IStateMachineConverter3<TStateMachine>).GetRequiredMethod(
-            name: nameof(Suspend),
-            genericParameterCount: 0,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [typeof(TStateMachine).MakeByRefType(), typeof(ISuspensionContext), typeof(StructWriter).MakeByRefType()]);
-
-        public static readonly MethodInfo ResumeWithVoidMethod = typeof(IStateMachineConverter3<TStateMachine>).GetRequiredMethod(
-            name: nameof(Resume),
-            genericParameterCount: 0,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [typeof(StructReader).MakeByRefType()]);
-
-        public static readonly MethodInfo ResumeWithResultMethod = typeof(IStateMachineConverter3<TStateMachine>).GetRequiredMethod(
-            name: nameof(Resume),
-            genericParameterCount: 1,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [typeof(StructReader).MakeByRefType(), Type.MakeGenericMethodParameter(0)]);
-
         void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext, ref StructWriter writer);
+    }
 
+    public interface IStateMachineResumer3
+    {
         IDAsyncRunnable Resume(ref StructReader reader);
 
         IDAsyncRunnable Resume<TResult>(ref StructReader reader, TResult result);
     }
 
-    public interface IStateMachineConverter4<TStateMachine>
+    public interface IStateMachineSuspender4<TStateMachine>
     {
-        public static readonly MethodInfo SuspendMethod = typeof(IStateMachineConverter4<TStateMachine>).GetRequiredMethod(
-            name: nameof(Suspend),
-            genericParameterCount: 0,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [typeof(TStateMachine).MakeByRefType(), typeof(ISuspensionContext), typeof(WriterWithSpecializedMethod)]);
-
-        public static readonly MethodInfo ResumeWithVoidMethod = typeof(IStateMachineConverter4<TStateMachine>).GetRequiredMethod(
-            name: nameof(Resume),
-            genericParameterCount: 0,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [typeof(ReaderWithSpecializedMethod)]);
-
-        public static readonly MethodInfo ResumeWithResultMethod = typeof(IStateMachineConverter4<TStateMachine>).GetRequiredMethod(
-            name: nameof(Resume),
-            genericParameterCount: 1,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [typeof(ReaderWithSpecializedMethod), Type.MakeGenericMethodParameter(0)]);
-
         void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext, WriterWithSpecializedMethod writer);
+    }
 
+    public interface IStateMachineResumer4
+    {
         IDAsyncRunnable Resume(ReaderWithSpecializedMethod reader);
 
         IDAsyncRunnable Resume<TResult>(ReaderWithSpecializedMethod reader, TResult result);

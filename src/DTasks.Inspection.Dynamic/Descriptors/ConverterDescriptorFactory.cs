@@ -8,46 +8,34 @@ using DTasks.Utils;
 namespace DTasks.Inspection.Dynamic.Descriptors;
 
 internal class ConverterDescriptorFactory(
-    Type converterGenericType,
-    Type readerParameterType,
+    Type suspenderGenericType,
     Type writerParameterType,
-    IReaderDescriptor reader,
-    IWriterDescriptor writer) : IConverterDescriptorFactory
+    IWriterDescriptor writer,
+    IResumerDescriptor resumerDescriptor) : IConverterDescriptorFactory
 {
-    public IConverterDescriptor CreateDescriptor(Type stateMachineType)
-    {
-        Type converterType = converterGenericType.MakeGenericType(stateMachineType);
+    public IResumerDescriptor ResumerDescriptor => resumerDescriptor;
 
-        MethodInfo suspendMethod = converterType.GetRequiredMethod(
+    public ISuspenderDescriptor CreateSuspenderDescriptor(Type stateMachineType)
+    {
+        Type suspenderType = suspenderGenericType.MakeGenericType(stateMachineType);
+        MethodInfo suspendMethod = suspenderType.GetRequiredMethod(
             name: InspectionConstants.SuspendMethodName,
             genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             parameterTypes: [stateMachineType.MakeByRefType(), typeof(ISuspensionContext), writerParameterType]);
 
-        MethodInfo resumeWithVoidMethod = converterType.GetRequiredMethod(
-            name: InspectionConstants.ResumeMethodName,
-            genericParameterCount: 0,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [readerParameterType]);
-
-        MethodInfo resumeWithResultMethod = converterType.GetRequiredMethod(
-            name: InspectionConstants.ResumeMethodName,
-            genericParameterCount: 1,
-            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [readerParameterType, Type.MakeGenericMethodParameter(0)]);
-
-        return new ConverterDescriptor(converterType, suspendMethod, resumeWithVoidMethod, resumeWithResultMethod, reader, writer);
+        return new SuspenderDescriptor(suspenderType, suspendMethod, writer);
     }
 
-    public static bool TryCreate(Type converterType, [NotNullWhen(true)] out ConverterDescriptorFactory? factory)
+    public static bool TryCreate(Type suspenderType, Type resumerType, [NotNullWhen(true)] out ConverterDescriptorFactory? factory)
     {
-        if (!converterType.IsInterface)
+        if (!suspenderType.IsInterface || !resumerType.IsInterface)
             return False(out factory);
 
-        if (!converterType.IsGenericTypeDefinition)
+        if (!suspenderType.IsGenericTypeDefinition || resumerType.IsGenericTypeDefinition)
             return False(out factory);
 
-        if (converterType.GetGenericArguments() is not [Type stateMachineType])
+        if (suspenderType.GetGenericArguments() is not [Type stateMachineType])
             return False(out factory);
 
         if (stateMachineType.BaseType != typeof(object))
@@ -59,39 +47,39 @@ internal class ConverterDescriptorFactory(
         if (stateMachineType.GetGenericParameterConstraints() is not [])
             return False(out factory);
 
-        MethodInfo[] methods = converterType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+        MethodInfo[] suspenderMethods = suspenderType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+        MethodInfo[] resumerMethods = resumerType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
         bool hasSuspendMethod = false;
-        bool hasResumeWithVoidMethod = false;
-        bool hasResumeWithResultMethod = false;
+        MethodInfo? resumeWithVoidMethod = null;
+        MethodInfo? resumeWithResultMethod = null;
         Type? writerParameterType = null;
         Type? readerParameterType = null;
 
-        foreach (MethodInfo method in methods)
+        foreach (MethodInfo method in suspenderMethods)
         {
+            if (method.Name != InspectionConstants.SuspendMethodName)
+                return False(out factory);
+
+            if (!HasSuspendMethod(method))
+                return False(out factory);
+        }
+
+        foreach (MethodInfo method in resumerMethods)
+        {
+            if (method.Name != InspectionConstants.ResumeMethodName)
+                return False(out factory);
+
             ParameterInfo[] parameters = method.GetParameters();
-            switch (method.Name)
+            switch (parameters.Length)
             {
-                case InspectionConstants.SuspendMethodName:
-                    if (!HasSuspendMethod(method, parameters))
+                case 1:
+                    if (!HasResumeWithVoidMethod(method, parameters))
                         return False(out factory);
                     break;
 
-                case InspectionConstants.ResumeMethodName:
-                    switch (parameters.Length)
-                    {
-                        case 1:
-                            if (!HasResumeWithVoidMethod(method, parameters))
-                                return False(out factory);
-                            break;
-
-                        case 2:
-                            if (!HasResumeWithResultMethod(method, parameters))
-                                return False(out factory);
-                            break;
-
-                        default:
-                            return False(out factory);
-                    }
+                case 2:
+                    if (!HasResumeWithResultMethod(method, parameters))
+                        return False(out factory);
                     break;
 
                 default:
@@ -99,7 +87,7 @@ internal class ConverterDescriptorFactory(
             }
         }
 
-        if (!hasSuspendMethod || !hasResumeWithVoidMethod || !hasResumeWithResultMethod)
+        if (!hasSuspendMethod || resumeWithVoidMethod is null || resumeWithResultMethod is null)
             return False(out factory);
 
         if (readerParameterType is null || writerParameterType is null)
@@ -125,11 +113,13 @@ internal class ConverterDescriptorFactory(
         if (!WriterDescriptor.TryCreate(writerType, out WriterDescriptor? writer))
             return False(out factory);
 
-        factory = new(converterType, readerParameterType, writerParameterType, reader, writer);
+        ResumerDescriptor resumerDescriptor = new(resumerType, resumeWithVoidMethod, resumeWithResultMethod, reader);
+        factory = new(suspenderType, writerParameterType, writer, resumerDescriptor);
         return true;
 
-        bool HasSuspendMethod(MethodInfo method, ParameterInfo[] parameters)
+        bool HasSuspendMethod(MethodInfo method)
         {
+            ParameterInfo[] parameters = method.GetParameters();
             if (parameters is not [ParameterInfo stateMachineParam, ParameterInfo suspensionContextParam, ParameterInfo writerParameter])
                 return false;
 
@@ -157,7 +147,7 @@ internal class ConverterDescriptorFactory(
             if (method.ReturnType != typeof(IDAsyncRunnable))
                 return false;
 
-            if (hasResumeWithVoidMethod)
+            if (resumeWithVoidMethod is not null)
                 return false;
 
             if (readerParameterType is null)
@@ -167,7 +157,7 @@ internal class ConverterDescriptorFactory(
             else if (readerParameterType != parameters[0].ParameterType)
                 return false;
 
-            hasResumeWithVoidMethod = true;
+            resumeWithVoidMethod = method;
             return true;
         }
 
@@ -187,7 +177,7 @@ internal class ConverterDescriptorFactory(
             if (method.ReturnType != typeof(IDAsyncRunnable))
                 return false;
 
-            if (hasResumeWithResultMethod)
+            if (resumeWithResultMethod is not null)
                 return false;
 
             if (readerParameterType is null)
@@ -197,7 +187,7 @@ internal class ConverterDescriptorFactory(
             else if (readerParameterType != parameters[0].ParameterType)
                 return false;
 
-            hasResumeWithResultMethod = true;
+            resumeWithResultMethod = method;
             return true;
         }
 

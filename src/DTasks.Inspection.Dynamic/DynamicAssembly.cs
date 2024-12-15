@@ -82,11 +82,18 @@ internal sealed class DynamicAssembly
         EnsureAccess(converterType.Assembly);
     }
 
-    public TypeBuilder DefineConverterType(Type stateMachineType)
+    public TypeBuilder DefineSuspenderType(Type stateMachineType)
     {
         EnsureAccess(stateMachineType.Assembly);
 
-        return _module.DefineType(stateMachineType.FullName + "Converter", TypeAttributes.Public | TypeAttributes.Class);
+        return _module.DefineType(stateMachineType.FullName + "Suspender", TypeAttributes.Public | TypeAttributes.Class);
+    }
+
+    public TypeBuilder DefineResumerType(Type stateMachineType)
+    {
+        EnsureAccess(stateMachineType.Assembly);
+
+        return _module.DefineType(stateMachineType.FullName + "Resumer", TypeAttributes.Public | TypeAttributes.Class);
     }
 
     public TypeBuilder DefineAwaiterFactoryType(Type awaiterType)

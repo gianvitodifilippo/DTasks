@@ -6,11 +6,14 @@ using Xunit.Sdk;
 
 namespace DTasks.Hosting;
 
-internal interface IFakeStateMachineConverter<TStateMachine>
+internal interface IFakeStateMachineSuspender<TStateMachine>
     where TStateMachine : notnull
 {
     void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext, FakeStateMachineWriter writer);
+}
 
+internal interface IFakeStateMachineResumer
+{
     IDAsyncRunnable Resume(FakeStateMachineReader reader);
 
     IDAsyncRunnable Resume<TResult>(FakeStateMachineReader reader, TResult result);
@@ -93,7 +96,7 @@ internal readonly ref struct FakeUnmarshalingAction<TField>(MarshaledValue marsh
 
 internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeResolver typeResolver) : IDAsyncStateManager
 {
-    private readonly DynamicStateMachineInspector _inspector = DynamicStateMachineInspector.Create(typeof(IFakeStateMachineConverter<>), typeResolver);
+    private readonly DynamicStateMachineInspector _inspector = DynamicStateMachineInspector.Create(typeof(IFakeStateMachineSuspender<>), typeof(IFakeStateMachineResumer), typeResolver);
     private readonly Dictionary<DAsyncId, DehydratedRunnable> _runnables = [];
     private Action<DAsyncId>? _onDehydrate;
 
@@ -181,7 +184,7 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeRe
         {
             FakeStateMachineWriter writer = new(_values, marshaler);
 
-            var converter = (IFakeStateMachineConverter<TStateMachine>)inspector.GetConverter(typeof(TStateMachine));
+            var converter = (IFakeStateMachineSuspender<TStateMachine>)inspector.GetSuspender(typeof(TStateMachine));
             converter.Suspend(ref stateMachine, suspensionContext, writer);
         }
 
@@ -189,7 +192,7 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeRe
         {
             FakeStateMachineReader reader = new(_values, marshaler);
 
-            var converter = (IFakeStateMachineConverter<TStateMachine>)inspector.GetConverter(typeof(TStateMachine));
+            var converter = (IFakeStateMachineResumer)inspector.GetResumer(typeof(TStateMachine));
             IDAsyncRunnable runnable = converter.Resume(reader);
 
             return new DAsyncLink(parentId, runnable);
@@ -199,7 +202,7 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeRe
         {
             FakeStateMachineReader reader = new(_values, marshaler);
 
-            var converter = (IFakeStateMachineConverter<TStateMachine>)inspector.GetConverter(typeof(TStateMachine));
+            var converter = (IFakeStateMachineResumer)inspector.GetResumer(typeof(TStateMachine));
             IDAsyncRunnable runnable = converter.Resume(reader, result);
 
             return new DAsyncLink(parentId, runnable);

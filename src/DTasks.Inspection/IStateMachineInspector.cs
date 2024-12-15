@@ -2,5 +2,7 @@
 
 public interface IStateMachineInspector
 {
-    object GetConverter(Type stateMachineType);
+    object GetSuspender(Type stateMachineType);
+
+    object GetResumer(Type stateMachineType);
 }

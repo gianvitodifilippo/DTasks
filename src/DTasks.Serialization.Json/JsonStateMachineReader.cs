@@ -1,6 +1,8 @@
 ﻿using DTasks.Marshaling;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DTasks.Hosting;
+using DTasks.Inspection;
 
 #if NET9_0_OR_GREATER
 using System.Runtime.CompilerServices;
@@ -14,7 +16,38 @@ internal ref struct JsonStateMachineReader(
     ReferenceResolver referenceResolver,
     IDAsyncMarshaler marshaler)
 {
+    public delegate IDAsyncRunnable ResumeAction<T>(IStateMachineResumer resumer, T arg, ref JsonStateMachineReader reader);
+
     private Utf8JsonReader _reader = new(bytes);
+
+    public DAsyncLink DeserializeStateMachine<T>(IStateMachineInspector inspector, ITypeResolver typeResolver, T arg, ResumeAction<T> resume)
+    {
+        _reader.MoveNext();
+        _reader.ExpectToken(JsonTokenType.StartObject);
+
+        _reader.MoveNext();
+        _reader.ExpectPropertyName("$typeId");
+
+        _reader.MoveNext();
+        TypeId typeId = _reader.ReadTypeId();
+
+        _reader.MoveNext();
+        _reader.ExpectPropertyName("$parentId");
+
+        _reader.MoveNext();
+        DAsyncId parentId = _reader.ReadDAsyncId();
+
+        Type stateMachineType = typeResolver.GetType(typeId);
+
+        IStateMachineResumer resumer = (IStateMachineResumer)inspector.GetResumer(stateMachineType);
+        IDAsyncRunnable runnable = resume(resumer, arg, ref this);
+
+        _reader.ExpectToken(JsonTokenType.EndObject);
+        _reader.MoveNext();
+        _reader.ExpectEnd();
+
+        return new DAsyncLink(parentId, runnable);
+    }
 
     public bool ReadField<TField>(string name, ref TField? value)
     {
@@ -32,6 +65,16 @@ internal ref struct JsonStateMachineReader(
 
         _reader.MoveNext();
         return true;
+    }
+
+    internal DAsyncId ReadParentId()
+    {
+        throw new NotImplementedException();
+    }
+
+    internal TypeId ReadTypeId()
+    {
+        throw new NotImplementedException();
     }
 
     private bool ReadMarshaledValue<TField>(string name, ref TField? value)

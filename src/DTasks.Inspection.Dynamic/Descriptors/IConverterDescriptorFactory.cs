@@ -2,5 +2,7 @@
 
 internal interface IConverterDescriptorFactory
 {
-    IConverterDescriptor CreateDescriptor(Type stateMachineType);
+    IResumerDescriptor ResumerDescriptor { get; }
+
+    ISuspenderDescriptor CreateSuspenderDescriptor(Type stateMachineType);
 }

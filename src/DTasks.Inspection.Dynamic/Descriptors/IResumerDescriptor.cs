@@ -2,17 +2,13 @@
 
 namespace DTasks.Inspection.Dynamic.Descriptors;
 
-internal interface IConverterDescriptor
+internal interface IResumerDescriptor
 {
     Type Type { get; }
-
-    MethodInfo SuspendMethod { get; }
 
     MethodInfo ResumeWithVoidMethod { get; }
 
     MethodInfo ResumeWithResultMethod { get; }
 
     IReaderDescriptor Reader { get; }
-
-    IWriterDescriptor Writer { get; }
 }

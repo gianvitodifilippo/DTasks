@@ -2,7 +2,6 @@
 using DTasks.Inspection;
 using DTasks.Marshaling;
 using System.Buffers;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -31,44 +30,29 @@ internal class JsonDAsyncSerializer : IDAsyncSerializer
     public void SerializeStateMachine<TStateMachine>(IBufferWriter<byte> buffer, DAsyncId parentId, ref TStateMachine stateMachine, ISuspensionContext suspensionContext)
         where TStateMachine : notnull
     {
-        bool skipValidation =
-#if DEBUG
-            false
-#else
-            true;
-#endif
+        JsonStateMachineWriter stateMachineWriter = new(buffer, _jsonOptions, _referenceResolver, _marshaler);
+        IStateMachineSuspender<TStateMachine> suspender = (IStateMachineSuspender<TStateMachine>)_inspector.GetSuspender(typeof(TStateMachine));
+        TypeId typeId = _typeResolver.GetTypeId(typeof(TStateMachine));
 
-        Utf8JsonWriter jsonWriter = new(buffer, new JsonWriterOptions
-        {
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            IndentCharacter = _jsonOptions.IndentCharacter,
-            Indented = _jsonOptions.WriteIndented,
-            IndentSize = _jsonOptions.IndentSize,
-            MaxDepth = _jsonOptions.MaxDepth,
-            NewLine = _jsonOptions.NewLine,
-            SkipValidation = skipValidation
-        });
-
-        TypeId stateMachineTypeId = _typeResolver.GetTypeId(typeof(TStateMachine));
-
-        jsonWriter.WriteStartObject();
-        jsonWriter.WriteString("$typeId", stateMachineTypeId.Value);
-
-        JsonStateMachineWriter stateMachineWriter = new(jsonWriter, _jsonOptions, _referenceResolver, _marshaler);
-        IStateMachineConverter<TStateMachine> converter = (IStateMachineConverter<TStateMachine>)_inspector.GetConverter(typeof(TStateMachine));
-        converter.Suspend(ref stateMachine, suspensionContext, ref stateMachineWriter);
-
-        jsonWriter.WriteEndObject();
+        stateMachineWriter.SerializeStateMachine(ref stateMachine, typeId, parentId, suspender, suspensionContext);
     }
 
     public DAsyncLink DeserializeStateMachine(ReadOnlySpan<byte> bytes)
     {
-        throw new NotImplementedException();
+        JsonStateMachineReader stateMachineReader = new(bytes, _jsonOptions, _referenceResolver, _marshaler);
+        return stateMachineReader.DeserializeStateMachine(_inspector, _typeResolver, null, static delegate (IStateMachineResumer resumer, object? result, ref JsonStateMachineReader reader)
+        {
+            return resumer.Resume(ref reader);
+        });
     }
 
     public DAsyncLink DeserializeStateMachine<TResult>(ReadOnlySpan<byte> bytes, TResult result)
     {
-        throw new NotImplementedException();
+        JsonStateMachineReader stateMachineReader = new(bytes, _jsonOptions, _referenceResolver, _marshaler);
+        return stateMachineReader.DeserializeStateMachine(_inspector, _typeResolver, result, static delegate (IStateMachineResumer resumer, TResult result, ref JsonStateMachineReader reader)
+        {
+            return resumer.Resume(ref reader, result);
+        });
     }
 
     public DAsyncLink DeserializeStateMachine(ReadOnlySpan<byte> bytes, Exception exception)

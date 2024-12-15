@@ -1,4 +1,5 @@
 ﻿using FluentAssertions;
+using System.Reflection;
 using static DTasks.Inspection.Dynamic.InspectionFixtures;
 
 namespace DTasks.Inspection.Dynamic.Descriptors;
@@ -6,27 +7,36 @@ namespace DTasks.Inspection.Dynamic.Descriptors;
 public partial class ConverterDescriptorFactoryTests
 {
     [Fact]
-    public void TryCreate_CreatesDescriptor_WhenStateMachineConverterHasClassArgs()
+    public void TryCreate_CreatesDescriptors_WhenStateMachineConverterHasClassArgs()
     {
         // Arrange
         Type stateMachineType = typeof(object);
-        Type converterGenericType = typeof(IStateMachineConverter1<>);
-        Type converterType = converterGenericType.MakeGenericType(stateMachineType);
+        Type suspenderGenericType = typeof(IStateMachineSuspender1<>);
+        Type suspenderType = suspenderGenericType.MakeGenericType(stateMachineType);
+        Type resumerType = typeof(IStateMachineResumer1);
+        Type writerType = typeof(ClassWriter);
+        Type readerType = typeof(ClassReader);
+
+        MethodInfo suspendMethod = GetSuspendMethod(suspenderType, writerType);
+        MethodInfo resumeWithVoidMethod = GetResumeWithVoidMethod(resumerType, readerType);
+        MethodInfo resumeWithResultMethod = GetResumeWithResultMethod(resumerType, readerType);
 
         // Act
-        bool result = ConverterDescriptorFactory.TryCreate(converterGenericType, out ConverterDescriptorFactory? factory);
-        IConverterDescriptor descriptor = factory!.CreateDescriptor(stateMachineType);
+        bool result = ConverterDescriptorFactory.TryCreate(suspenderGenericType, resumerType, out ConverterDescriptorFactory? factory);
+        ISuspenderDescriptor suspenderDescriptor = factory!.CreateSuspenderDescriptor(stateMachineType);
+        IResumerDescriptor resumerDescriptor = factory!.ResumerDescriptor;
 
         // Assert
         result.Should().BeTrue();
-        descriptor!.Type.Should().Be(converterType);
-        descriptor.SuspendMethod.Should().BeSameAs(IStateMachineConverter1<object>.SuspendMethod);
-        descriptor.ResumeWithVoidMethod.Should().BeSameAs(IStateMachineConverter1<object>.ResumeWithVoidMethod);
-        descriptor.ResumeWithResultMethod.Should().BeSameAs(IStateMachineConverter1<object>.ResumeWithResultMethod);
-        descriptor.Reader.Type.Should().Be<ClassReader>();
-        descriptor.Reader.GetReadFieldMethod(typeof(int)).Should().BeSameAs(ClassReader.ReadFieldMethod.MakeGenericMethod(typeof(int)));
-        descriptor.Writer.Type.Should().Be<ClassWriter>();
-        descriptor.Writer.GetWriteFieldMethod(typeof(int)).Should().BeSameAs(ClassWriter.WriteFieldMethod.MakeGenericMethod(typeof(int)));
+        suspenderDescriptor.Type.Should().Be(suspenderType);
+        suspenderDescriptor.SuspendMethod.Should().BeSameAs(suspendMethod);
+        suspenderDescriptor.Writer.Type.Should().Be(writerType);
+        suspenderDescriptor.Writer.GetWriteFieldMethod(typeof(int)).Should().BeSameAs(ClassWriter.WriteFieldMethod.MakeGenericMethod(typeof(int)));
+        resumerDescriptor.Type.Should().Be(resumerType);
+        resumerDescriptor.ResumeWithVoidMethod.Should().BeSameAs(resumeWithVoidMethod);
+        resumerDescriptor.ResumeWithResultMethod.Should().BeSameAs(resumeWithResultMethod);
+        resumerDescriptor.Reader.Type.Should().Be(readerType);
+        resumerDescriptor.Reader.GetReadFieldMethod(typeof(int)).Should().BeSameAs(ClassReader.ReadFieldMethod.MakeGenericMethod(typeof(int)));
     }
 
     [Fact]
@@ -34,23 +44,32 @@ public partial class ConverterDescriptorFactoryTests
     {
         // Arrange
         Type stateMachineType = typeof(object);
-        Type converterGenericType = typeof(IStateMachineConverter2<>);
-        Type converterType = converterGenericType.MakeGenericType(stateMachineType);
+        Type suspenderGenericType = typeof(IStateMachineSuspender2<>);
+        Type suspenderType = suspenderGenericType.MakeGenericType(stateMachineType);
+        Type resumerType = typeof(IStateMachineResumer2);
+        Type writerType = typeof(StructWriter);
+        Type readerType = typeof(StructReader);
+
+        MethodInfo suspendMethod = GetSuspendMethod(suspenderType, writerType);
+        MethodInfo resumeWithVoidMethod = GetResumeWithVoidMethod(resumerType, readerType);
+        MethodInfo resumeWithResultMethod = GetResumeWithResultMethod(resumerType, readerType);
 
         // Act
-        bool result = ConverterDescriptorFactory.TryCreate(converterGenericType, out ConverterDescriptorFactory? factory);
-        IConverterDescriptor descriptor = factory!.CreateDescriptor(stateMachineType);
+        bool result = ConverterDescriptorFactory.TryCreate(suspenderGenericType, resumerType, out ConverterDescriptorFactory? factory);
+        ISuspenderDescriptor suspenderDescriptor = factory!.CreateSuspenderDescriptor(stateMachineType);
+        IResumerDescriptor resumerDescriptor = factory!.ResumerDescriptor;
 
         // Assert
         result.Should().BeTrue();
-        descriptor!.Type.Should().Be(converterType);
-        descriptor.SuspendMethod.Should().BeSameAs(IStateMachineConverter2<object>.SuspendMethod);
-        descriptor.ResumeWithVoidMethod.Should().BeSameAs(IStateMachineConverter2<object>.ResumeWithVoidMethod);
-        descriptor.ResumeWithResultMethod.Should().BeSameAs(IStateMachineConverter2<object>.ResumeWithResultMethod);
-        descriptor.Reader.Type.Should().Be<StructReader>();
-        descriptor.Reader.GetReadFieldMethod(typeof(int)).Should().BeSameAs(StructReader.ReadFieldMethod.MakeGenericMethod(typeof(int)));
-        descriptor.Writer.Type.Should().Be<StructWriter>();
-        descriptor.Writer.GetWriteFieldMethod(typeof(int)).Should().BeSameAs(StructWriter.WriteFieldMethod.MakeGenericMethod(typeof(int)));
+        suspenderDescriptor.Type.Should().Be(suspenderType);
+        suspenderDescriptor.SuspendMethod.Should().BeSameAs(suspendMethod);
+        suspenderDescriptor.Writer.Type.Should().Be(writerType);
+        suspenderDescriptor.Writer.GetWriteFieldMethod(typeof(int)).Should().BeSameAs(StructWriter.WriteFieldMethod.MakeGenericMethod(typeof(int)));
+        resumerDescriptor.Type.Should().Be(resumerType);
+        resumerDescriptor.ResumeWithVoidMethod.Should().BeSameAs(resumeWithVoidMethod);
+        resumerDescriptor.ResumeWithResultMethod.Should().BeSameAs(resumeWithResultMethod);
+        resumerDescriptor.Reader.Type.Should().Be(readerType);
+        resumerDescriptor.Reader.GetReadFieldMethod(typeof(int)).Should().BeSameAs(StructReader.ReadFieldMethod.MakeGenericMethod(typeof(int)));
     }
 
     [Fact]
@@ -58,23 +77,32 @@ public partial class ConverterDescriptorFactoryTests
     {
         // Arrange
         Type stateMachineType = typeof(object);
-        Type converterGenericType = typeof(IStateMachineConverter3<>);
-        Type converterType = converterGenericType.MakeGenericType(stateMachineType);
+        Type suspenderGenericType = typeof(IStateMachineSuspender3<>);
+        Type suspenderType = suspenderGenericType.MakeGenericType(stateMachineType);
+        Type resumerType = typeof(IStateMachineResumer3);
+        Type writerType = typeof(StructWriter);
+        Type readerType = typeof(StructReader);
+
+        MethodInfo suspendMethod = GetSuspendMethod(suspenderType, writerType.MakeByRefType());
+        MethodInfo resumeWithVoidMethod = GetResumeWithVoidMethod(resumerType, readerType.MakeByRefType());
+        MethodInfo resumeWithResultMethod = GetResumeWithResultMethod(resumerType, readerType.MakeByRefType());
 
         // Act
-        bool result = ConverterDescriptorFactory.TryCreate(converterGenericType, out ConverterDescriptorFactory? factory);
-        IConverterDescriptor descriptor = factory!.CreateDescriptor(stateMachineType);
+        bool result = ConverterDescriptorFactory.TryCreate(suspenderGenericType, resumerType, out ConverterDescriptorFactory? factory);
+        ISuspenderDescriptor suspenderDescriptor = factory!.CreateSuspenderDescriptor(stateMachineType);
+        IResumerDescriptor resumerDescriptor = factory!.ResumerDescriptor;
 
         // Assert
         result.Should().BeTrue();
-        descriptor!.Type.Should().Be(converterType);
-        descriptor.SuspendMethod.Should().BeSameAs(IStateMachineConverter3<object>.SuspendMethod);
-        descriptor.ResumeWithVoidMethod.Should().BeSameAs(IStateMachineConverter3<object>.ResumeWithVoidMethod);
-        descriptor.ResumeWithResultMethod.Should().BeSameAs(IStateMachineConverter3<object>.ResumeWithResultMethod);
-        descriptor.Reader.Type.Should().Be<StructReader>();
-        descriptor.Reader.GetReadFieldMethod(typeof(int)).Should().BeSameAs(StructReader.ReadFieldMethod.MakeGenericMethod(typeof(int)));
-        descriptor.Writer.Type.Should().Be<StructWriter>();
-        descriptor.Writer.GetWriteFieldMethod(typeof(int)).Should().BeSameAs(StructWriter.WriteFieldMethod.MakeGenericMethod(typeof(int)));
+        suspenderDescriptor.Type.Should().Be(suspenderType);
+        suspenderDescriptor.SuspendMethod.Should().BeSameAs(suspendMethod);
+        suspenderDescriptor.Writer.Type.Should().Be(writerType);
+        suspenderDescriptor.Writer.GetWriteFieldMethod(typeof(int)).Should().BeSameAs(StructWriter.WriteFieldMethod.MakeGenericMethod(typeof(int)));
+        resumerDescriptor.Type.Should().Be(resumerType);
+        resumerDescriptor.ResumeWithVoidMethod.Should().BeSameAs(resumeWithVoidMethod);
+        resumerDescriptor.ResumeWithResultMethod.Should().BeSameAs(resumeWithResultMethod);
+        resumerDescriptor.Reader.Type.Should().Be(readerType);
+        resumerDescriptor.Reader.GetReadFieldMethod(typeof(int)).Should().BeSameAs(StructReader.ReadFieldMethod.MakeGenericMethod(typeof(int)));
     }
 
     [Fact]
@@ -82,24 +110,33 @@ public partial class ConverterDescriptorFactoryTests
     {
         // Arrange
         Type stateMachineType = typeof(object);
-        Type converterGenericType = typeof(IStateMachineConverter4<>);
-        Type converterType = converterGenericType.MakeGenericType(stateMachineType);
+        Type suspenderGenericType = typeof(IStateMachineSuspender4<>);
+        Type suspenderType = suspenderGenericType.MakeGenericType(stateMachineType);
+        Type resumerType = typeof(IStateMachineResumer4);
+        Type writerType = typeof(WriterWithSpecializedMethod);
+        Type readerType = typeof(ReaderWithSpecializedMethod);
+
+        MethodInfo suspendMethod = GetSuspendMethod(suspenderType, writerType);
+        MethodInfo resumeWithVoidMethod = GetResumeWithVoidMethod(resumerType, readerType);
+        MethodInfo resumeWithResultMethod = GetResumeWithResultMethod(resumerType, readerType);
 
         // Act
-        bool result = ConverterDescriptorFactory.TryCreate(converterGenericType, out ConverterDescriptorFactory? factory);
-        IConverterDescriptor descriptor = factory!.CreateDescriptor(stateMachineType);
+        bool result = ConverterDescriptorFactory.TryCreate(suspenderGenericType, resumerType, out ConverterDescriptorFactory? factory);
+        ISuspenderDescriptor suspenderDescriptor = factory!.CreateSuspenderDescriptor(stateMachineType);
+        IResumerDescriptor resumerDescriptor = factory!.ResumerDescriptor;
 
         // Assert
         result.Should().BeTrue();
-        descriptor!.Type.Should().Be(converterType);
-        descriptor.SuspendMethod.Should().BeSameAs(IStateMachineConverter4<object>.SuspendMethod);
-        descriptor.ResumeWithVoidMethod.Should().BeSameAs(IStateMachineConverter4<object>.ResumeWithVoidMethod);
-        descriptor.ResumeWithResultMethod.Should().BeSameAs(IStateMachineConverter4<object>.ResumeWithResultMethod);
-        descriptor.Reader.Type.Should().Be<ReaderWithSpecializedMethod>();
-        descriptor.Reader.GetReadFieldMethod(typeof(string)).Should().BeSameAs(ReaderWithSpecializedMethod.ReadFieldMethod.MakeGenericMethod(typeof(string)));
-        descriptor.Reader.GetReadFieldMethod(typeof(int)).Should().BeSameAs(ReaderWithSpecializedMethod.SpecializedReadFieldMethod);
-        descriptor.Writer.Type.Should().Be<WriterWithSpecializedMethod>();
-        descriptor.Writer.GetWriteFieldMethod(typeof(string)).Should().BeSameAs(WriterWithSpecializedMethod.WriteFieldMethod.MakeGenericMethod(typeof(string)));
-        descriptor.Writer.GetWriteFieldMethod(typeof(int)).Should().BeSameAs(WriterWithSpecializedMethod.SpecializedWriteFieldMethod);
+        suspenderDescriptor.Type.Should().Be(suspenderType);
+        suspenderDescriptor.SuspendMethod.Should().BeSameAs(suspendMethod);
+        suspenderDescriptor.Writer.Type.Should().Be(writerType);
+        suspenderDescriptor.Writer.GetWriteFieldMethod(typeof(string)).Should().BeSameAs(WriterWithSpecializedMethod.WriteFieldMethod.MakeGenericMethod(typeof(string)));
+        suspenderDescriptor.Writer.GetWriteFieldMethod(typeof(int)).Should().BeSameAs(WriterWithSpecializedMethod.SpecializedWriteFieldMethod);
+        resumerDescriptor.Type.Should().Be(resumerType);
+        resumerDescriptor.ResumeWithVoidMethod.Should().BeSameAs(resumeWithVoidMethod);
+        resumerDescriptor.ResumeWithResultMethod.Should().BeSameAs(resumeWithResultMethod);
+        resumerDescriptor.Reader.GetReadFieldMethod(typeof(string)).Should().BeSameAs(ReaderWithSpecializedMethod.ReadFieldMethod.MakeGenericMethod(typeof(string)));
+        resumerDescriptor.Reader.GetReadFieldMethod(typeof(int)).Should().BeSameAs(ReaderWithSpecializedMethod.SpecializedReadFieldMethod);
+        resumerDescriptor.Reader.Type.Should().Be(readerType);
     }
 }

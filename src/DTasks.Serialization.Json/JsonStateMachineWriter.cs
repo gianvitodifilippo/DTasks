@@ -1,22 +1,51 @@
-﻿using DTasks.Marshaling;
+﻿using DTasks.Hosting;
+using DTasks.Marshaling;
+using System.Buffers;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace DTasks.Serialization.Json;
 
 internal readonly ref struct JsonStateMachineWriter(
-    Utf8JsonWriter writer,
+    IBufferWriter<byte> buffer,
     JsonSerializerOptions jsonOptions,
     ReferenceResolver referenceResolver,
     IDAsyncMarshaler marshaler)
 {
+    private readonly Utf8JsonWriter _writer = new(buffer, new JsonWriterOptions
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        IndentCharacter = jsonOptions.IndentCharacter,
+        Indented = jsonOptions.WriteIndented,
+        IndentSize = jsonOptions.IndentSize,
+        MaxDepth = jsonOptions.MaxDepth,
+        NewLine = jsonOptions.NewLine,
+        SkipValidation =
+#if DEBUG
+            true
+#else
+            false
+#endif
+    });
+
+    public void SerializeStateMachine<TStateMachine>(ref TStateMachine stateMachine, TypeId typeId, DAsyncId parentId, IStateMachineSuspender<TStateMachine> suspender, ISuspensionContext suspensionContext)
+        where TStateMachine : notnull
+    {
+        _writer.WriteStartObject();
+        _writer.WriteTypeId("$typeId", typeId);
+        _writer.WriteDAsyncId("$parentId", parentId);
+        suspender.Suspend(ref stateMachine, suspensionContext, in this);
+        _writer.WriteEndObject();
+    }
+
     public void WriteField<TField>(string name, in TField value)
     {
         if (!typeof(TField).IsValueType)
         {
             if (value is not null)
             {
-                ReferenceMarshalingAction marshalingAction = new(writer, jsonOptions, referenceResolver, value, name);
+                ReferenceMarshalingAction marshalingAction = new(_writer, jsonOptions, referenceResolver, value, name);
                 if (marshaler.TryMarshal(in value, ref marshalingAction))
                     return;
             }
@@ -25,19 +54,19 @@ internal readonly ref struct JsonStateMachineWriter(
                 if (jsonOptions.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingNull)
                     return;
 
-                writer.WriteNull(name);
+                _writer.WriteNull(name);
                 return;
             }
         }
         else
         {
-            ValueMarshalingAction marshalingAction = new(writer, jsonOptions, name);
+            ValueMarshalingAction marshalingAction = new(_writer, jsonOptions, name);
             if (marshaler.TryMarshal(in value, ref marshalingAction))
                 return;
         }
 
-        writer.WritePropertyName(name);
-        JsonSerializer.Serialize(writer, value, jsonOptions);
+        _writer.WritePropertyName(name);
+        JsonSerializer.Serialize(_writer, value, jsonOptions);
     }
 
     public void WriteField(string name, string value)
@@ -45,82 +74,82 @@ internal readonly ref struct JsonStateMachineWriter(
         if (value is null && jsonOptions.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingNull)
             return;
 
-        writer.WriteString(name, value);
+        _writer.WriteString(name, value);
     }
 
     public void WriteField(string name, bool value)
     {
-        writer.WriteBoolean(name, value);
+        _writer.WriteBoolean(name, value);
     }
 
     public void WriteField(string name, byte value)
     {
-        writer.WriteNumber(name, value);
+        _writer.WriteNumber(name, value);
     }
 
     public void WriteField(string name, sbyte value)
     {
-        writer.WriteNumber(name, value);
+        _writer.WriteNumber(name, value);
     }
 
     public void WriteField(string name, short value)
     {
-        writer.WriteNumber(name, value);
+        _writer.WriteNumber(name, value);
     }
 
     public void WriteField(string name, ushort value)
     {
-        writer.WriteNumber(name, value);
+        _writer.WriteNumber(name, value);
     }
 
     public void WriteField(string name, int value)
     {
-        writer.WriteNumber(name, value);
+        _writer.WriteNumber(name, value);
     }
 
     public void WriteField(string name, uint value)
     {
-        writer.WriteNumber(name, value);
+        _writer.WriteNumber(name, value);
     }
 
     public void WriteField(string name, long value)
     {
-        writer.WriteNumber(name, value);
+        _writer.WriteNumber(name, value);
     }
 
     public void WriteField(string name, ulong value)
     {
-        writer.WriteNumber(name, value);
+        _writer.WriteNumber(name, value);
     }
 
     public void HandleField(string name, float value)
     {
-        writer.WriteNumber(name, value);
+        _writer.WriteNumber(name, value);
     }
 
     public void HandleField(string name, double value)
     {
-        writer.WriteNumber(name, value);
+        _writer.WriteNumber(name, value);
     }
 
     public void HandleField(string name, decimal value)
     {
-        writer.WriteNumber(name, value);
+        _writer.WriteNumber(name, value);
     }
 
     public void HandleField(string name, DateTime value)
     {
-        writer.WriteString(name, value);
+        _writer.WriteString(name, value);
     }
 
     public void HandleField(string name, DateTimeOffset value)
     {
-        writer.WriteString(name, value);
+        _writer.WriteString(name, value);
     }
 
     public void HandleField(string name, Guid value)
     {
-        writer.WriteString(name, value);
+        _writer.WriteString(name, value);
     }
 
     private static void WriteMarshaledPropertyName(Utf8JsonWriter writer, string name)
