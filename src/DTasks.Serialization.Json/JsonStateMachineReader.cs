@@ -38,12 +38,12 @@ internal ref struct JsonStateMachineReader(
         DAsyncId parentId = _reader.ReadDAsyncId();
 
         Type stateMachineType = typeResolver.GetType(typeId);
-
         IStateMachineResumer resumer = (IStateMachineResumer)inspector.GetResumer(stateMachineType);
+
+        _reader.MoveNext();
         IDAsyncRunnable runnable = resume(resumer, arg, ref this);
 
         _reader.ExpectToken(JsonTokenType.EndObject);
-        _reader.MoveNext();
         _reader.ExpectEnd();
 
         return new DAsyncLink(parentId, runnable);
@@ -104,7 +104,7 @@ internal ref struct JsonStateMachineReader(
 
         if (_reader.ValueTextEquals("$id"))
         {
-            if (!typeof(TField).IsValueType)
+            if (typeof(TField).IsValueType)
                 throw new JsonException($"Unexpected property name '{_reader.GetString()}' while deserializing a d-async token.");
 
             _reader.MoveNext();
@@ -137,10 +137,12 @@ internal ref struct JsonStateMachineReader(
         UnmarshalingAction<TField> action = new(ref _reader, jsonOptions, ref value);
         if (marshaler.TryUnmarshal<TField, UnmarshalingAction<TField>>(typeId, ref action))
         {
+            _reader.MoveNext();
             TryAddReference(referenceId, value);
             return true;
         }
 
+        _reader.MoveNext();
         return false;
 #else
         if (marshaler.TryUnmarshal<TField>(typeId, out UnmarshalResult result))
@@ -243,6 +245,7 @@ internal ref struct JsonStateMachineReader(
         {
             ref Utf8JsonReader reader = ref Unsafe.As<ReinterpretMeAsUtf8JsonReader, Utf8JsonReader>(ref _reader);
             object? token = JsonSerializer.Deserialize(ref reader, tokenType, jsonOptions);
+            reader.MoveNext();
             return token;
         }
 

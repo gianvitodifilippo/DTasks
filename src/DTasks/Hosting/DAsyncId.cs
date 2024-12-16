@@ -103,10 +103,38 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 #endif
     }
 
+    public static DAsyncId Parse(string value)
+    {
+        ThrowHelper.ThrowIfNull(value);
+
+        if (!TryParseCore(value, out DAsyncId id))
+            throw new ArgumentException($"'{value}' does not represent a valid DAsyncId.", nameof(value));
+
+        return id;
+    }
+
     public static bool TryParse(string value, out DAsyncId id)
     {
         ThrowHelper.ThrowIfNull(value);
 
+        return TryParseCore(value, out id);
+    }
+
+    public static DAsyncId ReadBytes(ReadOnlySpan<byte> bytes)
+    {
+        if (!TryReadBytesCore(bytes, out DAsyncId id))
+            throw new ArgumentException("The provided bytes do not represent a valid DAsyncId.", nameof(bytes));
+
+        return id;
+    }
+
+    public static bool TryReadBytes(ReadOnlySpan<byte> bytes, out DAsyncId id)
+    {
+        return TryReadBytesCore(bytes, out id);
+    }
+
+    private static bool TryParseCore(string value, out DAsyncId id)
+    {
         Span<byte> bytes = stackalloc byte[ByteCount];
         if (!Convert.TryFromBase64String(value, bytes, out int bytesWritten) || bytesWritten != ByteCount)
         {
@@ -114,11 +142,6 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
             return false;
         }
 
-        return TryReadBytesCore(bytes, out id);
-    }
-
-    public static bool TryReadBytes(ReadOnlySpan<byte> bytes, out DAsyncId id)
-    {
         return TryReadBytesCore(bytes, out id);
     }
 

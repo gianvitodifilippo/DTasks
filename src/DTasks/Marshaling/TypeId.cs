@@ -23,6 +23,11 @@ public readonly struct TypeId(string value) : IEquatable<TypeId>
         return Value.GetHashCode();
     }
 
+    public override string ToString()
+    {
+        return Value;
+    }
+
     public static bool operator ==(TypeId left, TypeId right)
     {
         return left.Equals(right);

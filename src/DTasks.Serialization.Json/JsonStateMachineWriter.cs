@@ -37,9 +37,10 @@ internal readonly ref struct JsonStateMachineWriter(
         _writer.WriteDAsyncId("$parentId", parentId);
         suspender.Suspend(ref stateMachine, suspensionContext, in this);
         _writer.WriteEndObject();
+        _writer.Flush();
     }
 
-    public void WriteField<TField>(string name, in TField value)
+    public void WriteField<TField>(string name, TField value)
     {
         if (!typeof(TField).IsValueType)
         {
@@ -69,7 +70,7 @@ internal readonly ref struct JsonStateMachineWriter(
         JsonSerializer.Serialize(_writer, value, jsonOptions);
     }
 
-    public void WriteField(string name, string value)
+    public void WriteField(string name, string? value)
     {
         if (value is null && jsonOptions.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingNull)
             return;
