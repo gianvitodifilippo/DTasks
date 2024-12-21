@@ -30,13 +30,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Serialization", "src
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Serialization.Json.Tests", "tests\DTasks.Serialization.Json.Tests\DTasks.Serialization.Json.Tests.csproj", "{2B425935-578D-4A9A-B68E-050A44FF89DD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Extensions.Microsoft.Extensions.DependencyInjection", "src\DTasks.Extensions.Microsoft.Extensions.DependencyInjection\DTasks.Extensions.Microsoft.Extensions.DependencyInjection.csproj", "{6FC324FC-356A-4178-87FB-3165AD8353FC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Extensions.DependencyInjection", "src\DTasks.Extensions.DependencyInjection\DTasks.Extensions.DependencyInjection.csproj", "{6FC324FC-356A-4178-87FB-3165AD8353FC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Extensions.Microsoft.Extensions.Hosting", "src\DTasks.Extensions.Microsoft.Extensions.Hosting\DTasks.Extensions.Microsoft.Extensions.Hosting.csproj", "{AECF7488-BDF0-4881-A43F-11FAB8265414}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Extensions.Hosting", "src\DTasks.Extensions.Hosting\DTasks.Extensions.Hosting.csproj", "{AECF7488-BDF0-4881-A43F-11FAB8265414}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Extensions.Microsoft.Extensions.DependencyInjection.Tests", "tests\DTasks.Extensions.Microsoft.Extensions.DependencyInjection.Tests\DTasks.Extensions.Microsoft.Extensions.DependencyInjection.Tests.csproj", "{941A705D-0B47-4EE1-B3BC-4D50CCFF3448}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Extensions.DependencyInjection.Tests", "tests\DTasks.Extensions.DependencyInjection.Tests\DTasks.Extensions.DependencyInjection.Tests.csproj", "{941A705D-0B47-4EE1-B3BC-4D50CCFF3448}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Extensions.Microsoft.Extensions.Hosting.Tests", "tests\DTasks.Extensions.Microsoft.Extensions.Hosting.Tests\DTasks.Extensions.Microsoft.Extensions.Hosting.Tests.csproj", "{E7972ED0-6152-49B1-AC98-17B9343A94DB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Extensions.Hosting.Tests", "tests\DTasks.Extensions.Hosting.Tests\DTasks.Extensions.Hosting.Tests.csproj", "{E7972ED0-6152-49B1-AC98-17B9343A94DB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Serialization.StackExchangeRedis", "src\DTasks.Serialization.StackExchangeRedis\DTasks.Serialization.StackExchangeRedis.csproj", "{34CA96EB-12AA-4813-9907-24C78DAE0D17}"
 EndProject

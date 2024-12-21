@@ -11,7 +11,7 @@
             <_Parameter1>DTasks</_Parameter1>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-            <_Parameter1>DTasks.Extensions.Microsoft.Extensions.DependencyInjection</_Parameter1>
+            <_Parameter1>DTasks.Extensions.DependencyInjection</_Parameter1>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
             <_Parameter1>DTasks.Inspection</_Parameter1>
