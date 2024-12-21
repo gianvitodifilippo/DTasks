@@ -7,7 +7,7 @@ using DTasks.Utils;
 
 namespace DTasks.Inspection.Dynamic.Descriptors;
 
-internal class ConverterDescriptorFactory(
+internal sealed class ConverterDescriptorFactory(
     Type suspenderGenericType,
     Type writerParameterType,
     IWriterDescriptor writer,

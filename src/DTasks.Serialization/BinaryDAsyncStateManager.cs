@@ -4,7 +4,7 @@ using System.Buffers;
 
 namespace DTasks.Serialization;
 
-public class BinaryDAsyncStateManager(IDAsyncSerializer serializer, IDAsyncStorage storage) : IDAsyncStateManager
+public sealed class BinaryDAsyncStateManager(IDAsyncSerializer serializer, IDAsyncStorage storage) : IDAsyncStateManager
 {
     public ValueTask DehydrateAsync<TStateMachine>(DAsyncId parentId, DAsyncId id, ref TStateMachine stateMachine, ISuspensionContext suspensionContext, CancellationToken cancellationToken = default)
         where TStateMachine : notnull

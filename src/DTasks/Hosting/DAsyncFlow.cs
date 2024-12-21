@@ -7,7 +7,7 @@ using System.Threading.Tasks.Sources;
 
 namespace DTasks.Hosting;
 
-internal partial class DAsyncFlow
+internal sealed partial class DAsyncFlow
 {
     private FlowState _state;
     private AsyncTaskMethodBuilder _builder;

@@ -6,7 +6,7 @@ using System.Reflection.Emit;
 
 namespace DTasks.Inspection.Dynamic;
 
-internal class AwaiterManager(DynamicAssembly assembly, ITypeResolver typeResolver) : IAwaiterManager
+internal sealed class AwaiterManager(DynamicAssembly assembly, ITypeResolver typeResolver) : IAwaiterManager
 {
     private static readonly MethodInfo s_fromVoidMethod = typeof(AwaiterFactory).GetRequiredMethod(
         name: nameof(AwaiterFactory.FromResult),

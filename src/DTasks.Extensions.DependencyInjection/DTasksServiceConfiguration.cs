@@ -7,7 +7,7 @@ namespace DTasks.Extensions.DependencyInjection;
 
 using KeyedServiceIdentifier = (Type ServiceType, object? ServiceKey);
 
-internal class DTasksServiceConfiguration(IServiceCollection services) : IDTasksServiceConfiguration
+internal sealed class DTasksServiceConfiguration(IServiceCollection services) : IDTasksServiceConfiguration
 {
     private readonly HashSet<KeyedServiceIdentifier> _additionalKeyedServiceTypes = [];
     private readonly HashSet<Type> _additionalServiceTypes = [];

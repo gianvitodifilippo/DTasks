@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace DTasks.Extensions.DependencyInjection;
 
-internal class DAsyncServiceRegister(FrozenSet<Type> types, ITypeResolver typeResolver) : IDAsyncServiceRegister
+internal sealed class DAsyncServiceRegister(FrozenSet<Type> types, ITypeResolver typeResolver) : IDAsyncServiceRegister
 {
     public bool IsDAsyncService(Type serviceType) => types.Contains(serviceType);
 

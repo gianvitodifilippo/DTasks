@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace DTasks.Serialization.Json;
 
-internal class JsonDAsyncSerializer : IDAsyncSerializer
+internal sealed class JsonDAsyncSerializer : IDAsyncSerializer
 {
     private readonly IStateMachineInspector _inspector;
     private readonly ITypeResolver _typeResolver;

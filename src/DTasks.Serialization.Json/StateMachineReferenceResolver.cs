@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace DTasks.Serialization.Json;
 
-internal class StateMachineReferenceResolver : ReferenceResolver
+internal sealed class StateMachineReferenceResolver : ReferenceResolver
 {
     private uint _referenceCount;
     private Dictionary<string, object>? _referenceIdToObjectMap;

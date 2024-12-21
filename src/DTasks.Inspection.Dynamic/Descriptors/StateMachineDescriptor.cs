@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace DTasks.Inspection.Dynamic.Descriptors;
 
-internal class StateMachineDescriptor(
+internal sealed class StateMachineDescriptor(
     Type type,
     ConstructorInfo? constructor,
     IReadOnlyCollection<FieldInfo> userFields,
