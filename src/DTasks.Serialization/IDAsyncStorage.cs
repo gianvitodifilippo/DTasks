@@ -1,6 +1,6 @@
 ﻿using DTasks.Hosting;
 
-namespace DTasks.Storage;
+namespace DTasks.Serialization;
 
 public interface IDAsyncStorage
 {
