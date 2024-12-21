@@ -1,13 +1,11 @@
-﻿using System;
-
-namespace DTasks.Marshaling;
+﻿namespace DTasks.Marshaling;
 
 public static class DAsyncMarshalerExtensions
 {
     public static bool TryMarshal<T>(this IDAsyncMarshaler marshaler, in T value, IMarshalingAction action)
     {
         MarshalingActionWrapper wrapper = new(action);
-        return marshaler.TryMarshal(value, ref wrapper);
+        return marshaler.TryMarshal(in value, ref wrapper);
     }
 
     public static bool TryUnmarshal<T>(this IDAsyncMarshaler marshaler, TypeId typeId, IUnmarshalingAction action)
