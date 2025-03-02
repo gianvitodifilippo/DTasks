@@ -14,10 +14,12 @@
 
     <ItemGroup>
         <ProjectReference Include="..\DTasks.Core\DTasks.Core.csproj" />
-        <ProjectReference Include="..\DTasks.Inspection\DTasks.Inspection.csproj" />
     </ItemGroup>
 
     <ItemGroup>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+            <_Parameter1>DTasks.Inspection.Dynamic</_Parameter1>
+        </AssemblyAttribute>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
             <_Parameter1>DTasks.Tests</_Parameter1>
         </AssemblyAttribute>

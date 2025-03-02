@@ -1,24 +1,19 @@
-﻿using DTasks.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace DTasks.Extensions.Hosting;
 
-public sealed class DTasksServiceProviderFactory(ServiceProviderOptions options) : IServiceProviderFactory<IServiceCollection>
+public sealed class DTasksServiceProviderFactory(
+    HostBuilderContext context,
+    Action<IDTasksHostBuilderConfiguration> configure) : IServiceProviderFactory<IServiceCollection>
 {
     public IServiceCollection CreateBuilder(IServiceCollection services) => services;
 
     public IServiceProvider CreateServiceProvider(IServiceCollection services)
     {
-        ServiceProvider provider = services
-            .AddDTasks()
-            .BuildServiceProvider(options);
+        DTasksHostBuilderConfiguration configuration = new(context, services);
+        configure(configuration);
 
-        if (options.ValidateOnBuild)
-        {
-            var validateDAsyncServices = provider.GetRequiredService<DAsyncServiceValidator>();
-            validateDAsyncServices();
-        }
-
-        return provider;
+        return configuration.BuildServiceProvider();
     }
 }

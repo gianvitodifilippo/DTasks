@@ -20,7 +20,7 @@ public readonly struct TypeId(string value) : IEquatable<TypeId>
 
     public override int GetHashCode()
     {
-        return Value.GetHashCode();
+        return Value?.GetHashCode() ?? 0;
     }
 
     public override string ToString()

@@ -172,8 +172,7 @@ internal readonly ref struct JsonStateMachineWriter(
         if (typeId == default)
             return;
 
-        writer.WritePropertyName("typeId");
-        JsonSerializer.Serialize(writer, typeId, jsonOptions);
+        writer.WriteTypeId("typeId", typeId);
     }
 
     private static void WriteToken<TToken>(Utf8JsonWriter writer, TToken token, JsonSerializerOptions jsonOptions)

@@ -1,5 +1,5 @@
 ﻿using DTasks.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
+using DTasks.Utils;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -7,38 +7,21 @@ public static class DTasksHostBuilderExtensions
 {
     public static IHostBuilder UseDTasks(this IHostBuilder hostBuilder)
     {
-        return hostBuilder.UseDTasksCore((context, options) => options);
+        ThrowHelper.ThrowIfNull(hostBuilder);
+
+        return hostBuilder.UseDTasksCore(configuration => { });
     }
 
-    public static IHostBuilder UseDTasks(this IHostBuilder hostBuilder, ServiceProviderOptions options)
+    public static IHostBuilder UseDTasks(this IHostBuilder hostBuilder, Action<IDTasksHostBuilderConfiguration> configure)
     {
-        return hostBuilder.UseDTasksCore((context, originalOptions) => options);
+        ThrowHelper.ThrowIfNull(hostBuilder);
+        ThrowHelper.ThrowIfNull(configure);
+
+        return hostBuilder.UseDTasksCore(configure);
     }
 
-    public static IHostBuilder UseDTasks(this IHostBuilder hostBuilder, Action<ServiceProviderOptions> configureOptions)
+    private static IHostBuilder UseDTasksCore(this IHostBuilder hostBuilder, Action<IDTasksHostBuilderConfiguration> configure)
     {
-        return hostBuilder.UseDTasksCore((context, originalOptions) =>
-        {
-            configureOptions(originalOptions);
-            return originalOptions;
-        });
-    }
-
-    public static IHostBuilder UseDTasks(this IHostBuilder hostBuilder, Action<HostBuilderContext, ServiceProviderOptions> configureOptions)
-    {
-        return hostBuilder.UseDTasksCore((context, originalOptions) =>
-        {
-            configureOptions(context, originalOptions);
-            return originalOptions;
-        });
-    }
-
-    private static IHostBuilder UseDTasksCore(this IHostBuilder hostBuilder, Func<HostBuilderContext, ServiceProviderOptions, ServiceProviderOptions> configureOptions)
-    {
-        return hostBuilder.UseServiceProviderFactory(context =>
-        {
-            ServiceProviderOptions options = configureOptions(context, new ServiceProviderOptions());
-            return new DTasksServiceProviderFactory(options);
-        });
+        return hostBuilder.UseServiceProviderFactory(context => new DTasksServiceProviderFactory(context, configure));
     }
 }

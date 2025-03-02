@@ -1,7 +1,9 @@
-﻿using DTasks.Marshaling;
+﻿using DTasks.Extensions.DependencyInjection.Marshaling;
+using DTasks.Marshaling;
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace DTasks.Extensions.DependencyInjection;
 
@@ -11,19 +13,33 @@ internal sealed class DTasksServiceConfiguration(IServiceCollection services) : 
 {
     private readonly HashSet<KeyedServiceIdentifier> _additionalKeyedServiceTypes = [];
     private readonly HashSet<Type> _additionalServiceTypes = [];
+    private Action<ITypeResolverBuilder>? _configureTypeResolver;
     private ITypeResolverBuilder? _typeResolverBuilder;
-
-    public IServiceCollection Services => services;
 
     public ServiceContainerBuilder CreateContainerBuilder()
     {
         ITypeResolverBuilder typeResolverBuilder = _typeResolverBuilder ?? TypeResolverBuilder.CreateDefault();
+        _configureTypeResolver?.Invoke(typeResolverBuilder);
+        typeResolverBuilder.Register(typeof(ServiceToken));
+        typeResolverBuilder.Register(typeof(KeyedServiceToken<string>));
+        typeResolverBuilder.Register(typeof(KeyedServiceToken<int>));
+
         return new ServiceContainerBuilder(services, typeResolverBuilder, new DAsyncServiceRegisterBuilder(typeResolverBuilder));
     }
 
     public IDTasksServiceConfiguration UseTypeResolverBuilder(ITypeResolverBuilder typeResolverBuilder)
     {
+        ThrowHelper.ThrowIfNull(typeResolverBuilder);
+
         _typeResolverBuilder = typeResolverBuilder;
+        return this;
+    }
+
+    public IDTasksServiceConfiguration ConfigureTypeResolver(Action<ITypeResolverBuilder> configure)
+    {
+        ThrowHelper.ThrowIfNull(configure);
+
+        _configureTypeResolver = configure;
         return this;
     }
 
@@ -43,7 +59,7 @@ internal sealed class DTasksServiceConfiguration(IServiceCollection services) : 
             : RegisterDAsyncServiceCore(serviceType, serviceKey);
     }
 
-    private IDTasksServiceConfiguration RegisterDAsyncServiceCore(Type serviceType)
+    private DTasksServiceConfiguration RegisterDAsyncServiceCore(Type serviceType)
     {
         if (serviceType.ContainsGenericParameters)
             throw OpenGenericsNotSupported();
@@ -55,7 +71,7 @@ internal sealed class DTasksServiceConfiguration(IServiceCollection services) : 
         return this;
     }
 
-    private IDTasksServiceConfiguration RegisterDAsyncServiceCore(Type serviceType, object serviceKey)
+    private DTasksServiceConfiguration RegisterDAsyncServiceCore(Type serviceType, object serviceKey)
     {
         if (serviceType.ContainsGenericParameters)
             throw OpenGenericsNotSupported();
@@ -91,9 +107,8 @@ internal sealed class DTasksServiceConfiguration(IServiceCollection services) : 
 
         return serviceType
             .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-            .Any(method => typeof(DTask).IsAssignableFrom(method.ReturnType) && !method.IsDefined(typeof(NonDAsyncAttribute)));
+            .Any(method => typeof(DTask).IsAssignableFrom(method.ReturnType) && method.IsDefined(typeof(AsyncStateMachineAttribute)));
     }
 
     private static NotSupportedException OpenGenericsNotSupported() => new("Usage of open generic services within d-async flows is not supported.");
 }
-

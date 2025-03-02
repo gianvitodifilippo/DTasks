@@ -1,13 +1,12 @@
 ﻿using DTasks.Marshaling;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Extensions.DependencyInjection;
 
 public interface IDTasksServiceConfiguration
 {
-    IServiceCollection Services { get; }
-
     IDTasksServiceConfiguration UseTypeResolverBuilder(ITypeResolverBuilder typeResolverBuilder);
+
+    IDTasksServiceConfiguration ConfigureTypeResolver(Action<ITypeResolverBuilder> configure);
 
     IDTasksServiceConfiguration RegisterDAsyncService(Type serviceType);
 

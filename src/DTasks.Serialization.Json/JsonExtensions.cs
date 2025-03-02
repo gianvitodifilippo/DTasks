@@ -9,9 +9,9 @@ namespace DTasks.Serialization.Json;
 
 internal static class JsonExtensions
 {
-    public static void WriteTypeId(this Utf8JsonWriter writer, string propertyName, TypeId id)
+    public static void WriteTypeId(this Utf8JsonWriter writer, string propertyName, TypeId typeId)
     {
-        writer.WriteString(propertyName, id.Value);
+        writer.WriteString(propertyName, typeId.Value);
     }
 
     public static void WriteDAsyncId(this Utf8JsonWriter writer, string propertyName, DAsyncId id)

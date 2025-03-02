@@ -1,6 +1,10 @@
-﻿using DTasks.Utils;
+﻿using DTasks.Hosting;
+using DTasks.Inspection;
+using DTasks.Utils;
 using System.Collections.Frozen;
 using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace DTasks.Marshaling;
 
@@ -15,8 +19,8 @@ public sealed class TypeResolverBuilder : ITypeResolverBuilder, ITypeResolver
     {
         ThrowHelper.ThrowIfNull(type);
 
-        if (type.IsGenericType)
-            throw new ArgumentException("Generic types are not supported.", nameof(type));
+        if (type.ContainsGenericParameters)
+            throw new ArgumentException("Open generic types are not supported.", nameof(type));
 
         if (_typesToIds.TryGetValue(type, out TypeId id))
             return id;
@@ -47,5 +51,11 @@ public sealed class TypeResolverBuilder : ITypeResolverBuilder, ITypeResolver
         return _typesToIds[type];
     }
 
-    public static TypeResolverBuilder CreateDefault() => new();
+    public static TypeResolverBuilder CreateDefault()
+    {
+        TypeResolverBuilder builder = new();
+        DAsyncFlow.RegisterTypeIds(builder);
+
+        return builder;
+    }
 }

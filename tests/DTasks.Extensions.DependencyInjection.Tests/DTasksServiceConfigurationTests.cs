@@ -22,12 +22,6 @@ public partial class DTasksServiceConfigurationTests
     }
 
     [Fact]
-    public void Services_ReturnsSameServiceCollectionPassedInConstructor()
-    {
-        _sut.Services.Should().BeSameAs(_services);
-    }
-
-    [Fact]
     public void ReplaceDAsyncServices_ReplacesServicesThatHaveDTaskMethods()
     {
         // Arrange

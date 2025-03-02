@@ -67,16 +67,6 @@ internal ref struct JsonStateMachineReader(
         return true;
     }
 
-    internal DAsyncId ReadParentId()
-    {
-        throw new NotImplementedException();
-    }
-
-    internal TypeId ReadTypeId()
-    {
-        throw new NotImplementedException();
-    }
-
     private bool ReadMarshaledValue<TField>(string name, ref TField? value)
     {
         ReadOnlySpan<char> namePrefix = StateMachineJsonConstants.MarshaledValuePrefix;
@@ -119,7 +109,7 @@ internal ref struct JsonStateMachineReader(
         if (_reader.ValueTextEquals("typeId"))
         {
             _reader.MoveNext();
-            typeId = JsonSerializer.Deserialize<TypeId>(ref _reader, jsonOptions);
+            typeId = _reader.ReadTypeId();
 
             _reader.MoveNext();
             if (_reader.TokenType == JsonTokenType.EndObject)
@@ -148,12 +138,16 @@ internal ref struct JsonStateMachineReader(
         if (marshaler.TryUnmarshal<TField>(typeId, out UnmarshalResult result))
         {
             object? token = JsonSerializer.Deserialize(ref _reader, result.TokenType, jsonOptions);
-            value = result.Converter.Convert<object?, TField>(token);
+            _reader.MoveNext();
 
+            value = result.Converter.Convert<object?, TField>(token);
             TryAddReference(referenceId, value);
+
+            _reader.MoveNext();
             return true;
         }
 
+        _reader.MoveNext();
         return false;
 #endif
     }
