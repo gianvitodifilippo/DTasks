@@ -1,9 +1,11 @@
 ﻿namespace DTasks;
 
-internal enum DTaskStatus
+public enum DTaskStatus
 {
+    Pending,
     Running,
     Suspended,
-    RanToCompletion,
-    // ...
+    Succeeded,
+    Faulted,
+    Canceled
 }

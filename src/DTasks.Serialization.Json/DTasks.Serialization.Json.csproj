@@ -1,21 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
+        <TargetFrameworks>netstandard2.1;net8.0;net9.0</TargetFrameworks>
     </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="System.Text.Json" Version="8.0.4" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\DTasks\DTasks.csproj" />
-    </ItemGroup>
 
     <ItemGroup>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
             <_Parameter1>DTasks.Serialization.Json.Tests</_Parameter1>
         </AssemblyAttribute>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="System.Text.Json" Version="9.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\DTasks.Inspection.Dynamic\DTasks.Inspection.Dynamic.csproj" />
+      <ProjectReference Include="..\DTasks.Serialization\DTasks.Serialization.csproj" />
     </ItemGroup>
 
 </Project>

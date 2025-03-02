@@ -1,4 +1,4 @@
-#if !NET
+﻿#if !NET
 
 namespace System.Runtime.CompilerServices;
 

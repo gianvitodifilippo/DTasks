@@ -1,43 +1,37 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
+        <TargetFrameworks>netstandard2.1;net8.0;net9.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Nullable" Version="1.3.1">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
-      <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+        <PackageReference Include="Nullable" Version="1.3.1">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\DTasks.Core\DTasks.Core.csproj" />
-        <ProjectReference Include="..\..\tests\DTask.Tests.Interceptors\DTask.Tests.Interceptors.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" Condition="'$(Configuration)|$(Platform)'=='Debug-Tests|AnyCPU' Or '$(Configuration)|$(Platform)'=='Release-Tests|AnyCPU'" />
     </ItemGroup>
 
     <ItemGroup>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-            <_Parameter1>DTasks.Extensions.Microsoft.DependencyInjection</_Parameter1>
-        </AssemblyAttribute>
-        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-            <_Parameter1>DTasks.Serialization.Json.Tests</_Parameter1>
-        </AssemblyAttribute>
-        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-            <_Parameter1>DTasks.Storage.StackExchangeRedis</_Parameter1>
+            <_Parameter1>DTasks.Inspection.Dynamic</_Parameter1>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
             <_Parameter1>DTasks.Tests</_Parameter1>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+            <_Parameter1>DTasks.Serialization.Json.Tests</_Parameter1>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+            <_Parameter1>DTasks.Serialization.StackExchangeRedis.Tests</_Parameter1>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
             <_Parameter1>DynamicProxyGenAssembly2</_Parameter1>
         </AssemblyAttribute>
     </ItemGroup>
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Tests|AnyCPU' Or '$(Configuration)|$(Platform)'=='Release-Tests|AnyCPU'">
-        <InterceptorsPreviewNamespaces>$(InterceptorsPreviewNamespaces);DTasks.Generated.Emit</InterceptorsPreviewNamespaces>
-    </PropertyGroup>
 
 </Project>

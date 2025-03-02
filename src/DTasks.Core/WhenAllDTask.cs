@@ -1,34 +1,77 @@
-﻿namespace DTasks;
+﻿using DTasks.Hosting;
+using DTasks.Utils;
+using System.Runtime.CompilerServices;
 
-internal sealed class WhenAllDTask(IEnumerable<DTask> tasks) : DTask
+namespace DTasks;
+
+internal sealed class WhenAllDTask(IEnumerable<DTask> tasks) : DTask, IDAsyncResultBuilder
 {
-    internal override DTaskStatus Status => DTaskStatus.Suspended; // TODO: Support local completion?
+    private DTaskStatus _status = DTaskStatus.Pending;
+    private Exception? _exception;
 
-    internal override Task<bool> UnderlyingTask => Task.FromResult(false);
+    public override DTaskStatus Status => _status;
 
-    internal override Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
-    {
-        return handler.OnWhenAllAsync(tasks, cancellationToken);
-    }
-}
-
-internal sealed class WhenAllDTask<TResult>(IEnumerable<DTask<TResult>> tasks) : DTask<TResult[]>
-{
-    internal override TResult[] Result
+    protected override Exception ExceptionCore
     {
         get
         {
-            InvalidStatus(expectedStatus: DTaskStatus.RanToCompletion);
-            return default!;
+            Assert.NotNull(_exception);
+            return _exception;
         }
     }
 
-    internal override DTaskStatus Status => DTaskStatus.Suspended;
+    protected override void Run(IDAsyncFlow flow) => flow.WhenAll(tasks, this);
 
-    internal override Task<bool> UnderlyingTask => Task.FromResult(false);
-
-    internal override Task SuspendAsync<THandler>(ref THandler handler, CancellationToken cancellationToken)
+    void IDAsyncResultBuilder.SetResult()
     {
-        return handler.OnWhenAllAsync(tasks, cancellationToken);
+        _status = DTaskStatus.Succeeded;
+    }
+
+    void IDAsyncResultBuilder.SetException(Exception exception)
+    {
+        _status = DTaskStatus.Faulted;
+        _exception = exception;
+    }
+}
+
+internal sealed class WhenAllDTask<TResult>(IEnumerable<DTask<TResult>> tasks) : DTask<TResult[]>, IDAsyncResultBuilder<TResult[]>
+{
+    private DTaskStatus _status = DTaskStatus.Pending;
+    private object? _stateObject;
+
+    public override DTaskStatus Status => _status;
+
+    protected override TResult[] ResultCore
+    {
+        get
+        {
+            Assert.Is<TResult[]>(_stateObject);
+
+            return Unsafe.As<TResult[]>(_stateObject);
+        }
+    }
+
+    protected override Exception ExceptionCore
+    {
+        get
+        {
+            Assert.Is<Exception>(_stateObject);
+
+            return Unsafe.As<Exception>(_stateObject);
+        }
+    }
+
+    protected override void Run(IDAsyncFlow flow) => flow.WhenAll(tasks, this);
+
+    void IDAsyncResultBuilder<TResult[]>.SetResult(TResult[] result)
+    {
+        _status = DTaskStatus.Succeeded;
+        _stateObject = result;
+    }
+
+    void IDAsyncResultBuilder<TResult[]>.SetException(Exception exception)
+    {
+        _status = DTaskStatus.Faulted;
+        _stateObject = exception;
     }
 }

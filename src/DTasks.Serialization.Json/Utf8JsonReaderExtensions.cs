@@ -16,11 +16,19 @@ internal static class Utf8JsonReaderExtensions
             throw new JsonException("Expected end of json.");
     }
 
-    public static void ExpectType(this ref readonly Utf8JsonReader reader, JsonTokenType expectedType)
+    public static void ExpectToken(this ref readonly Utf8JsonReader reader, JsonTokenType expectedType)
     {
         JsonTokenType actualType = reader.TokenType;
 
         if (actualType != expectedType)
             throw new JsonException($"Expected token type '{expectedType}', got '{actualType}' instead.");
+    }
+
+    public static void ExpectPropertyName(this ref readonly Utf8JsonReader reader, string expectedName)
+    {
+        reader.ExpectToken(JsonTokenType.PropertyName);
+
+        if (!reader.ValueTextEquals(expectedName))
+            throw new JsonException($"Expected property '{expectedName}'.");
     }
 }

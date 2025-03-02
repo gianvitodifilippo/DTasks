@@ -2,7 +2,7 @@
 
 public interface IStateMachineInspector
 {
-    Delegate GetSuspender(Type stateMachineType);
+    object GetSuspender(Type stateMachineType);
 
-    Delegate GetResumer(Type stateMachineType);
+    object GetResumer(Type stateMachineType);
 }
