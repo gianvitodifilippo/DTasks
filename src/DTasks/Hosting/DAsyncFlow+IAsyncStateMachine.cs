@@ -24,6 +24,7 @@ internal partial class DAsyncFlow : IAsyncStateMachine
 
                     GetVoidValueTaskResult();
                     _suspendingAwaiterOrType = null;
+                    _state = FlowState.Running;
                     Consume(ref _continuation).Invoke(this);
                     break;
 

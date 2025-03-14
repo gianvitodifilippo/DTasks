@@ -198,8 +198,7 @@ internal partial class DAsyncFlow
             flowImpl._suspendingAwaiterOrType = typeof(WhenAnyAwaiter);
             flowImpl._continuation = self =>
             {
-                DTask result = new DTaskHandle(self._childId);
-                self._tasks.Add(self._childId, result);
+                DTask result = self._tasks[self._childId];
                 self.Resume(self._parentId, result);
             };
             flowImpl.Dehydrate(flowImpl._parentId, flowImpl._id, ref _stateMachine);

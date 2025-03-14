@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\DTasks.Extensions.Hosting\DTasks.Extensions.Hosting.csproj" />
+      <ProjectReference Include="..\DTasks.Inspection.Dynamic\DTasks.Inspection.Dynamic.csproj" />
+      <ProjectReference Include="..\DTasks.Serialization.Json\DTasks.Serialization.Json.csproj" />
+      <ProjectReference Include="..\DTasks.Serialization.StackExchangeRedis\DTasks.Serialization.StackExchangeRedis.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+      "module": "commonjs",
+      "target": "es5",
+      "allowJs": true,
+      "checkJs": false,
+      "jsx": "react",
+      "outDir": "./build",
+      "rootDir": "./lib",
+      "removeComments": true,
+      "noEmit": true,
+      "pretty": true,
+      "skipLibCheck": true,
+      "strict": true,
+      "moduleResolution": "node",
+      "esModuleInterop": true
+  },
+  "include": [
+      "./lib/**/*"
+  ],
+  "exclude": [
+      "node_modules"
+  ]
+}
