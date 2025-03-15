@@ -11,14 +11,14 @@ public class DAsyncRunner(
     public async DTask<IResult> StartApproval(string operationId, StartApprovalRequest request)
     {
         IResult result = await endpoints.StartApproval(request);
-        host.ContinueAsynchronously(operationId, null);
+        host.SetCallback(operationId, null);
         return result;
     }
 
     public async DTask<IResult> StartApproval_Webhook(string operationId, Uri callbackAddress, StartApprovalRequest request)
     {
         IResult result = await endpoints.StartApproval(request);
-        host.ContinueAsynchronously(operationId, new WebhookDAsyncCallback(httpClientFactory, callbackAddress, operationId));
+        host.SetCallback(operationId, new WebhookDAsyncCallback(httpClientFactory, callbackAddress, operationId));
         return result;
     }
 }

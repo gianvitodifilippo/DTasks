@@ -10,4 +10,8 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.24.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\DTasks.AspNetCore\DTasks.AspNetCore.csproj" />
+  </ItemGroup>
+
 </Project>

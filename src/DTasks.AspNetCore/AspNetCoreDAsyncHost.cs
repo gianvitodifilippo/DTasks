@@ -21,6 +21,8 @@ public class AspNetCoreDAsyncHost(
 
     public IResult? Result => _result;
 
+    public bool IsSyncContext { get; set; }
+
     protected override ITypeResolver TypeResolver => typeResolver;
 
     protected override IDAsyncMarshaler CreateMarshaler()
@@ -83,8 +85,11 @@ public class AspNetCoreDAsyncHost(
         return workQueue.YieldAsync(id, cancellationToken);
     }
 
-    public void ContinueAsynchronously(string operationId, IDAsyncCallback? callback)
+    public void SetCallback(string operationId, IDAsyncCallback? callback)
     {
+        if (IsSyncContext)
+            return;
+
         _operationId = operationId;
         _callback = callback;
     }

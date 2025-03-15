@@ -37,6 +37,7 @@ public class RedisWorkQueue(
 
                     AspNetCoreDAsyncHost host = scopeServices.GetRequiredService<AspNetCoreDAsyncHost>();
                     await host.ResumeAsync(id, stoppingToken);
+                    await redis.HashDeleteAsync(s_reminderKey, entry.Name);
                 }
                 catch (Exception ex)
                 {

@@ -77,6 +77,7 @@ app.MapPost("/approvals/start", async (
         task = runner.StartApproval(operationId, request);
     }
 
+    host.IsSyncContext = true;
     await host.StartAsync(task, cancellationToken);
 
     if (host.Result is IResult result)
