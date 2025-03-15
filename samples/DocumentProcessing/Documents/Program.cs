@@ -14,6 +14,7 @@ using StackExchange.Redis;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,8 +25,9 @@ builder.Host.UseDTasks(configuration => configuration
             typeResolver.RegisterDAsyncType<AsyncEndpoints>();
             typeResolver.RegisterDAsyncType<DAsyncRunner>();
         })));
-builder.Services.AddScoped<AsyncEndpoints>();
 
+#region In library
+builder.Services.AddScoped<AsyncEndpoints>();
 builder.Services
     .AddSingleton(sp => ConnectionMultiplexer.Connect("localhost:6379"))
     .AddSingleton(sp => sp.GetRequiredService<ConnectionMultiplexer>().GetDatabase());
@@ -34,7 +36,7 @@ builder.Services
     .AddSingleton<IDAsyncStorage, RedisDAsyncStorage>()
     .AddSingleton(new JsonSerializerOptions()
     {
-        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         WriteIndented = true,
         Converters =
         {
@@ -46,7 +48,10 @@ builder.Services
     .AddSingleton<RedisWorkQueue>()
     .AddHostedService(sp => sp.GetRequiredService<RedisWorkQueue>())
     .AddSingleton<IWorkQueue>(sp => sp.GetRequiredService<RedisWorkQueue>())
-    .AddScoped<DAsyncRunner>();
+    .AddScoped<DAsyncRunner>()
+    .AddSingleton<WebSocketHandler>()
+    .AddSingleton<IWebSocketHandler>(sp => sp.GetRequiredService<WebSocketHandler>());
+#endregion
 
 const string storageConnectionString = "UseDevelopmentStorage=true";
 const string containerName = "documents";
@@ -68,8 +73,6 @@ BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(conta
 await containerClient.CreateIfNotExistsAsync();
 
 builder.Services.AddSingleton(containerClient);
-builder.Services.AddSingleton<WebSocketHandler>();
-builder.Services.AddSingleton<IWebSocketHandler>(sp => sp.GetRequiredService<WebSocketHandler>());
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader()));
 
 var app = builder.Build();
@@ -101,6 +104,7 @@ app.MapPost("/upload-request", (HttpContext context, BlobContainerClient contain
     });
 });
 
+#region Generated
 app.MapPost("/process-document/{documentId}", async (
     [FromServices] DAsyncRunner runner,
     [FromServices] AspNetCoreDAsyncHost host,
@@ -190,5 +194,6 @@ app.Map("/ws", async (HttpContext context, [FromServices] WebSocketHandler handl
         }
     }
 });
+#endregion
 
 app.Run();

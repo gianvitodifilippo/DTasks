@@ -4,14 +4,14 @@ using DTasks;
 using DTasks.AspNetCore;
 using DTasks.Hosting;
 using DTasks.Marshaling;
+using DTasks.Serialization;
 using DTasks.Serialization.Json;
 using DTasks.Serialization.StackExchangeRedis;
-using DTasks.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using StackExchange.Redis;
-using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 using System.Net;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,8 +22,9 @@ builder.Host.UseDTasks(configuration => configuration
             typeResolver.RegisterDAsyncType<AsyncEndpoints>();
             typeResolver.RegisterDAsyncType<DAsyncRunner>();
         })));
-builder.Services.AddScoped<AsyncEndpoints>();
 
+#region In library
+builder.Services.AddScoped<AsyncEndpoints>();
 builder.Services
     .AddSingleton(sp => ConnectionMultiplexer.Connect("localhost:6379"))
     .AddSingleton(sp => sp.GetRequiredService<ConnectionMultiplexer>().GetDatabase());
@@ -32,7 +33,7 @@ builder.Services
     .AddSingleton<IDAsyncStorage, RedisDAsyncStorage>()
     .AddSingleton(new JsonSerializerOptions()
     {
-        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         WriteIndented = true,
         Converters =
         {
@@ -46,6 +47,7 @@ builder.Services
     .AddHostedService(sp => sp.GetRequiredService<RedisWorkQueue>())
     .AddSingleton<IWorkQueue>(sp => sp.GetRequiredService<RedisWorkQueue>())
     .AddScoped<DAsyncRunner>();
+#endregion
 
 builder.Services
     .AddSingleton<ApproverRepository>()
@@ -53,6 +55,7 @@ builder.Services
 
 var app = builder.Build();
 
+#region Generated
 app.MapPost("/approvals/start", async (
     [FromServices] DAsyncRunner runner,
     [FromServices] AspNetCoreDAsyncHost host,
@@ -115,7 +118,6 @@ app.MapGet("/approvals/{operationId}", async (
     return Results.Ok(new { status });
 }).WithName("GetApprovalsStatus");
 
-// This should be generated
 app.MapGet("/approvals/{id}/{result}", async (
     string id,
     ApprovalResult result,
@@ -128,5 +130,6 @@ app.MapGet("/approvals/{id}/{result}", async (
     await host.ResumeAsync(dasyncId, result, cancellationToken);
     return Results.Ok();
 });
+#endregion
 
 app.Run();
