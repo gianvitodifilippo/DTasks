@@ -18,9 +18,9 @@ internal class DTaskToken
         , allows ref struct
 #endif
     {
-        TypeId typeId = typeof(Task).IsAssignableFrom(typeof(T))
+        TypeId typeId = typeof(DTask).IsAssignableFrom(typeof(T))
             ? default
-            : typeResolver.GetTypeId(typeof(Task));
+            : typeResolver.GetTypeId(typeof(DTask));
 
         action.MarshalAs(typeId, this);
     }
@@ -72,9 +72,9 @@ internal class DTaskToken<TResult> : DTaskToken
 
     internal override void Write<T, TAction>(ref TAction action, ITypeResolver typeResolver)
     {
-        TypeId typeId = typeof(Task<TResult>).IsAssignableFrom(typeof(T))
+        TypeId typeId = typeof(DTask<TResult>).IsAssignableFrom(typeof(T))
             ? default
-            : typeResolver.GetTypeId(typeof(Task<TResult>));
+            : typeResolver.GetTypeId(typeof(DTask<TResult>));
 
         action.MarshalAs(typeId, this);
     }

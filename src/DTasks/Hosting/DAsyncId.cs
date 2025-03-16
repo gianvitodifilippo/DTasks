@@ -11,7 +11,9 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     internal static readonly DAsyncId RootId = new(uint.MaxValue, uint.MaxValue, uint.MaxValue);
 
-#if !NET6_0_OR_GREATER
+#if DEBUG_TESTS
+    private static int s_idCount = 0;
+#elif !NET6_0_OR_GREATER
     private static readonly ThreadLocal<Random> s_randomLocal = new(static () => new Random());
 #endif
 
@@ -96,7 +98,12 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     private static void Randomize(Span<byte> bytes)
     {
-#if NET6_0_OR_GREATER
+#if DEBUG_TESTS
+        s_idCount++;
+        string stringId = s_idCount.ToString("0000000000000000");
+        bool hasConverted = Convert.TryFromBase64String(stringId, bytes, out int bytesWritten);
+        Debug.Assert(hasConverted && bytesWritten == ByteCount);
+#elif NET6_0_OR_GREATER
         Random.Shared.NextBytes(bytes);
 #else
         s_randomLocal.Value.NextBytes(bytes);

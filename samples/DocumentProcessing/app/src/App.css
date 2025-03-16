@@ -1,0 +1,88 @@
+html, body, .container {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+button {
+  border: none;
+  height: 48px;
+}
+
+.header {
+  text-align: center;
+  margin: 30px 0px;
+}
+
+h1 {
+  font-size: 34px;
+  margin: 0;
+}
+
+h2 {
+  font-size: 26px;
+  color: rgb(212, 212, 212);
+  margin-top: 5px;
+}
+
+h3 {
+  font-size: 20px;
+  color: rgb(212, 212, 212);
+  margin: 0;
+}
+
+p {
+  min-height: 24px;
+}
+
+.description {
+  margin: 5px 0px 20px 0px;
+}
+
+.upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.step1, .step2, .step3, .step4 {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.file-selection {
+  display: inline-block;
+  padding: 12px 24px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  text-align: center;
+  transition: background 0.3s;
+}
+
+.file-selection:hover {
+  background-color: #0056b3;
+}
+
+.file-selection.disabled {
+  background-color: #777;
+  cursor: not-allowed;
+}
+
+input[type="file"] {
+  display: none;
+}

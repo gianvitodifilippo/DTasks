@@ -6,6 +6,7 @@
         <Nullable>enable</Nullable>
         <WarningsAsErrors>Nullable</WarningsAsErrors>
         <Configurations>Debug;Release;Debug-Tests;Release-Tests</Configurations>
+        <PackageVersion>0.1.0-preview.1</PackageVersion>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Tests|AnyCPU'">

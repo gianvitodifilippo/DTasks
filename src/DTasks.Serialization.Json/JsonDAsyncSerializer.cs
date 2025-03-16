@@ -3,6 +3,7 @@ using DTasks.Inspection;
 using DTasks.Inspection.Dynamic;
 using DTasks.Marshaling;
 using System.Buffers;
+using System.Text;
 using System.Text.Json;
 
 namespace DTasks.Serialization.Json;
@@ -56,6 +57,7 @@ public sealed class JsonDAsyncSerializer : IDAsyncSerializer
 
     public DAsyncLink DeserializeStateMachine<TResult>(ReadOnlySpan<byte> bytes, TResult result)
     {
+        string json = Encoding.UTF8.GetString(bytes);
         _referenceResolver.InitForReading();
 
         JsonStateMachineReader stateMachineReader = new(bytes, _jsonOptions, _referenceResolver, _marshaler);

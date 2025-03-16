@@ -46,11 +46,16 @@ internal partial class DAsyncFlow
             if (flow is not DAsyncFlow flowImpl)
                 throw new ArgumentException("A d-async runnable was resumed on a different flow than the one that started it.");
 
+            DAsyncId id = flowImpl._id;
             CompletedHandleStateMachine stateMachine = default;
             stateMachine.Runnable = this;
             flowImpl._suspendingAwaiterOrType = typeof(CompletedHandleAwaiter);
-            flowImpl._continuation = self => self.Resume(self._parentId);
-            flowImpl.Dehydrate(default, flowImpl._id, ref stateMachine);
+            flowImpl._continuation = self => // TODO: Try avoid this allocation
+            {
+                self._tasks.Add(id, DTask.CompletedDTask);
+                self.Resume(self._parentId);
+            };
+            flowImpl.Dehydrate(default, id, ref stateMachine);
         }
 
         public virtual void Write<T, TAction>(scoped ref TAction action)
@@ -70,10 +75,15 @@ internal partial class DAsyncFlow
             if (flow is not DAsyncFlow flowImpl)
                 throw new ArgumentException("A d-async runnable was resumed on a different flow than the one that started it.");
 
+            DAsyncId id = flowImpl._id;
             CompletedHandleStateMachine stateMachine = default;
             stateMachine.Runnable = this;
             flowImpl._suspendingAwaiterOrType = typeof(CompletedHandleAwaiter);
-            flowImpl._continuation = self => self.Resume(self._parentId, result); // TODO: Avoid this allocation
+            flowImpl._continuation = self => // TODO: Try avoid this allocation
+            {
+                self._tasks.Add(id, DTask.FromResult(result));
+                self.Resume(self._parentId, result);
+            };
             flowImpl.Dehydrate(default, flowImpl._id, ref stateMachine);
         }
 
