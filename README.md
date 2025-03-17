@@ -1,2 +1,64 @@
-# DTasks
-DTasks is a zero-abstraction durable task library.
+# DTasks: a zero-abstraction durable task library
+
+DTasks is a **zero-abstraction** library for writing **long-running workflows across service boundaries**. It is built directly on top of the C# **async pattern**, allowing users to write persistent and distributed operations using `async`/`await` with no more effort than adding a "D" to your "Tasks!" By the way, if you're wondering what the **"D"** in DTasks stands for, you choose! It can be "durable", "distributed", or "damn, that's amazing!"
+
+## Why DTasks?
+
+DTasks is an alternative to Microsoft's **Durable Task Framework (DTFx)**, which it is inspired by, but it follows a different approach:
+
+1. **Dedicated async types** - Async methods representing a durable operation (d-async methods) will return `DTask` instead of `Task`. You can still await a normal `Task` inside a d-async method.
+2. **Runs anywhere** - Works in ASP.NET Core and any environment that implements the DTasks pattern.
+3. **No deterministic code constraints** – Workflows can contain non-deterministic code, and execution is not replayed after every yield.
+
+> DTasks is still in its pre-alpha version. It will take time and effort to reach 1.0, so feedback and contributions are most welcome. If you find this project useful, consider starring it and sharing it with others!
+
+## Samples
+
+Currently, DTasks integrates with ASP.NET Core only, but it has the potential to run in other environments in the future. There are two samples that showcase how you can write asynchronous endpoints. Async endpoints are HTTP methods that may not immediately return the operation's result but instead provide a way for the client to be notified or retrieve the result later.
+
+1. **ApprovalWorkflow** - The client (another .NET Web API) sends an HTTP request to start an approval process and provides a callback URL to get notified when the request has been reviewed. The server sends an email to the approver and waits for their input before notifying the client using the provided URL.
+2. **DocumentProcessing** - The client (a web app) sends a request to process a document that it previously uploaded to a storage account. The server verifies that the document exists and immediately responds, then starts long-running processing and notifies the client when it's done using WebSockets.
+
+To run these samples, please refer to the relevant README files.
+
+Here's a basic example of how you can define a durable workflow using DTasks, taken from the ApprovalWorkflow sample:
+
+```csharp
+using DTasks;
+
+public class AsyncEndpoints(
+    ApproverRepository repository, // Use dependency injection like in any other framework
+    ApprovalService service)
+{
+    [HttpPost("approvals")] // Map your async endpoint using ASP.NET Core attributes
+    public async DTask<IResult> NewApproval(NewApprovalRequest request) // Returning DTask allows you to write async endpoints
+    {
+        // Get the email of the approver by looking it up in the database
+        string? email = await repository.GetEmailByIdAsync(request.ApproverId); // Await any "normal" Tasks, including those that are non-deterministic or have side effects
+        if (email is null)
+            return Results.BadRequest("Invalid approver id");
+
+        // Send an email to the approver with links for approving or rejecting the request
+        DTask<ApprovalResult> approvalTask = service.SendApprovalRequestDAsync(request.Details, email); // This DTask will complete when the approver clicks on either link
+        DTask timeout = DTask.Delay(TimeSpan.FromDays(7)); // Give them 7 days to review the request
+
+        // Wait until either the approver reviews the request or the timeout expires
+        DTask winner = await DTask.WhenAny(timeout, approvalTask); // DTasks has an API similar to Task, including DTask.WhenAny, DTask.WhenAll, etc.
+        ApprovalResult result = winner == timeout
+            ? ApprovalResult.Reject
+            : approvalTask.Result; // "DTask.Result" can be accessed only if the DTask was awaited, otherwise it throws
+
+        return AsyncResults.Success(result); // If you need to return IResult, use AsyncResults.Success to terminate the workflow
+    }
+}
+```
+
+This method will automatically persist its state and resume execution even after failures or restarts.
+
+## Contributing
+
+Contributions are deeply appreciated! At this stage, the focus is on carefully designing the APIs and internals to ensure that the library is extensible and flexible. Feel free to open issues to discuss design choices, propose features, and submit pull requests. If you want to reach out, drop me an email—I’d love to hear your thoughts!
+
+## License
+
+DTasks is licensed under [MIT](LICENSE).
