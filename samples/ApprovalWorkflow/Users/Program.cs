@@ -8,7 +8,7 @@ app.MapPost("/approvals/start", async () =>
 {
     using HttpClient http = new HttpClient();
 
-    HttpRequestMessage request = new(HttpMethod.Post, new Uri("http://localhost:5033/approvals/start"));
+    using HttpRequestMessage request = new(HttpMethod.Post, new Uri("http://localhost:5033/approvals"));
     request.Headers.Add("Async-CallbackType", "webhook");
     request.Headers.Add("Async-CallbackUrl", "http://localhost:5017/approvals/result");
 
@@ -23,8 +23,8 @@ app.MapPost("/approvals/start", async () =>
         approverId = "550e8400-e29b-41d4-a716-446655440000"
     });
 
-    var response = await http.SendAsync(request);
-    return Results.Ok(response.Headers.Location);
+    using HttpResponseMessage response = await http.SendAsync(request);
+    return Results.Ok($"Go to {response.Headers.Location} to monitor the status of the approval");
 });
 
 app.MapPost("/approvals/result", ([FromBody] ApprovalResult result) =>

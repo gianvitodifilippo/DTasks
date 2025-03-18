@@ -8,16 +8,16 @@ public class DAsyncRunner(
     AspNetCoreDAsyncHost host,
     IHttpClientFactory httpClientFactory)
 {
-    public async DTask<IResult> StartApproval(string operationId, StartApprovalRequest request)
+    public async DTask<IResult> NewApproval(string operationId, NewApprovalRequest request)
     {
-        IResult result = await endpoints.StartApproval(request);
+        IResult result = await endpoints.NewApproval(request);
         host.SetCallback(operationId, null);
         return result;
     }
 
-    public async DTask<IResult> StartApproval_Webhook(string operationId, Uri callbackAddress, StartApprovalRequest request)
+    public async DTask<IResult> NewApproval_Webhook(string operationId, Uri callbackAddress, NewApprovalRequest request)
     {
-        IResult result = await endpoints.StartApproval(request);
+        IResult result = await endpoints.NewApproval(request);
         host.SetCallback(operationId, new WebhookDAsyncCallback(httpClientFactory, callbackAddress, operationId));
         return result;
     }

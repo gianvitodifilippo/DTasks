@@ -8,20 +8,21 @@ public class AsyncEndpoints(
     ApproverRepository repository,
     ApprovalService service)
 {
-    [HttpPost]
-    public async DTask<IResult> StartApproval(StartApprovalRequest request)
+    [HttpPost("approvals")]
+    public async DTask<IResult> NewApproval(NewApprovalRequest request)
     {
         string? email = await repository.GetEmailByIdAsync(request.ApproverId);
         if (email is null)
             return Results.BadRequest("Invalid approver id");
 
         DTask<ApprovalResult> approvalTask = service.SendApprovalRequestDAsync(request.Details, email);
-        DTask timeout = DTask.Delay(TimeSpan.FromSeconds(30));
+        DTask timeout = DTask.Delay(TimeSpan.FromDays(7));
 
         DTask winner = await DTask.WhenAny(timeout, approvalTask);
-        if (winner == timeout)
-            return AsyncResults.Success(ApprovalResult.Reject);
+        ApprovalResult result = winner == timeout
+            ? ApprovalResult.Reject
+            : approvalTask.Result;
 
-        return AsyncResults.Success(approvalTask.Result);
+        return AsyncResults.Success(result);
     }
 }
