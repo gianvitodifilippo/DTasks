@@ -1,6 +1,7 @@
 # DTasks: a zero-abstraction durable task library
 
 [![build](https://github.com/GianvitoDifilippo/DTasks/actions/workflows/ci.yml/badge.svg)](https://github.com/GianvitoDifilippo/DTasks/actions?query=workflow%3ACI)
+[![NuGet](http://img.shields.io/nuget/vpre/DTasks.svg?label=NuGet)](https://www.nuget.org/packages/DTasks/)
 
 **DTasks** is a _zero-abstraction_ library for writing long-running workflows across service boundaries.
 It is built directly on top of the C# **async pattern**, allowing users to write persistent and distributed operations using `async`/`await` with no more effort than adding a "D" to your "Tasks."
