@@ -11,9 +11,11 @@ on:
 jobs:
   run-tests:
     runs-on: ubuntu-latest
+    fail-fast: true
     strategy:
       matrix:
         configuration: [Debug-Tests, Release-Tests]
+        dotnet-version: [6.0.x, 8.0.x, 9.0.x]
 
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +23,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: ${{ matrix.dotnet-version }}
       
       - name: Cache NuGet packages
         uses: actions/cache@v3
@@ -38,4 +40,11 @@ jobs:
         run: dotnet build -c ${{ matrix.configuration }} --no-restore
 
       - name: Test ${{ matrix.configuration }}
-        run: dotnet test -c ${{ matrix.configuration }} --no-build --verbosity normal
+        run: dotnet test -c ${{ matrix.configuration }} --no-build --verbosity normal --logger trx --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ matrix.configuration }}
+          path: TestResults
