@@ -82,4 +82,4 @@ If you want to reach out, [drop me an email](mailto:gianvito.difilippo@gmail.com
 
 ## ⚖️ License
 
-**DTasks** is licensed under [MIT](LICENSE).
+**DTasks** is licensed under [Apache 2.0](LICENSE).
