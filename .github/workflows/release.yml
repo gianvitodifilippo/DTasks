@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  release:
+    types:
+      - published
+      - prereleased
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+        
+      - name: Get version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Create Git tag
+        run: |
+          git tag $VERSION
+          git push origin $VERSION
+          
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: |
+            6.0.x
+            8.0.x
+            9.0.x
+          
+      - name: Cache NuGet packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+      
+      - name: Restore dependencies
+        run: dotnet restore
+      
+      - name: Build
+        run: dotnet build -c Release --no-restore -p:Version=${VERSION#v}
+
+      - name: Pack
+        run: dotnet pack -c Release --output nupkgs -p:PackageVersion=${VERSION#v}
+
+      - name: Publish to NuGet
+        run: dotnet nuget push "nupkgs/*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+
+      - name: Generate changelog
+        run: |
+          echo "## ${VERSION#v} - $(date + '%Y-%m-%d')" > new_changelog.md
+          echo "" >> new_changelog.md
+          gh api repos/${{ github.repository }}/releases/${{ github.event.release.id }} | jq -r '.body' >> new_changelog.md
+          echo "" >> new_changelog.md
+          cat CHANGELOG.md >> new_changelog.md
+          mv new_changelog.md CHANGELOG.md
+
+      - name: Commmit and push changelog
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "Update CHANGELOG for ${VERSION#v}"
+          git push origin main
