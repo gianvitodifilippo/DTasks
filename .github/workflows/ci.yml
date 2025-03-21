@@ -16,16 +16,15 @@ permissions:
   
 jobs:
   run-tests:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
         configuration:
           - Debug-Tests
-          # - Release-Tests
+          - Release-Tests
         dotnet-version:
-          # - net6.0
-          # - net8.0
+          - net8.0
           - net9.0
 
     steps:
