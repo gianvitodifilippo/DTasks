@@ -23,9 +23,6 @@ jobs:
         configuration:
           - Debug-Tests
           - Release-Tests
-        dotnet-version:
-          - net8.0
-          - net9.0
 
     steps:
       - uses: actions/checkout@v4
@@ -48,17 +45,17 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build ${{ matrix.dotnet-version }} ${{ matrix.configuration }}
-        run: dotnet build --no-restore
+      - name: Build ${{ matrix.configuration }}
+        run: dotnet build -c ${{ matrix.configuration }} --no-restore
 
-      - name: Test ${{ matrix.dotnet-version }} ${{ matrix.configuration }}
-        run: dotnet test -f ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --no-restore --verbosity normal --logger trx --results-directory ${{ matrix.configuration }}/${{ matrix.dotnet-version }}/TestResults
+      - name: Test ${{ matrix.configuration }}
+        run: dotnet test -c ${{ matrix.configuration }} --no-build --no-restore --verbosity normal --logger trx --results-directory ${{ matrix.configuration }}/TestResults
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
           files: |
-            ${{ matrix.configuration }}/${{ matrix.dotnet-version }}/TestResults/**/*.xml
-            ${{ matrix.configuration }}/${{ matrix.dotnet-version }}/TestResults/**/*.trx
-            ${{ matrix.configuration }}/${{ matrix.dotnet-version }}/TestResults/**/*.json
+            ${{ matrix.configuration }}/TestResults/**/*.xml
+            ${{ matrix.configuration }}/TestResults/**/*.trx
+            ${{ matrix.configuration }}/TestResults/**/*.json
