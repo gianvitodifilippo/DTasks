@@ -18,9 +18,9 @@ jobs:
           - Debug-Tests
           - Release-Tests
         dotnet-version:
-          - 6.x
-          - 8.x
-          - 9.x
+          - netstandard2.1
+          - net8.0
+          - net9.0
 
     steps:
       - uses: actions/checkout@v4
@@ -54,5 +54,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.configuration }}
+          name: test-results-${{ matrix.dotnet-version }}-${{ matrix.configuration }}
           path: TestResults
