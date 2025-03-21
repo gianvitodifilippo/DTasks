@@ -54,7 +54,7 @@ jobs:
         run: dotnet build -c ${{ matrix.configuration }} --no-restore
 
       - name: Test ${{ matrix.dotnet-version }} ${{ matrix.configuration }}
-        run: dotnet test -f ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-restore --verbosity normal --logger trx --results-directory TestResults
+        run: dotnet test -f ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --no-restore --verbosity normal --logger trx --results-directory TestResults
 
       - name: Upload test results
         if: always()
