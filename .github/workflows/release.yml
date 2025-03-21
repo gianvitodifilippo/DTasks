@@ -22,7 +22,7 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          echo "VERSION=0.0.1" >> $GITHUB_ENV
           echo "Resolved version: $VERSION"
           
       - name: Set up .NET
