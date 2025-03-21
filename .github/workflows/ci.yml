@@ -17,10 +17,6 @@ jobs:
         configuration:
           - Debug-Tests
           - Release-Tests
-        dotnet-version:
-          - 6.0.x
-          - 8.0.x
-          - 9.0.x
 
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +24,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: ${{ matrix.dotnet-version }}
+          dotnet-version:
+            - 6.0.x
+            - 8.0.x
+            - 9.0.x
       
       - name: Cache NuGet packages
         uses: actions/cache@v3
