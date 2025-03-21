@@ -62,22 +62,7 @@ jobs:
       - name: Add DTasks.Tests.Interceptors to solution
         run: dotnet sln add tests/DTasks.Tests.Interceptors/DTasks.Tests.Interceptors.csproj
       
-      - name: Test ${{ matrix.dotnet-version }} ${{ matrix.configuration }} 1
-        run: dotnet test tests/DTasks.Extensions.DependencyInjection.Tests/DTasks.Extensions.DependencyInjection.Tests.csproj -f ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --no-restore --verbosity normal --logger trx --results-directory ${{ matrix.configuration }}/${{ matrix.dotnet-version }}/TestResults
-
-      - name: Test ${{ matrix.dotnet-version }} ${{ matrix.configuration }} 2
-        run: dotnet test tests/DTasks.Extensions.Hosting.Tests/DTasks.Extensions.Hosting.Tests.csproj -f ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --no-restore --verbosity normal --logger trx --results-directory ${{ matrix.configuration }}/${{ matrix.dotnet-version }}/TestResults
-
-      - name: Test ${{ matrix.dotnet-version }} ${{ matrix.configuration }} 3
-        run: dotnet test tests/DTasks.Inspection.Dynamic.Tests/DTasks.Inspection.Dynamic.Tests.csproj -f ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --no-restore --verbosity normal --logger trx --results-directory ${{ matrix.configuration }}/${{ matrix.dotnet-version }}/TestResults
-
-      - name: Test ${{ matrix.dotnet-version }} ${{ matrix.configuration }} 4
-        run: dotnet test tests/DTasks.Serialization.Json.Tests/DTasks.Serialization.Json.Tests.csproj -f ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --no-restore --verbosity normal --logger trx --results-directory ${{ matrix.configuration }}/${{ matrix.dotnet-version }}/TestResults
-
-      - name: Test ${{ matrix.dotnet-version }} ${{ matrix.configuration }} 5
-        run: dotnet test tests/DTasks.Serialization.StackExchangeRedis.Tests/DTasks.Serialization.StackExchangeRedis.Tests.csproj -f ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --no-restore --verbosity normal --logger trx --results-directory ${{ matrix.configuration }}/${{ matrix.dotnet-version }}/TestResults
-
-      - name: Test ${{ matrix.dotnet-version }} ${{ matrix.configuration }} 6
+      - name: Test ${{ matrix.dotnet-version }} ${{ matrix.configuration }}
         run: dotnet test tests/DTasks.Tests/DTasks.Tests.csproj -f ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --no-restore --verbosity normal --logger trx --results-directory ${{ matrix.configuration }}/${{ matrix.dotnet-version }}/TestResults
 
       - name: Publish Test Results
