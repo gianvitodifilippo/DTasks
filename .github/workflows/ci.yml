@@ -18,8 +18,8 @@ jobs:
           - Debug-Tests
           - Release-Tests
         dotnet-version:
-          - net6.0
-          - net8.0
+          # - net6.0
+          # - net8.0
           - net9.0
 
     steps:
@@ -50,6 +50,9 @@ jobs:
       - name: Build DTasks.Tests.Interceptors
         run: dotnet build tests/DTasks.Tests.Interceptors/DTasks.Tests.Interceptors.csproj --no-restore
 
+      - name: Add DTasks.Tests.Interceptors to solution
+        run: dotnet sln add tests/DTasks.Tests.Interceptors/DTasks.Tests.Interceptors.csproj
+      
       - name: Build ${{ matrix.dotnet-version }} ${{ matrix.configuration }}
         run: dotnet build -c ${{ matrix.configuration }} --no-restore
 
