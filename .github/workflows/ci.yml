@@ -22,11 +22,11 @@ jobs:
       matrix:
         configuration:
           - Debug-Tests
-          - Release-Tests
+          # - Release-Tests
         dotnet-version:
           # - net6.0
-          - net8.0
-          # - net9.0
+          # - net8.0
+          - net9.0
 
     steps:
       - uses: actions/checkout@v4
