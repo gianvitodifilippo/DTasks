@@ -21,7 +21,9 @@ jobs:
         
       - name: Get version
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: |
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          echo "Version: $VERSION"
           
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
