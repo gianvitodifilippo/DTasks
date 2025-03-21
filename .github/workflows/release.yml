@@ -22,14 +22,13 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-          echo "VERSION=0.0.1" >> $GITHUB_ENV
-          echo "Version: $VERSION"
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          echo "Resolved version: $VERSION"
           
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.x
             8.x
             9.x
           
@@ -48,7 +47,7 @@ jobs:
         run: dotnet build -c Release --no-restore -p:Version=${VERSION#v}
 
       - name: Pack
-        run: dotnet pack -c Release --output nupkgs -p:PackageVersion=${VERSION#v}
+        run: dotnet pack -c Release --output nupkgs -p:PackageVersion=${VERSION#v} --include-symbols --include-source
 
-      # - name: Publish to NuGet
-      #   run: dotnet nuget push "nupkgs/*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+      - name: Publish to NuGet
+        run: dotnet nuget push "nupkgs/*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate
