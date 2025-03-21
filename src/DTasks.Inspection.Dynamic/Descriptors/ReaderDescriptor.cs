@@ -82,7 +82,7 @@ internal sealed class ReaderDescriptor(
             if (method.ReturnType != typeof(bool))
                 return false;
 
-            Type fieldType = fieldParam.ParameterType.GetElementType();
+            Type fieldType = fieldParam.ParameterType.GetElementType()!;
             if (readFieldSpecializedMethods.ContainsKey(fieldType))
                 return false;
 

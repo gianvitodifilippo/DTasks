@@ -32,7 +32,7 @@ internal sealed class DynamicAssembly
 
         PropertyInfo allowMultipleProperty = typeof(AttributeUsageAttribute).GetProperty(
             name: nameof(AttributeUsageAttribute.AllowMultiple),
-            bindingAttr: BindingFlags.Public | BindingFlags.Instance);
+            bindingAttr: BindingFlags.Public | BindingFlags.Instance)!;
 
         ignoresAccessChecksToAttributeType.SetCustomAttribute(new CustomAttributeBuilder(
             con: attributeUsageConstructor,

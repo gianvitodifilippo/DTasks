@@ -193,7 +193,7 @@ internal readonly ref struct InspectorILGenerator(
 
     public void Call(MethodInfo method)
     {
-        OpCode opCode = method.IsStatic || method.DeclaringType.IsValueType
+        OpCode opCode = method.IsStatic || method.DeclaringType!.IsValueType
             ? OpCodes.Call
             : OpCodes.Callvirt;
 
