@@ -62,7 +62,7 @@ jobs:
         run: dotnet sln add tests/DTasks.Tests.Interceptors/DTasks.Tests.Interceptors.csproj
       
       - name: Test ${{ matrix.dotnet-version }} ${{ matrix.configuration }}
-        run: dotnet test tests/DTasks.Tests/DTasks.Tests.csproj -f ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --no-restore --verbosity normal --logger trx --results-directory ${{ matrix.configuration }}/${{ matrix.dotnet-version }}/TestResults
+        run: dotnet test -f ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --no-restore --verbosity normal --logger trx --results-directory ${{ matrix.configuration }}/${{ matrix.dotnet-version }}/TestResults
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
