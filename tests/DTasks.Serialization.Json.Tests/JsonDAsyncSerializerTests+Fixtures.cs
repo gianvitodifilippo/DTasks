@@ -330,7 +330,10 @@ public partial class JsonDAsyncSerializerTests
     private class MockDAsyncMarshaler(JsonDTaskConverterFixture fixture) : IDAsyncMarshaler, ITokenConverter
     {
         public bool TryMarshal<T, TAction>(in T value, scoped ref TAction action)
-            where TAction : struct, IMarshalingAction, allows ref struct
+            where TAction : struct, IMarshalingAction
+#if NET9_0_OR_GREATER
+            , allows ref struct
+#endif
         {
             if (ReferenceEquals(value, fixture.Services.Service1))
             {
@@ -348,7 +351,10 @@ public partial class JsonDAsyncSerializerTests
         }
 
         public bool TryUnmarshal<T, TAction>(TypeId typeId, scoped ref TAction action)
-            where TAction : struct, IUnmarshalingAction, allows ref struct
+            where TAction : struct, IUnmarshalingAction
+#if NET9_0_OR_GREATER
+            , allows ref struct
+#endif
         {
             if (typeof(T) == typeof(Service1))
             {
