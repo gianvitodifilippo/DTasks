@@ -59,11 +59,17 @@ internal readonly ref struct InspectorILGenerator(
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [typeof(TypeId), Type.MakeGenericMethodParameter(0)]);
 
-    private static readonly MethodInfo s_runtimeTypeHandleEqualsMethod = typeof(RuntimeTypeHandle).GetRequiredMethod(
-        name: nameof(RuntimeTypeHandle.Equals),
+    private static readonly MethodInfo s_getTypeFromHandleMethod = typeof(Type).GetRequiredMethod(
+        name: nameof(Type.GetTypeFromHandle),
+        genericParameterCount: 0,
+        bindingAttr: BindingFlags.Static | BindingFlags.Public,
+        parameterTypes: [typeof(RuntimeTypeHandle)]);
+
+    private static readonly MethodInfo s_typeEqualsMethod = typeof(Type).GetRequiredMethod(
+        name: nameof(Type.Equals),
         genericParameterCount: 0,
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-        parameterTypes: [typeof(RuntimeTypeHandle)]);
+        parameterTypes: [typeof(Type)]);
 
     public void DeclareStateMachineLocal()
     {
@@ -275,9 +281,14 @@ internal readonly ref struct InspectorILGenerator(
         il.Emit(OpCodes.Call, fromResultMethod);
     }
 
-    public void CallRuntimeTypeHandleEqualsMethod()
+    public void CallGetTypeFromHandleMethod()
     {
-        il.Emit(OpCodes.Call, s_runtimeTypeHandleEqualsMethod);
+        il.Emit(OpCodes.Call, s_getTypeFromHandleMethod);
+    }
+
+    public void CallTypeEqualsMethod()
+    {
+        il.Emit(OpCodes.Call, s_typeEqualsMethod);
     }
 
     public void NewInvalidOperationException()
@@ -333,6 +344,12 @@ internal readonly ref struct InspectorILGenerator(
     public void BranchIfFalse(Label label, bool shortForm = false)
     {
         OpCode opCode = shortForm ? OpCodes.Brfalse_S : OpCodes.Brfalse;
+        il.Emit(opCode, label);
+    }
+
+    public void BranchIfTrue(Label label, bool shortForm = false)
+    {
+        OpCode opCode = shortForm ? OpCodes.Brtrue_S : OpCodes.Brtrue;
         il.Emit(opCode, label);
     }
 

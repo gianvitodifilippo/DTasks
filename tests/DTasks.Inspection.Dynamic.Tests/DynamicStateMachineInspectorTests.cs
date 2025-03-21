@@ -1,7 +1,6 @@
 ﻿using DTasks.Generated.Emit;
 using DTasks.Inspection.Dynamic.Descriptors;
 using DTasks.Marshaling;
-using FluentAssertions;
 using System.Reflection;
 using System.Reflection.Emit;
 using Xunit.Sdk;
@@ -539,9 +538,11 @@ public partial class DynamicStateMachineInspectorTests
             _il.MarkLabel(Arg.Any<Label>());
             _il.DefineLabel();
             _il.Emit(OpCodes.Ldtoken, Arg.Is(GenericMethodParameter(0)));
+            _il.Emit(OpCodes.Call, Arg.Is(GetTypeFromHandleMethod()));
             _il.Emit(OpCodes.Ldtoken, typeof(int));
-            _il.Emit(OpCodes.Call, Arg.Is(RuntimeTypeHandleEqualsMethod()));
-            _il.Emit(OpCodes.Brfalse_S, Arg.Any<Label>());
+            _il.Emit(OpCodes.Call, Arg.Is(GetTypeFromHandleMethod()));
+            _il.Emit(OpCodes.Call, Arg.Is(TypeEqualsMethod()));
+            _il.Emit(OpCodes.Brtrue_S, Arg.Any<Label>());
 
             _il.Emit(OpCodes.Ldstr, "Invalid attempt to resume a d-async method.");
             _il.Emit(OpCodes.Newobj, Arg.Is(InvalidOperationExceptionConstructor()));
