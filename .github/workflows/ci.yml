@@ -17,6 +17,10 @@ jobs:
         configuration:
           - Debug-Tests
           - Release-Tests
+        dotnet-version:
+          - 6.x
+          - 8.x
+          - 9.x
 
     steps:
       - uses: actions/checkout@v4
@@ -40,11 +44,11 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
       
-      - name: Build ${{ matrix.configuration }}
-        run: dotnet build -c ${{ matrix.configuration }} --no-restore
+      - name: Build ${{ matrix.dotnet-version }} ${{ matrix.configuration }}
+        run: dotnet build --framework ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-restore
 
-      - name: Test ${{ matrix.configuration }}
-        run: dotnet test -c ${{ matrix.configuration }} --no-build --verbosity normal --logger trx --results-directory TestResults
+      - name: Test ${{ matrix.dotnet-version }} ${{ matrix.configuration }}
+        run: dotnet test --framework ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --verbosity normal --logger trx --results-directory TestResults
 
       - name: Upload test results
         if: always()
