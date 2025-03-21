@@ -21,13 +21,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+      - name: dotnet
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version:
-            - 6.0.x
-            - 8.0.x
-            - 9.0.x
+          dotnet-version: |
+            6.x
+            8.x
+            9.x
       
       - name: Cache NuGet packages
         uses: actions/cache@v3

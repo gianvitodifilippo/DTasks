@@ -26,12 +26,12 @@ jobs:
           echo "Version: $VERSION"
           
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
-            8.0.x
-            9.0.x
+            6.x
+            8.x
+            9.x
           
       - name: Cache NuGet packages
         uses: actions/cache@v3
@@ -47,8 +47,8 @@ jobs:
       - name: Build
         run: dotnet build -c Release --no-restore -p:Version=${VERSION#v}
 
-      # - name: Pack
-      #   run: dotnet pack -c Release --output nupkgs -p:PackageVersion=${VERSION#v}
+      - name: Pack
+        run: dotnet pack -c Release --output nupkgs -p:PackageVersion=${VERSION#v}
 
       # - name: Publish to NuGet
       #   run: dotnet nuget push "nupkgs/*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate
