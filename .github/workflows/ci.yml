@@ -45,7 +45,7 @@ jobs:
         run: dotnet restore
       
       - name: Build ${{ matrix.dotnet-version }} ${{ matrix.configuration }}
-        run: dotnet build --framework ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-restore
+        run: dotnet build -c ${{ matrix.configuration }} --no-restore
 
       - name: Test ${{ matrix.dotnet-version }} ${{ matrix.configuration }}
         run: dotnet test --framework ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --verbosity normal --logger trx --results-directory TestResults
