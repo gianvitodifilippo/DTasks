@@ -1,6 +1,8 @@
 <Project>
     
     <PropertyGroup>
+        <Authors>Gianvito Difilippo</Authors>
+        
         <LangVersion>preview</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>

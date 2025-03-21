@@ -18,7 +18,7 @@ jobs:
           - Debug-Tests
           - Release-Tests
         dotnet-version:
-          - netstandard2.1
+          - net6.0
           - net8.0
           - net9.0
 
@@ -43,12 +43,18 @@ jobs:
       
       - name: Restore dependencies
         run: dotnet restore
+
+      - name: Remove DTasks.Tests.Interceptors from solution
+        run: dotnet sln remove tests/DTasks.Tests.Interceptors/DTasks.Tests.Interceptors.csproj
       
+      - name: Build DTasks.Tests.Interceptors
+        run: dotnet build tests/DTasks.Tests.Interceptors/DTasks.Tests.Interceptors.csproj --no-restore
+
       - name: Build ${{ matrix.dotnet-version }} ${{ matrix.configuration }}
-        run: dotnet build -c ${{ matrix.configuration }} --no-restore
+        run: dotnet build -f ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-restore
 
       - name: Test ${{ matrix.dotnet-version }} ${{ matrix.configuration }}
-        run: dotnet test --framework ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --verbosity normal --logger trx --results-directory TestResults
+        run: dotnet test -f ${{ matrix.dotnet-version }} -c ${{ matrix.configuration }} --no-build --no-restore --verbosity normal --logger trx --results-directory TestResults
 
       - name: Upload test results
         if: always()
