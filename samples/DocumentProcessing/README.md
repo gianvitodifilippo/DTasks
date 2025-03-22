@@ -84,6 +84,8 @@ public class AsyncEndpoints(BlobContainerClient containerClient)
 }
 ```
 
+> How DTasks will interact with the WebSockets connection is yet to be determined. Most ASP.NET Core apps will use SignalR and integrating DTasks with it is certainly a future development. Right now, the sample contains placeholder code to make the operations work.
+
 ### Monitoring the Workflow Status
 
 In addition to this, you get an endpoint to monitor the status of the workflow.
