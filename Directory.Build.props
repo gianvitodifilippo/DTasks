@@ -9,6 +9,7 @@
         <WarningsAsErrors>Nullable</WarningsAsErrors>
         <Configurations>Debug;Release;Debug-Tests;Release-Tests</Configurations>
         <PackageProjectUrl>https://github.com/GianvitoDifilippo/DTasks</PackageProjectUrl>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(IsPackable)' == 'true'">
