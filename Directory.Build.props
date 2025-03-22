@@ -1,8 +1,8 @@
 <Project>
-    
+
     <PropertyGroup>
         <Authors>Gianvito Difilippo</Authors>
-        
+
         <LangVersion>preview</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
@@ -10,6 +10,10 @@
         <Configurations>Debug;Release;Debug-Tests;Release-Tests</Configurations>
         <PackageProjectUrl>https://github.com/GianvitoDifilippo/DTasks</PackageProjectUrl>
     </PropertyGroup>
+
+    <ItemGroup Condition="'$(IsPackable)' == 'true'">
+        <None Include="PACKAGE.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Tests|AnyCPU'">
         <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
@@ -19,5 +23,5 @@
         <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
         <Optimize>True</Optimize>
     </PropertyGroup>
-    
+
 </Project>
