@@ -2,8 +2,8 @@
 
 This sample demonstrates how DTasks can be used to easily define a long-running operation that interacts with a web app. In this case, the sample consists of two main components:
 
-- The **Documents** service - Defines an asynchronous endpoint that starts the processing of a document uploaded by the caller.
-The **web app** - A React SPA that provides a UI for starting and monitoring the document processing.
+- The **Documents** service (server) - Defines an asynchronous endpoint that starts the processing of a document uploaded by the caller.
+- The **Web App** (client) - A React SPA that provides a UI for starting and monitoring the document processing.
 
 ## Workflow
 
@@ -11,7 +11,7 @@ The **web app** - A React SPA that provides a UI for starting and monitoring the
 2. The user selects the PDF document they want to process.
 3. The app sends a request to the server for a URL where the file can be uploaded. The server responds with a SAS URL and an ID that identifies the document.
 4. The app uses the provided URL to upload the document to blob storage.
-5. The app then requests the server to start the document processing by providing the previously returned document ID. The server verifies that the document was successfully uploaded and starts the processing in the background.
+5. The app then requests the Documents service to start the document processing by providing the previously returned document ID. The service verifies that the document was successfully uploaded and starts the processing in the background.
 6. Once processing is complete, the server notifies the client via *WebSockets*.
 
 ```mermaid
@@ -23,7 +23,7 @@ sequenceDiagram
 
     User->>WebApp: Open Web App
     WebApp->>Documents: Establish WebSocket connection
-    Documents->>WebApp: 
+    Documents->>WebApp:
 
     User->>WebApp: Select PDF document
     WebApp->>+Documents: POST /upload-request to request document upload
@@ -31,7 +31,7 @@ sequenceDiagram
 
     WebApp->>BlobStorage: Upload document to Blob Storage
 
-    WebApp->>+Documents: POST /document-processing/{documentId} with callback heaader
+    WebApp->>+Documents: POST /document-processing/{documentId} with callback header
     Documents->>BlobStorage: Verify document upload
     Documents->>-WebApp: Respond with OK
 
@@ -47,7 +47,7 @@ DTasks enables defining the document processing workflow with a single d-async m
 - A background job that processes the document.
 - Logic to persist the workflow state.
 
-With DTasks, this can be achieved by defining a single method that represents the whole workflow by defining its steps.
+With DTasks, this can be achieved by defining a single method that represents the whole workflow by defining its steps, eliminating the need for explicit workflow orchestration.
 
 ```csharp
 using Azure.Storage.Blobs;
@@ -129,20 +129,21 @@ This section shows how to run the sample to see DTasks in action.
 
 This folder contains a *docker-compose.yml* file that can be used to spin up containers that support the persistence and the email feature of this sample.
 
-To start, make sure Docker Desktop is running and that there are no running containers that may conflict with the ones that are used in this sample.
-Then, just open a terminal, run `docker compose up`, and wait for the containers to be up and running.
+To start, make sure Docker Desktop is running and that there are no running containers that may conflict with the ones used in this sample.
+Then, simply open a terminal, run `docker compose up`, and wait for the containers to be up and running.
 This will start the following services:
 
 - An **Azurite** container (exposed on ports 10000, 10001, 10002) - used for uploading the documents.
 - A **Redis** instance (exposed on port 6379) used to persist the workflow status.
 
-### 2. Starting the services
+### 2. Starting the Documents Service
 
 Open a new terminal window, and navigate to the Documents subfolder.
 Then, run `dotnet run`.
 This will start the **Documents** service, running on port 5262.
 
-In a new terminal window, open the app subfolder and, if this is the first time running this sample, run `npm i`. Then, run `npm run dev`to start the web app, which will be available on port 5173.
+In a new terminal window, open the app subfolder and, if this is the first time running this sample, run `npm i`.
+Then, run `npm run dev` to start the web app, which will be available on port 5173.
 
 Now, you can navigate to `http://localhost:5173/` to open the app.
 
