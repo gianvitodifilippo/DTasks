@@ -45,18 +45,18 @@ Here's a basic example of how you can define a durable workflow using **DTasks**
 using DTasks;
 
 public class AsyncEndpoints(
-    ApproverRepository repository, // Use dependency injection like in any other framework
+    ApproverRepository repository, // Dependency injection is supported
     ApprovalService service)
 {
     [HttpPost("approvals")] // Map your async endpoint using ASP.NET Core attributes
     public async DTask<IResult> NewApproval(NewApprovalRequest request) // Returning DTask allows you to write async endpoints
     {
-        // Get the email of the approver by looking it up in the database
+        // Look up approver's email in the database
         string? email = await repository.GetEmailByIdAsync(request.ApproverId); // Await any "normal" Tasks, including those that are non-deterministic or have side effects
         if (email is null)
             return Results.BadRequest("Invalid approver id");
 
-        // Send an email to the approver with links for approving or rejecting the request
+        // Send approval/rejection links to the approver
         DTask<ApprovalResult> approvalTask = service.SendApprovalRequestDAsync(request.Details, email); // This DTask will complete when the approver clicks on either link
         DTask timeout = DTask.Delay(TimeSpan.FromDays(7)); // Give them 7 days to review the request
 
