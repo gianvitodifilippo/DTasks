@@ -2,6 +2,11 @@
 
     <PropertyGroup>
         <TargetFrameworks>netstandard2.1;net8.0;net9.0</TargetFrameworks>
+
+        <PackageId>DTasks.Serialization.Json</PackageId>
+        <Summary>Enables the uses of JSON serialization for async state persistence.</Summary>
+        <Description>Enables the uses of JSON serialization for async state persistence.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>

@@ -2,6 +2,11 @@
 
     <PropertyGroup>
         <TargetFrameworks>netstandard2.1;net8.0;net9.0</TargetFrameworks>
+
+        <PackageId>DTasks.Inspection.Dynamic</PackageId>
+        <Summary>Enables state machine inspection by generating dynamic code.</Summary>
+        <Description>Enables state machine inspection by generating dynamic code.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
