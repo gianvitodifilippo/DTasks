@@ -3,9 +3,9 @@
 This sample demonstrates how DTasks can be used to orchestrate a distributed approval workflow across multiple services.
 In this case, there are two services that interop to manage long-running approval requests that include human interaction.
 
-- **Approvals**: This service uses DTasks.AspNetCore to define an async endpoint that starts a generic approval workflow. The caller defines what kind of approval the workflow handles and gets automatically notified when the workflow completes.
+- **Approvals** - This service uses DTasks.AspNetCore to define an async endpoint that starts a generic approval workflow. The caller defines what kind of approval the workflow handles and gets automatically notified when the workflow completes.
 
-- **Users**: Handles user information and integrates with the Approvals service by calling its approval workflow async endpoint, providing the details of the approval and a callback URI to be notified when the decision is made. It does *not* use DTasks.
+- **Users** - Handles user information and integrates with the Approvals service by calling its approval workflow async endpoint, providing the details of the approval and a callback URI to be notified when the decision is made. It does *not* use DTasks.
 
 ## Workflow
 
@@ -16,23 +16,21 @@ In this case, there are two services that interop to manage long-running approva
   - Otherwise, the request times out and is automatically rejected.
 4. Once a decision is reached, the Users Service gets notified via the provided webhook.
 
-This diagram shows the main flow.
-
 ```mermaid
 sequenceDiagram
-    participant UserService as Users Service
-    participant ApprovalsService as Approvals Service
+    participant Users as Users Service
+    participant Approvals as Approvals Service
     participant Approver as Approver (human)
     
-    UserService->>+ApprovalsService: POST /approvals with callback headers
-    ApprovalsService->>+Approver: Send approval request email with Approve/Reject links
-    ApprovalsService->>-UserService: Responds with OK
+    Users->>+Approvals: POST /approvals with callback headers
+    Approvals->>+Approver: Send approval request email with Approve/Reject links
+    Approvals->>-Users: Respond with OK
 
-    Approver->>+ApprovalsService: Click Approve/Reject link
-    ApprovalsService->>-ApprovalsService: Resume workflow with result
+    Approver->>+Approvals: Click Approve/Reject link
+    Approvals->>-Approvals: Resume workflow with result
 
-    ApprovalsService->>+UserService: POST callback to /approvals/result
-    UserService->>-UserService: Handle approval result
+    Approvals->>+Users: POST callback to /approvals/result
+    Users->>-Users: Handle approval result
 ```
 
 ## How you write it
@@ -110,7 +108,7 @@ Once the workflow completes, the response would be:
 
 Based on the code in the `AsyncEndpoint` and `ApprovalService classes`, three endpoints are generated:
 
-1. `POST /approvals`: Generated from the `[HttpPost("approvals")]` attribute on the `NewApproval` method of `AsyncEndpoints`. This endpoint behaves as expected but returns a response after the first d-async yield point (after await DTask.WhenAny), rather than at the end of the method.
+1. `POST /approvals`: Generated from the `[HttpPost("approvals")]` attribute on the `NewApproval` method of `AsyncEndpoints`. This endpoint behaves as expected but returns a response after the first d-async yield point (after `await DTask.WhenAny`), rather than at the end of the method.
 2. `GET /approvals/{operationId}`: This endpoint is automatically generated to monitor the workflow status and retrieve its result.
 3. `GET /approvals/{id}/{result}`: Generated from the hypothetical `[DAsyncCallback(route: "approvals/{$id}/{$result}", Method = "get")]` attribute on the `SendApprovalRequestDAsync` method in `ApprovalService`. This endpoint resumes the workflow by providing a result to the approvalTask.
 
@@ -127,8 +125,8 @@ This section shows how to run the sample to see DTasks in action.
 
 This folder contains a *docker-compose.yml* file that can be used to spin up containers that support the persistence and the email feature of this sample.
 
-To start, make sure Docker Desktop is running. Then, just open a terminal and run `docker compose up`.
-Wait for the containers to be up and running.
+To start, make sure Docker Desktop is running and that there are no running containers that may conflict with the ones that are used in this sample.
+Then, just open a terminal, run `docker compose up`, and wait for the containers to be up and running.
 This will start the following services:
 
 - A **PostgreSQL** container (exposed on port 5432) - used for storing the approver email addresses.
@@ -193,7 +191,8 @@ info: Program[0]
 
 If you're debugging the workflow, you may notice that the Users service received a response (202 Accepted) even though the `NewApproval` method hasn't returned yet.
 
-This is because the method execution was suspended and its status persisted, while the caller is not blocked. In the next step, we’ll resume the method execution after human input.
+This is because the method execution was suspended and its status persisted, while the caller is not blocked.
+In the next step, we’ll resume the method execution after human input.
 
 To verify the workflow’s persistence, you can shut down the Approvals service; just remember to restart it before proceeding to the next step.
 
@@ -233,12 +232,14 @@ If you perform a GET request to the monitor endpoint (`http://localhost:5033/app
 To verify the behavior of `DTask.WhenAny`, you can make the approval request time out.
 To do this, reduce the delay in the code to a shorter interval (e.g., 1 minute) and repeat step 4.
 
-After the timeout expires, check the logs of the Users service. It should indicate that the approval was rejected.
+After the timeout expires, check the logs of the Users service.
+It should indicate that the approval was rejected.
 
 ## Feedback
 
-Feel free to experiment with this sample! Keep in mind that the project is still in its early stages, and changes to the code may lead to errors or unexpected behavior.
+Feel free to experiment with this sample!
+Keep in mind that the project is still in its early stages, and changes to the code may lead to errors or unexpected behavior.
 
-If you discover something worth sharing or notice any discrepancies with the steps above, please do reach out by either open an issue or send us an email.
+If you discover something worth sharing or notice any discrepancies with the steps above, please do reach out by either [opening an issue](https://github.com/GianvitoDifilippo/DTasks/issues) or by [sending an email](mailto:gianvito.difilippo@gmail.com).
 
 Thanks for reading so far and happy coding! 😄
