@@ -12,8 +12,8 @@ It can be "durable", "distributed", or "damn, that's amazing!"
 ## ❓ Why DTasks?
 
 **DTasks** aims to simplify the way we write long-running asynchronous workflows in distributed environments.
-Before `async`/`await`, writing asynchronous code meant starting an operation that assumed a result would eventually be returned, requiring a callback to continue execution once the result was available, eventually leading to the so-called _callback hell_.
-The `async`/`await` pattern and the `Task` type elegantly solved the problem for _locally_ asynchronous operations.
+Before `async`/`await`, writing asynchronous code meant starting an operation that assumed a result would be returned *in the future*, requiring a callback to continue execution once the result was available. This eventually leads, when composing multiple asynchronous operations, to the so-called _callback hell_.
+The `async`/`await` pattern and the `Task` type elegantly solved the problem for _locally_ asynchronous operations, meaning operations that happen asynchronously on the same machine.
 Today, we see the same callback pattern in distributed environments in many forms: _request-reply_, _webhooks_, and so on.
 **DTasks** introduces a new awaitable type, `DTask`, designed for these distributed and durable operations.
 It integrates seamlessly with the `async` and `await` keywords and serves as the distributed counterpart to `Task`.
@@ -31,11 +31,11 @@ It integrates seamlessly with the `async` and `await` keywords and serves as the
 
 ## 🧪 Samples
 
-Currently, **DTasks** integrates with ASP.NET Core only, but it has the potential to run in other environments in the future.
+Currently, **DTasks** integrates with ASP.NET Core only, but it has the potential to run in other environments in the future (for example, Azure Functions).
 There are two samples that showcase how you can write asynchronous endpoints. Async endpoints are HTTP methods that may not immediately return the operation's result but instead provide a way for the client to be notified or retrieve the result later.
 
-1. **ApprovalWorkflow** - The client (another .NET Web API) sends an HTTP request to start an approval process and provides a callback URL to get notified when the request has been reviewed. The server sends an email to the approver and waits for their input before notifying the client using the provided URL.
-2. **DocumentProcessing** - The client (a web app) sends a request to process a document that it previously uploaded to a storage account. The server verifies that the document exists and immediately responds, then starts long-running processing and notifies the client when it's done using WebSockets.
+1. [**ApprovalWorkflow**](./samples/ApprovalWorkflow/README.md) - The client (another .NET Web API) sends an HTTP request to start an approval process and provides a callback URL to get notified when the request has been reviewed. The server sends an email to the approver and waits for their input before notifying the client using the provided URL.
+2. [**DocumentProcessing**](./samples/DocumentProcessing/README.md) - The client (a web app) sends a request to process a document that it previously uploaded to a storage account. The server verifies that the document exists and immediately responds, then starts long-running processing and notifies the client when it's done using WebSockets.
 
 To run these samples, please refer to the relevant README files.
 
@@ -77,7 +77,7 @@ This method will automatically persist its state and resume execution even after
 
 Contributions are deeply appreciated!
 At this stage, the focus is on carefully designing the APIs and internals to ensure that the library is extensible and flexible.
-Feel free to open issues to discuss design choices, propose features, and submit pull requests.
+Feel free to open issues to discuss design choices, propose features, or just to ask questions.
 If you want to reach out, [drop me an email](mailto:gianvito.difilippo@gmail.com) - I’d love to hear your thoughts!
 
 ## ⚖️ License
