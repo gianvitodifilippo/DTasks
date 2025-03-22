@@ -56,13 +56,13 @@ builder.Services
 var app = builder.Build();
 
 #region Generated
-app.MapPost("/approvals/start", async (
+app.MapPost("/approvals", async (
     [FromServices] DAsyncRunner runner,
     [FromServices] AspNetCoreDAsyncHost host,
     [FromServices] IDatabase redis,
     [FromHeader(Name = "Async-CallbackType")] string callbackType,
     [FromHeader(Name = "Async-CallbackUrl")] string? callbackAddress,
-    [FromBody] StartApprovalRequest request,
+    [FromBody] NewApprovalRequest request,
     CancellationToken cancellationToken) =>
 {
     string operationId = Guid.NewGuid().ToString();
@@ -73,11 +73,11 @@ app.MapPost("/approvals/start", async (
         if (callbackAddress is null)
             return Results.BadRequest();
 
-        task = runner.StartApproval_Webhook(operationId, new Uri(callbackAddress), request);
+        task = runner.NewApproval_Webhook(operationId, new Uri(callbackAddress), request);
     }
     else
     {
-        task = runner.StartApproval(operationId, request);
+        task = runner.NewApproval(operationId, request);
     }
 
     host.IsSyncContext = true;

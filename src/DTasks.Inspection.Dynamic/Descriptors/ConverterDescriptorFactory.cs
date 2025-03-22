@@ -94,14 +94,14 @@ internal sealed class ConverterDescriptorFactory(
             return False(out factory);
 
         Type readerType = readerParameterType.IsByRef
-            ? readerParameterType.GetElementType()
+            ? readerParameterType.GetElementType()!
             : readerParameterType;
 
         if (!readerType.IsValueType && readerParameterType.IsByRef)
             return False(out factory);
 
         Type writerType = writerParameterType.IsByRef
-            ? writerParameterType.GetElementType()
+            ? writerParameterType.GetElementType()!
             : writerParameterType;
 
         if (!writerType.IsValueType && writerParameterType.IsByRef)

@@ -518,10 +518,12 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
                     Type expectedResultType = awaiterType.GetGenericArguments()[0];
 
                     // if (typeof(TResult) != $expectedResultType)
-                    _il.LoadToken(resultType);                           // Stack: $resultType
-                    _il.LoadToken(expectedResultType);                   // Stack: $expectedResultType
-                    _il.CallRuntimeTypeHandleEqualsMethod();             // Stack: $resultType == $expectedResultType
-                    _il.BranchIfFalse(fromResultLabel, shortForm: true); // Stack: -
+                    _il.LoadToken(resultType);                          // Stack: @handle($resultType)
+                    _il.CallGetTypeFromHandleMethod();                  // Stack: $resultType
+                    _il.LoadToken(expectedResultType);                  // Stack: @handle($expectedResultType)
+                    _il.CallGetTypeFromHandleMethod();                  // Stack: $expectedResultType
+                    _il.CallTypeEqualsMethod();                         // Stack: $resultType == $expectedResultType
+                    _il.BranchIfTrue(fromResultLabel, shortForm: true); // Stack: -
 
                     // throw new InvalidOperationException("...");
                     _il.LoadString("Invalid attempt to resume a d-async method."); // "Invalid attempt to resume a d-async method."

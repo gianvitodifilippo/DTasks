@@ -2,6 +2,11 @@
 
     <PropertyGroup>
         <TargetFrameworks>netstandard2.1;net8.0;net9.0</TargetFrameworks>
+
+        <PackageId>DTasks</PackageId>
+        <Summary>A zero-abstraction durable task library.</Summary>
+        <Description>A zero-abstraction durable task library.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>

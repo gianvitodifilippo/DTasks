@@ -1,8 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netstandard2.1</TargetFramework>
-        <Nullable>enable</Nullable>
+        <TargetFrameworks>netstandard2.1;net8.0;net9.0</TargetFrameworks>
+
+        <PackageId>DTasks.Serialization</PackageId>
+        <Summary>Serialization-based implementation of the DTasks snapshot model.</Summary>
+        <Description>Serialization-based implementation of the DTasks snapshot model.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>

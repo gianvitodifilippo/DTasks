@@ -1,6 +1,6 @@
 ﻿namespace Approvals;
 
-public class StartApprovalRequest
+public class NewApprovalRequest
 {
     public required ApprovalRequestDetails Details { get; set; }
 

@@ -107,7 +107,7 @@ internal sealed class DTasksServiceConfiguration(IServiceCollection services) : 
 
         return serviceType
             .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-            .Any(method => typeof(DTask).IsAssignableFrom(method.ReturnType) && method.IsDefined(typeof(AsyncStateMachineAttribute)));
+            .Any(method => typeof(DTask).IsAssignableFrom(method.ReturnType));
     }
 
     private static NotSupportedException OpenGenericsNotSupported() => new("Usage of open generic services within d-async flows is not supported.");

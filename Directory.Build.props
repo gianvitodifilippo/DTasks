@@ -1,13 +1,20 @@
 <Project>
-    
+
     <PropertyGroup>
+        <Authors>Gianvito Difilippo</Authors>
+
         <LangVersion>preview</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <WarningsAsErrors>Nullable</WarningsAsErrors>
         <Configurations>Debug;Release;Debug-Tests;Release-Tests</Configurations>
-        <PackageVersion>0.1.0-preview.1</PackageVersion>
+        <PackageProjectUrl>https://github.com/GianvitoDifilippo/DTasks</PackageProjectUrl>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     </PropertyGroup>
+
+    <ItemGroup Condition="'$(IsPackable)' == 'true'">
+        <None Include="PACKAGE.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Tests|AnyCPU'">
         <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
@@ -17,5 +24,5 @@
         <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
         <Optimize>True</Optimize>
     </PropertyGroup>
-    
+
 </Project>

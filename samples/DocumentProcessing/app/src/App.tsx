@@ -141,7 +141,7 @@ const App: React.FC = () => {
           <h3>Step 2 - Upload the file to the blob storage</h3>
           <p className="description">Select a file to upload using the SAS URL you receive from the server.</p>
           <label htmlFor="file-selection" className={`file-selection ${!uploadUrl ? "disabled" : ""}`}>
-            Select File
+            Select file
           </label>
           <input
             id="file-selection"

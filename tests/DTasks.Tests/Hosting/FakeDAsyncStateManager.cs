@@ -58,10 +58,19 @@ internal class FakeStateMachineReader(Dictionary<string, object?> values, IDAsyn
 
         if (untypedValue is MarshaledValue marshaledValue)
         {
-            FakeUnmarshalingAction<TField> action = new(marshaledValue, ref value);
+            FakeUnmarshalingAction<TField> action =
+#if NET9_0_OR_GREATER
+            new(marshaledValue, ref value);
+#else
+            new(marshaledValue);
+#endif
+
             if (!marshaler.TryUnmarshal<TField, FakeUnmarshalingAction<TField>>(marshaledValue.TypeId, ref action))
                 throw FailException.ForFailure("Marshaler should be able to unmarshal its own token.");
 
+#if !NET9_0_OR_GREATER
+            value = action.Value!;
+#endif
             return true;
         }
 
@@ -70,7 +79,11 @@ internal class FakeStateMachineReader(Dictionary<string, object?> values, IDAsyn
     }
 }
 
-internal readonly ref struct FakeMarshalingAction(string fieldName, Dictionary<string, object?> values) : IMarshalingAction
+internal readonly
+#if NET9_0_OR_GREATER
+ref
+#endif
+struct FakeMarshalingAction(string fieldName, Dictionary<string, object?> values) : IMarshalingAction
 {
     public void MarshalAs<TToken>(TypeId typeId, TToken token)
     {
@@ -78,6 +91,7 @@ internal readonly ref struct FakeMarshalingAction(string fieldName, Dictionary<s
     }
 }
 
+#if NET9_0_OR_GREATER
 internal readonly ref struct FakeUnmarshalingAction<TField>(MarshaledValue marshaledValue, ref TField value) : IUnmarshalingAction
 {
     private readonly ref TField _value = ref value;
@@ -93,6 +107,23 @@ internal readonly ref struct FakeUnmarshalingAction<TField>(MarshaledValue marsh
         _value = marshaledValue.Convert<TField>(tokenType, converter);
     }
 }
+#else
+internal struct FakeUnmarshalingAction<TField>(MarshaledValue marshaledValue) : IUnmarshalingAction
+{
+    public TField? Value { get; private set; }
+
+    public void UnmarshalAs<TConverter>(Type tokenType, scoped ref TConverter converter)
+        where TConverter : struct, ITokenConverter
+    {
+        UnmarshalAs(tokenType, converter);
+    }
+
+    public void UnmarshalAs(Type tokenType, ITokenConverter converter)
+    {
+        Value = marshaledValue.Convert<TField>(tokenType, converter);
+    }
+}
+#endif
 
 internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeResolver typeResolver) : IDAsyncStateManager
 {
@@ -123,7 +154,7 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeRe
         runnable.Suspend(ref stateMachine, suspensionContext);
 
         _runnables[id] = runnable;
-        return ValueTask.CompletedTask;
+        return default;
     }
 
     public ValueTask<DAsyncLink> HydrateAsync(DAsyncId id, CancellationToken cancellationToken = default)
@@ -133,7 +164,7 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeRe
 
         DAsyncLink link = runnable.Resume();
         Debug.WriteLine($"Hydrated task {id} with parent {link.ParentId}.");
-        return ValueTask.FromResult(link);
+        return new(link);
     }
 
     public ValueTask<DAsyncLink> HydrateAsync<TResult>(DAsyncId id, TResult result, CancellationToken cancellationToken = default)
@@ -143,7 +174,7 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeRe
 
         DAsyncLink link = runnable.Resume(result);
         Debug.WriteLine($"Hydrated task {id} with parent {link.ParentId}.");
-        return ValueTask.FromResult(link);
+        return new(link);
     }
 
     public ValueTask<DAsyncLink> HydrateAsync(DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
@@ -156,12 +187,12 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeRe
         if (!_runnables.Remove(id, out DehydratedRunnable? runnable))
             throw FailException.ForFailure($"Runnable '{id}' was not found.");
 
-        return ValueTask.FromResult(runnable.ParentId);
+        return new(runnable.ParentId);
     }
 
     public ValueTask FlushAsync(CancellationToken cancellationToken = default)
     {
-        return ValueTask.CompletedTask;
+        return default;
     }
 
     private abstract class DehydratedRunnable

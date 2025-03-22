@@ -66,29 +66,22 @@ public partial class DynamicStateMachineInspectorTests
     private static Expression<Predicate<MethodInfo>> BuilderCreateMethod()
     {
         return method =>
-            method.Name == nameof(AsyncDTaskMethodBuilder<int>.Create) &&
+            method.Name == nameof(AsyncDTaskMethodBuilder<>.Create) &&
             method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>);
     }
 
     private static Expression<Predicate<MethodInfo>> BuilderStartMethod()
     {
         return method =>
-            method.Name == nameof(AsyncDTaskMethodBuilder<int>.Start) &&
+            method.Name == nameof(AsyncDTaskMethodBuilder<>.Start) &&
             method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>);
     }
 
     private static Expression<Predicate<MethodInfo>> BuilderTaskGetter()
     {
         return method =>
-            method.Name == $"get_{nameof(AsyncDTaskMethodBuilder<int>.Task)}" &&
+            method.Name == $"get_{nameof(AsyncDTaskMethodBuilder<>.Task)}" &&
             method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>);
-    }
-
-    private static Expression<Predicate<MethodInfo>> RuntimeTypeHandleEqualsMethod()
-    {
-        return method =>
-            method.Name == nameof(RuntimeTypeHandle.Equals) &&
-            method.DeclaringType == typeof(RuntimeTypeHandle);
     }
 
     private static Expression<Predicate<MethodInfo>> DTaskFromResultMethod()
@@ -97,6 +90,21 @@ public partial class DynamicStateMachineInspectorTests
             method.Name == nameof(DTask.FromResult) &&
             method.GetGenericArguments()[0].IsGenericParameter &&
             method.DeclaringType == typeof(DTask);
+    }
+
+    private static Expression<Predicate<MethodInfo>> GetTypeFromHandleMethod()
+    {
+        return method =>
+            method.Name == nameof(Type.GetTypeFromHandle) &&
+            method.DeclaringType == typeof(Type);
+    }
+
+    private static Expression<Predicate<MethodInfo>> TypeEqualsMethod()
+    {
+        return method =>
+            method.Name == nameof(Type.Equals) &&
+            method.GetParameters()[0].ParameterType == typeof(Type) &&
+            method.DeclaringType == typeof(Type);
     }
 
     private static Expression<Predicate<ConstructorInfo>> ObjectConstructor()

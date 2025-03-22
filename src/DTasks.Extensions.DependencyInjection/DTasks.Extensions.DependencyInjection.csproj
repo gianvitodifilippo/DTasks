@@ -2,6 +2,11 @@
 
     <PropertyGroup>
         <TargetFrameworks>netstandard2.1;net8.0;net9.0</TargetFrameworks>
+
+        <PackageId>DTasks.Extensions.DependencyInjection</PackageId>
+        <Summary>Provides integration of DTasks with Microsoft.Extensions.DependencyInjection.</Summary>
+        <Description>Provides integration of DTasks with Microsoft.Extensions.DependencyInjection.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>

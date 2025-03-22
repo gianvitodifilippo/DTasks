@@ -8,20 +8,29 @@ on:
     branches:
       - main
 
+permissions:
+  checks: write
+  pull-requests: write
+  
 jobs:
   run-tests:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: true
       matrix:
-        configuration: [Debug-Tests, Release-Tests]
+        configuration:
+          - Debug-Tests
+          - Release-Tests
 
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: |
+            8.x
+            9.x
       
       - name: Cache NuGet packages
         uses: actions/cache@v3
@@ -33,9 +42,18 @@ jobs:
       
       - name: Restore dependencies
         run: dotnet restore
-      
+
       - name: Build ${{ matrix.configuration }}
         run: dotnet build -c ${{ matrix.configuration }} --no-restore
 
       - name: Test ${{ matrix.configuration }}
-        run: dotnet test -c ${{ matrix.configuration }} --no-build --verbosity normal
+        run: dotnet test -c ${{ matrix.configuration }} --no-build --no-restore --verbosity normal --logger trx --results-directory ${{ matrix.configuration }}/TestResults
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: |
+            ${{ matrix.configuration }}/TestResults/**/*.xml
+            ${{ matrix.configuration }}/TestResults/**/*.trx
+            ${{ matrix.configuration }}/TestResults/**/*.json

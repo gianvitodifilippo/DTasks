@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace DTasks.Hosting;
 
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
 public readonly struct DAsyncId : IEquatable<DAsyncId>
 {
     private const int ByteCount = 3 * sizeof(uint);

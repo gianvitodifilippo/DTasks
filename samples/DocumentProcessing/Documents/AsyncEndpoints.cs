@@ -17,7 +17,7 @@ public class AsyncEndpoints(BlobContainerClient containerClient)
         await DTask.Yield();
 
         // Simulating the processing with a delay
-        await Task.Delay(TimeSpan.FromSeconds(20));
+        await Task.Delay(TimeSpan.FromSeconds(30));
 
         return AsyncResults.Success();
     }
@@ -26,7 +26,6 @@ public class AsyncEndpoints(BlobContainerClient containerClient)
     {
         string blobName = $"{documentId}.pdf";
         BlobClient blobClient = containerClient.GetBlobClient(blobName);
-        bool exists = await blobClient.ExistsAsync();
-        return exists;
+        return await blobClient.ExistsAsync();
     }
 }
