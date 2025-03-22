@@ -4,7 +4,6 @@ on:
   release:
     types:
       - published
-      - prereleased
 
 jobs:
   release:
@@ -17,10 +16,8 @@ jobs:
           fetch-depth: 0
         
       - name: Get version
-        id: get_version
-        run: |
-          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-          echo "Resolved version: $VERSION"
+        id: version
+        uses: battila7/get-version-action@v2
           
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
@@ -41,10 +38,10 @@ jobs:
         run: dotnet restore
       
       - name: Build
-        run: dotnet build -c Release --no-restore -p:Version=${VERSION#v}
+        run: dotnet build -c Release --no-restore -p:Version=${{ steps.version.outputs.version-without-v }}
 
       - name: Pack
-        run: dotnet pack -c Release --output nupkgs -p:PackageVersion=${VERSION#v} --include-symbols --include-source
+        run: dotnet pack -c Release --output nupkgs -p:PackageVersion=${{ steps.version.outputs.version-without-v }} --include-symbols --include-source
 
       - name: Publish to NuGet
         run: dotnet nuget push "nupkgs/*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate
