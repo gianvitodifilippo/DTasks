@@ -23,7 +23,7 @@ It integrates seamlessly with the `async` and `await` keywords and serves as the
 
 **DTasks** is an alternative to Microsoft's **Durable Task Framework (DTFx)**, which it is inspired by, but it follows a different approach:
 
-1. **Dedicated async types** - Async methods representing a durable operation (d-async methods) will return `DTask` instead of `Task`. You can still await a normal `Task` inside a d-async method (but not the other way around 🙂).
+1. **Dedicated async types** - Async methods representing a durable operation (d-async methods) will return `DTask` instead of `Task`. You can still await a normal `Task` inside a d-async method.
 2. **Runs anywhere** - Works in ASP.NET Core and any environment that implements the **DTasks** pattern.
 3. **No deterministic code constraints** – Workflows can contain non-deterministic code, and execution is not replayed after every yield.
 
