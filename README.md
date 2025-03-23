@@ -9,7 +9,7 @@ It is built directly on top of the C# **async pattern**, allowing users to write
 By the way, if you're wondering what the **"D"** in **DTasks** stands for, you choose!
 It can be "durable", "distributed", or "damn, that's amazing!"
 
-## ❓ Why DTasks?
+## Why DTasks?
 
 **DTasks** aims to simplify the way we write long-running asynchronous workflows in distributed environments.
 
@@ -23,7 +23,7 @@ It integrates seamlessly with the `async` and `await` keywords and serves as the
 
 **DTasks** is an alternative to Microsoft's **Durable Task Framework (DTFx)**, which it is inspired by, but it follows a different approach:
 
-1. **Dedicated async types** - Async methods representing a durable operation (d-async methods) will return `DTask` instead of `Task`. You can still await a normal `Task` inside a d-async method (but not the other way around 🙂).
+1. **Dedicated async types** - Async methods representing a durable operation (*d-async* methods) will return `DTask` instead of `Task`. You can still await a normal `Task` inside a d-async method.
 2. **Runs anywhere** - Works in ASP.NET Core and any environment that implements the **DTasks** pattern.
 3. **No deterministic code constraints** – Workflows can contain non-deterministic code, and execution is not replayed after every yield.
 
@@ -33,17 +33,20 @@ It integrates seamlessly with the `async` and `await` keywords and serves as the
 - **Durable** – The execution state of a d-async method is persisted, ensuring it survives failures and restarts without losing progress.
 - **Damn, that's amazing!** – Because you get all of this without any new major abstractions — just pure `async`/`await` magic!
 
-## 🚀 Getting started
+## Getting started
 
 **DTasks** is an *experimental* library, currently in its pre-alpha stage.
 At this point, it's *not ready* to be integrated in any .NET project, as some of its features are still in development.
-Despite this, you can already explore its capabilities through the provided [samples](./samples), so it's recommended that you check them out and, if you're curious, play with them a bit.
+Despite this, you can already explore its capabilities through the provided [samples](./samples), so it's recommended that you try them out and, if you're curious, play with them a bit.
 
 **DTasks** was made public at this early stage to gather feedback from the community.
 And also because getting it this far took a lot of effort!
+
+For more details on the current status of the project and what’s coming next, check out the [roadmap](./ROADMAP.md).
+If you feel that something is missing, please [reach out](#contributing).
 Any thoughts or contributions are more than welcome.
 
-## 🧪 Samples
+## Samples
 
 Currently, **DTasks** integrates with ASP.NET Core only, but it has the potential to run in other environments in the future (for example, Azure Functions).
 There are two samples that showcase how you can write asynchronous endpoints. Async endpoints are HTTP methods that may not immediately return the operation's result but instead provide a way for the client to be notified or retrieve the result later.
@@ -87,13 +90,13 @@ public class AsyncEndpoints(
 
 This method will automatically persist its state and resume execution even after failures or restarts.
 
-## 👩‍💻 Contributing
+## Contributing
 
 Contributions are deeply appreciated!
 At this stage, the focus is on carefully designing the APIs and internals to ensure that the library is extensible and flexible.
-Feel free to open issues to discuss design choices, propose features, or just to ask questions.
+Feel free to [open issues](https://github.com/GianvitoDifilippo/DTasks/issues) to discuss design choices, propose features, or just to ask questions.
 If you want to reach out, [drop me an email](mailto:gianvito.difilippo@gmail.com) - I’d love to hear your thoughts!
 
-## ⚖️ License
+## License
 
 **DTasks** is licensed under [Apache 2.0](LICENSE).

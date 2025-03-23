@@ -1,4 +1,4 @@
-# 🧪 Samples
+# Samples
 
 Currently, **DTasks** integrates with ASP.NET Core only, but it has the potential to run in other environments in the future (for example, Azure Functions).
 There are two samples that showcase how you can write asynchronous endpoints. Async endpoints are HTTP methods that may not immediately return the operation's result but instead provide a way for the client to be notified or retrieve the result later.
