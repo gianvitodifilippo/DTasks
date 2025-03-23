@@ -32,7 +32,7 @@ It integrates seamlessly with the `async` and `await` keywords and serves as the
 ## 🚀 Getting started
 
 **DTasks** is an *experimental* library, currently in its pre-alpha stage.
-At this point, it's *not ready* to be integrated in .NET projects, as some of its features are still in development.
+At this point, it's *not ready* to be integrated in any .NET project, as some of its features are still in development.
 Despite this, you can already explore its capabilities through the provided [samples](./samples), so it's recommended that you check them out and, if you're curious, play with them a bit.
 
 **DTasks** was made public at this early stage to gather feedback from the community.
