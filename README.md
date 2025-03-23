@@ -29,6 +29,16 @@ It integrates seamlessly with the `async` and `await` keywords and serves as the
 - **Durable** – The execution state of a d-async method is persisted, ensuring it survives failures and restarts without losing progress.
 - **Damn, that's amazing!** – Because you get all of this without any new major abstractions — just pure `async`/`await` magic!
 
+## 🚀 Getting started
+
+**DTasks** is an *experimental* library, currently in its pre-alpha stage.
+At this point, it's *not ready* to be integrated in .NET projects, as some of its features are still in development.
+Despite this, you can already explore its capabilities through the provided [samples](./samples), so it's recommended that you check them out and, if you're curious, play with them a bit.
+
+**DTasks** was made public at this early stage to gather feedback from the community.
+And also because getting it this far took a lot of effort!
+Any thoughts or contributions are more than welcome.
+
 ## 🧪 Samples
 
 Currently, **DTasks** integrates with ASP.NET Core only, but it has the potential to run in other environments in the future (for example, Azure Functions).
