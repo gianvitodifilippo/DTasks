@@ -12,11 +12,15 @@ It can be "durable", "distributed", or "damn, that's amazing!"
 ## ❓ Why DTasks?
 
 **DTasks** aims to simplify the way we write long-running asynchronous workflows in distributed environments.
-Before `async`/`await`, writing asynchronous code meant starting an operation that assumed a result would be returned *in the future*, requiring a callback to continue execution once the result was available. This eventually leads, when composing multiple asynchronous operations, to the so-called _callback hell_.
+
+Before `async`/`await`, writing asynchronous code meant starting an operation that assumed a result would be returned *in the future*, requiring a callback to continue execution once the result was available.
+When composing multiple asynchronous operations, this may eventually lead to the so-called _callback hell_.
 The `async`/`await` pattern and the `Task` type elegantly solved the problem for _locally_ asynchronous operations, meaning operations that happen asynchronously on the same machine.
+
 Today, we see the same callback pattern in distributed environments in many forms: _request-reply_, _webhooks_, and so on.
 **DTasks** introduces a new awaitable type, `DTask`, designed for these distributed and durable operations.
 It integrates seamlessly with the `async` and `await` keywords and serves as the distributed counterpart to `Task`.
+
 **DTasks** is an alternative to Microsoft's **Durable Task Framework (DTFx)**, which it is inspired by, but it follows a different approach:
 
 1. **Dedicated async types** - Async methods representing a durable operation (d-async methods) will return `DTask` instead of `Task`. You can still await a normal `Task` inside a d-async method (but not the other way around 🙂).
