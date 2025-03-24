@@ -182,3 +182,4 @@ Provides integration of DTasks with ASP.NET Core, enabling workflow orchestratio
 - Efficient state machine inspection strategy.
 - Integration with SignalR.
 - Performance enhancement.
+- Clear definition of constraints (locals must be marshalable, etc.)
