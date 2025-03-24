@@ -131,7 +131,7 @@ Integrates DTasks with Microsoft.Extensions.Hosting.
 
 ✅ Integration pattern (`UseDTasks`) defined and mostly stable.
 
-#### Implementation
+#### Implementation
 
 ✅ Basic implementation completed.
 
