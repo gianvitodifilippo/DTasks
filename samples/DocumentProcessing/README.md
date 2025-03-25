@@ -23,7 +23,7 @@ sequenceDiagram
 
     User->>WebApp: Open Web App
     WebApp->>Documents: Establish WebSocket connection
-    Documents->>WebApp:
+    Documents->>WebApp: 
 
     User->>WebApp: Select PDF document
     WebApp->>+Documents: POST /upload-request to request document upload
