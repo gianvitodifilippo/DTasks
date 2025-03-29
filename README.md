@@ -21,7 +21,7 @@ Today, we see the same callback pattern in distributed environments in many form
 **DTasks** introduces a new awaitable type, `DTask`, designed for these distributed and durable operations.
 It integrates seamlessly with the `async` and `await` keywords and serves as the distributed counterpart to `Task`.
 
-**DTasks** is an alternative to Microsoft's **Durable Task Framework (DTFx)**, which it is inspired by, but it follows a different approach:
+**DTasks** is an alternative to Microsoft's [**Durable Task Framework (DTFx)**](https://github.com/Azure/durabletask), which it is inspired by, but it follows a different approach:
 
 1. **Dedicated async types** - Async methods representing a durable operation (*d-async* methods) will return `DTask` instead of `Task`. You can still await a normal `Task` inside a d-async method.
 2. **No replay model** - Execution is not replayed, but resumed from where it was suspended.

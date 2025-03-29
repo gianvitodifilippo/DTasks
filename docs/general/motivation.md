@@ -1,6 +1,6 @@
 # Motivation
 
-## Async/Await in C#: A Brief History
+## Async/await in C#: a brief history
 
 The advent of `async`/`await` in C# 5 revolutionized the way developers write asynchronous code.
 Before its introduction, different patterns were employed, such as callback-based approaches like `BeginInvoke`/`EndInvoke`, `IAsyncResult`, manual thread and thread pool management, or event-driven programming.
@@ -11,7 +11,7 @@ With `async`/`await` and `Task`, asynchronous programming in C# became more intu
 
 For a deeper dive into this topic, it's recommended to read Stephen Toub's excellent article [How Async/Await Really Works](https://devblogs.microsoft.com/dotnet/how-async-await-really-works/).
 
-## DTask: An Awaitable for Distributed Async Operations
+## DTask: an awaitable for distributed asynchronous operations
 
 Today, we see similar problems and patterns emerging in distributed computing as those that existed in local asynchronous programming before `async`/`await`.
 Distributed architectures, microservices, and cloud infrastructure require handling long-running operations across different machines.
@@ -24,24 +24,26 @@ However, the `Task` object is inherently *local*: it represents an asynchronous 
 A `Task` resides in heap memory and cannot simply be stored in a distributed environment.
 As a result, developers are forced to revert to manually writing callback-based code, handling state persistence, and managing event-driven execution, just as they did before `async`/`await`.
 
-DTasks aims to solve this problem by extending the benefits of `async`/`await` to distributed asynchronous operations.
+DTasks tries to solve this problem by extending the benefits of `async`/`await` to distributed asynchronous operations.
 Its core principles are:
 
 1. **Seamless integration with async/await** – Just as `Task` made asynchronous code feel synchronous, DTasks aims to make distributed asynchronous operations feel like local ones.
 2. **A dedicated type for distributed operations** – `Task` was designed to represent a locally asynchronous operation: let it keep doing only that. Instead, let's introduce a new type to represent distributed asynchronous operations.
 3. **A familiar API** – Distributed programming is hard. `Task` and `async`/`await` are rooted into most developers' background; DTasks should come with an API that minimizes the learning curve, making adoption easier.
+4. **Run everywhere** - Integrating DTasks should be possible regardless of the environment or framework used. It should run in ASP.NET Core, Azure Functions, or even in sub-frameworks (e.g., Microsoft Orleans).
+5. **Extensibility and pluggability** - Any relevant component of DTask should be pluggable and configurable. For example, any useful implementation will most likely have to persist the state of the workflow: developers should be able to choose and configure their preferred storage provider.
 
 This leads to the definition of the `DTask` type: a distributed task.
 `DTask` closely resembles `Task` in both name and API: if `await Task.Delay(...)` suspends an operation and later resumes it, potentially on a different thread, then `await DTask.Delay(...)` suspends an operation and later resumes it, potentially on a different machine.
 
+In general, DTasks is an attempt to reimplement the asynchronous pattern on the distributed scale: that is, what we can call the d-async pattern.
+
 ## Comparison with Microsoft DTFx
 
-Microsoft's Durable Task Framework (DTFx) is similar in its intent: writing long running persistent workflows in C# using the async/await capabilities.
+Microsoft's [Durable Task Framework](https://github.com/Azure/durabletask) is similar in its intent: writing long running persistent workflows in C# using the async/await capabilities.
 
 DTasks differs in key ways:
 
 - **Dedicated type for distributed operations** – DTFx treats distributed tasks as standard `Task` objects and requires an orchestration context to track them.
 - **No mandatory orchestration context** – With DTasks, you can await any `DTask` (or even `Task`) directly without needing an orchestration context, making the API feel more natural for developers familiar with `async`/`await`.
 - **Flexible execution models** – While DTFx primarily follows a replay-based execution model, DTasks is not inherently tied to one approach. It can support snapshot-based persistence or a replay model depending on the implementation.
-
-By taking an approach that aligns more closely with native async programming, DTasks aims to reduce friction for developers while still providing a robust framework for distributed workflows.
