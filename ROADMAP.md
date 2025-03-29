@@ -9,7 +9,7 @@ Some key features are still missing, and important design decisions have yet to 
 
 This library defines the core types and APIs and is agnostic of the persistence model being used.
 
-#### API
+**API**
 
 ✅ Core types (`DTask`, `DTask<TResult>`) and APIs (`DTask.Delay`, `DTask.WhenAll`, `DTask.Run`, etc.) defined and mostly stable.
 
@@ -17,7 +17,7 @@ This library defines the core types and APIs and is agnostic of the persistence 
 
 ❌ Distributed equivalent of `CancellationToken` not defined.
 
-#### Implementation
+**Implementation**
 
 ✅ Integration with async/await.
 
@@ -27,7 +27,7 @@ This library defines the core types and APIs and is agnostic of the persistence 
 
 This package implements a snapshot-based persistence model, where state machines are dehydrated and hydrated at yield points.
 
-#### API
+**API**
 
 ✅ Support for executing callbacks on suspension defined (`DTask.Factory.Callback`) but location (`DTasks` or `DTasks.Core`) must be confirmed.
 
@@ -41,7 +41,7 @@ This package implements a snapshot-based persistence model, where state machines
 
 ❌ Distributed locking not yet defined.
 
-#### Implementation
+**Implementation**
 
 ✅ Support for `DTask.Yield`, `DTask.Delay`, `DTask.Factory.Callback` and completed DTasks.
 
@@ -57,11 +57,11 @@ This package implements a snapshot-based persistence model, where state machines
 
 This package allows accessing the fields of state machines (inspection) through generation of dynamic code.
 
-#### API
+**API**
 
 ✅ `DynamicStateMachineInspector` defined and mostly stable.
 
-#### Implementation
+**Implementation**
 
 ✅ Basic inspection support.
 
@@ -71,11 +71,11 @@ This package allows accessing the fields of state machines (inspection) through 
 
 Implements the hydration/dehydration pattern using binary serialization.
 
-#### API
+**API**
 
 ❓ Support for multiple serialization formats (`IDAsyncSerializer`) and storage (`IDAsyncStorage`) defined but design must be confirmed.
 
-#### Implementation
+**Implementation**
 
 ✅ Basic hydration/dehydration support.
 
@@ -85,11 +85,11 @@ Implements the hydration/dehydration pattern using binary serialization.
 
 Implements serialization with JSON format.
 
-#### API
+**API**
 
 ✅ Basic support for JSON serialization.
 
-#### Implementation
+**Implementation**
 
 ❓ Marshaling strategy to be revised.
 
@@ -97,11 +97,11 @@ Implements serialization with JSON format.
 
 Adds support for using Redis as storage for serialized state.
 
-#### API
+**API**
 
 No contracts defined.
 
-#### Implementation
+**Implementation**
 
 ✅ Simple support for Redis storage.
 
@@ -109,13 +109,13 @@ No contracts defined.
 
 Adds support for marshaling services registered in a DI container (IServiceCollection).
 
-#### API
+**API**
 
 ✅ Integration pattern (`AddDTasks`) defined and mostly stable.
 
 ✅ Validation pattern (`IsDAsyncService`, `GetDAsyncService`) defined.
 
-#### Implementation
+**Implementation**
 
 ✅ Marshaling of services implemented.
 
@@ -127,11 +127,11 @@ Adds support for marshaling services registered in a DI container (IServiceColle
 
 Integrates DTasks with Microsoft.Extensions.Hosting.
 
-#### API
+**API**
 
 ✅ Integration pattern (`UseDTasks`) defined and mostly stable.
 
-#### Implementation
+**Implementation**
 
 ✅ Basic implementation completed.
 
@@ -139,7 +139,7 @@ Integrates DTasks with Microsoft.Extensions.Hosting.
 
 Provides integration of DTasks with ASP.NET Core, enabling workflow orchestration and async endpoints within web applications.
 
-#### API
+**API**
 
 ✅ Integration with the `IResult` type.
 
@@ -151,7 +151,7 @@ Provides integration of DTasks with ASP.NET Core, enabling workflow orchestratio
 
 ❌ Integration with existing WebSockets (non-SignalR) code not defined.
 
-#### Implementation
+**Implementation**
 
 ❓ Sketched `DAsyncHost` implementation, needs to be revised.
 
