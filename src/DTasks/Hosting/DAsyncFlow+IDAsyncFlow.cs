@@ -420,7 +420,7 @@ internal partial class DAsyncFlow : IDAsyncFlowInternal
         }
         else
         {
-            _continuation = self => self.Resume(self._parentId);
+            _continuation = static self => self.Resume(self._parentId);
             currentStateMachine.Suspend();
         }
     }

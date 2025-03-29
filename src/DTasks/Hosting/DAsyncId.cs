@@ -72,6 +72,12 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     public override string ToString()
     {
+        if (this == default)
+            return "<default>";
+
+        if (this == RootId)
+            return "<root>";
+
         ref byte head = ref Unsafe.As<DAsyncId, byte>(ref Unsafe.AsRef(in this));
         ReadOnlySpan<byte> bytes = MemoryMarshal.CreateReadOnlySpan(ref head, ByteCount);
 
