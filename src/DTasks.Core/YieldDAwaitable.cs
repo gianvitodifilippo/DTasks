@@ -1,5 +1,5 @@
 ﻿using DTasks.CompilerServices;
-using DTasks.Hosting;
+using DTasks.Infrastructure;
 using DTasks.Utils;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -19,7 +19,7 @@ public readonly struct YieldDAwaitable
 
         public void GetResult() { }
 
-        public void Continue(IDAsyncFlow flow) => flow.Yield();
+        public void Continue(IDAsyncRunner runner) => runner.Yield();
 
         public void OnCompleted(Action continuation)
         {

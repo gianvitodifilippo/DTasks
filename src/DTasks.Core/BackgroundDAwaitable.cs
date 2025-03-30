@@ -1,5 +1,5 @@
 ﻿using DTasks.CompilerServices;
-using DTasks.Hosting;
+using DTasks.Infrastructure;
 using DTasks.Utils;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -31,7 +31,7 @@ public readonly struct BackgroundDAwaitable(IDAsyncRunnable runnable)
 
         public void OnCompleted(Action continuation) => _backgroundTask.GetAwaiter().OnCompleted(continuation);
 
-        public void Continue(IDAsyncFlow flow) => flow.Background(_backgroundTask.Runnable, _backgroundTask);
+        public void Continue(IDAsyncRunner runner) => runner.Background(_backgroundTask.Runnable, _backgroundTask);
     }
 }
 
@@ -60,7 +60,7 @@ public readonly struct BackgroundDAwaitable<TResult>(IDAsyncRunnable runnable)
 
         public void OnCompleted(Action continuation) => _backgroundTask.GetAwaiter().OnCompleted(continuation);
 
-        public void Continue(IDAsyncFlow flow) => flow.Background(_backgroundTask.Runnable, _backgroundTask);
+        public void Continue(IDAsyncRunner runner) => runner.Background(_backgroundTask.Runnable, _backgroundTask);
     }
 }
 
@@ -102,9 +102,9 @@ internal sealed class BackgroundDTask<TTask>(IDAsyncRunnable runnable) : DTask<T
         }
     }
 
-    protected override void Run(IDAsyncFlow flow)
+    protected override void Run(IDAsyncRunner runner)
     {
-        Debug.Fail($"'{nameof(Run)}' should not be invoked on {nameof(BackgroundDTask<DTask>)}.");
+        Debug.Fail($"'{nameof(Run)}' should not be invoked on {nameof(BackgroundDTask<>)}.");
     }
 
     void IDAsyncResultBuilder<TTask>.SetResult(TTask result)

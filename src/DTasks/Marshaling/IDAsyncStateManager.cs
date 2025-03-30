@@ -1,4 +1,4 @@
-﻿using DTasks.Hosting;
+﻿using DTasks.Infrastructure;
 using System.ComponentModel;
 
 namespace DTasks.Marshaling;

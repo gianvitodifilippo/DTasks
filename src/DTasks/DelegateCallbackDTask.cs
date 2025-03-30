@@ -1,4 +1,4 @@
-﻿using DTasks.Hosting;
+﻿using DTasks.Infrastructure;
 
 namespace DTasks;
 
@@ -11,12 +11,12 @@ internal sealed class DelegateCallbackDTask<TResult>(SuspensionCallback callback
         return callback(id, cancellationToken);
     }
 
-    protected override void Run(IDAsyncFlow flow)
+    protected override void Run(IDAsyncRunner runner)
     {
-        if (flow is not IDAsyncFlowInternal flowInternal)
-            throw new ArgumentException("The provided flow does not support callbacks.", nameof(flow));
+        if (runner is not IDAsyncRunnerInternal runnerInternal)
+            throw new ArgumentException("The provided runner does not support callbacks.", nameof(runner));
 
-        flowInternal.Callback(this);
+        runnerInternal.Callback(this);
     }
 }
 
@@ -29,11 +29,11 @@ internal sealed class DelegateCallbackDTask<TResult, TState>(TState state, Suspe
         return callback(id, state, cancellationToken);
     }
 
-    protected override void Run(IDAsyncFlow flow)
+    protected override void Run(IDAsyncRunner runner)
     {
-        if (flow is not IDAsyncFlowInternal flowInternal)
-            throw new ArgumentException("The provided flow does not support callbacks.", nameof(flow));
+        if (runner is not IDAsyncRunnerInternal runnerInternal)
+            throw new ArgumentException("The provided runner does not support callbacks.", nameof(runner));
 
-        flowInternal.Callback(this);
+        runnerInternal.Callback(this);
     }
 }

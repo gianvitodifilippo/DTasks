@@ -84,7 +84,7 @@ internal sealed class AwaiterManager(DynamicAssembly assembly, ITypeResolver typ
 
         MethodBuilder fromVoidMethod = factoryType.DefineMethodOverride(s_fromVoidMethod);
         ILGenerator il = fromVoidMethod.GetILGenerator();
-        
+
         il.Emit(OpCodes.Call, awaiterFromVoidMethod);
         il.Emit(OpCodes.Ret);
     }

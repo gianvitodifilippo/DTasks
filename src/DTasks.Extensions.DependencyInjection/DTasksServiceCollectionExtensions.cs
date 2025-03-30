@@ -1,5 +1,5 @@
-﻿using DTasks.Utils;
-using DTasks.Extensions.DependencyInjection;
+﻿using DTasks.Extensions.DependencyInjection;
+using DTasks.Utils;
 
 namespace Microsoft.Extensions.DependencyInjection;
 

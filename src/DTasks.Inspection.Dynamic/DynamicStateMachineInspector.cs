@@ -1,7 +1,6 @@
 ﻿using DTasks.Inspection.Dynamic.Descriptors;
 using DTasks.Marshaling;
 using DTasks.Utils;
-using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
@@ -83,7 +82,7 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
 
         FieldBuilder awaiterManagerField = DefineAwaiterManagerField(resumerType);
         DefineConstructor(resumerType, awaiterManagerField);
-        
+
         MethodBuilder resumeWithVoidMethod = resumerType.DefineMethodOverride(resumerDescriptor.ResumeWithVoidMethod);
         MethodBuilder resumeWithResultMethod = resumerType.DefineMethodOverride(resumerDescriptor.ResumeWithResultMethod);
 
@@ -123,7 +122,7 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
             iSequence: 1,
             attributes: ParameterAttributes.None,
             strParamName: "awaiterManager");
-        
+
         ILGenerator il = constructor.GetILGenerator();
 
         il.Emit(OpCodes.Ldarg_0);                    // Stack: this

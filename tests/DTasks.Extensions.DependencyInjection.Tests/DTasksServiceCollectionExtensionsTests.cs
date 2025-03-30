@@ -1,6 +1,5 @@
 ﻿using DTasks.Extensions.DependencyInjection.Marshaling;
 using DTasks.Marshaling;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Extensions.DependencyInjection;

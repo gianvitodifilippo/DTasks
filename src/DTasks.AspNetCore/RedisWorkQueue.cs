@@ -1,4 +1,4 @@
-﻿using DTasks.Hosting;
+﻿using DTasks.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -56,7 +56,7 @@ public class RedisWorkQueue(
     {
         return AddReminderAsync(id, delay, cancellationToken);
     }
-    
+
     private async Task AddReminderAsync(DAsyncId id, TimeSpan delay, CancellationToken cancellationToken = default)
     {
         await redis.HashSetAsync(s_reminderKey, id.ToString(), (DateTime.UtcNow.Add(delay)).ToString());

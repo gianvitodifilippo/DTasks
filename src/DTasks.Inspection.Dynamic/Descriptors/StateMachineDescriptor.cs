@@ -122,7 +122,7 @@ internal sealed class StateMachineDescriptor(
 
         return new StateMachineDescriptor(
             stateMachineType,
-            constructor, 
+            constructor,
             userFields,
             awaiterFields,
             refAwaiterField,

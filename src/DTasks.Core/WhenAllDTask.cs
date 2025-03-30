@@ -1,4 +1,4 @@
-﻿using DTasks.Hosting;
+﻿using DTasks.Infrastructure;
 using DTasks.Utils;
 using System.Runtime.CompilerServices;
 
@@ -20,7 +20,7 @@ internal sealed class WhenAllDTask(IEnumerable<DTask> tasks) : DTask, IDAsyncRes
         }
     }
 
-    protected override void Run(IDAsyncFlow flow) => flow.WhenAll(tasks, this);
+    protected override void Run(IDAsyncRunner runner) => runner.WhenAll(tasks, this);
 
     void IDAsyncResultBuilder.SetResult()
     {
@@ -61,7 +61,7 @@ internal sealed class WhenAllDTask<TResult>(IEnumerable<DTask<TResult>> tasks) :
         }
     }
 
-    protected override void Run(IDAsyncFlow flow) => flow.WhenAll(tasks, this);
+    protected override void Run(IDAsyncRunner runner) => runner.WhenAll(tasks, this);
 
     void IDAsyncResultBuilder<TResult[]>.SetResult(TResult[] result)
     {

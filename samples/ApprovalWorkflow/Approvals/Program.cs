@@ -2,7 +2,7 @@ using Approvals;
 using Approvals.Generated;
 using DTasks;
 using DTasks.AspNetCore;
-using DTasks.Hosting;
+using DTasks.Infrastructure;
 using DTasks.Marshaling;
 using DTasks.Serialization;
 using DTasks.Serialization.Json;
