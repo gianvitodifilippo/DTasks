@@ -1,8 +1,7 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using DTasks.Utils;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using DTasks.Utils;
-using DTasks.Infrastructure;
 
 namespace DTasks.Infrastructure;
 
@@ -39,7 +38,7 @@ internal partial class DAsyncFlow : IAsyncStateMachine
                     _state = FlowState.Running;
                     runnable.Run(this);
                     break;
-                    
+
                 case FlowState.Returning: // After awaiting a method that results in completing the d-async flow
                     GetVoidTaskResult();
                     _valueTaskSource.SetResult(default);

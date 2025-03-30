@@ -7,7 +7,7 @@ namespace DTasks.Inspection.Dynamic;
 internal sealed class DynamicAssembly
 {
     private const string Name = "DTasks.Inspection.Dynamic.Generated";
-    
+
     private readonly AssemblyBuilder _assembly;
     private readonly ModuleBuilder _module;
     private readonly ConstructorInfo _ignoresAccessChecksToAttributeConstructor;

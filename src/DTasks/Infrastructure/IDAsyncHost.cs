@@ -17,6 +17,6 @@ internal interface IDAsyncHost
     Task FailAsync(Exception exception, CancellationToken cancellationToken = default);
 
     Task YieldAsync(DAsyncId id, CancellationToken cancellationToken = default);
-    
+
     Task DelayAsync(DAsyncId id, TimeSpan delay, CancellationToken cancellationToken = default);
 }

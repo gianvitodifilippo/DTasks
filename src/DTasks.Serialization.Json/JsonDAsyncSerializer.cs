@@ -78,7 +78,7 @@ public sealed class JsonDAsyncSerializer : IDAsyncSerializer
     public static JsonDAsyncSerializer Create(ITypeResolver typeResolver, IDAsyncMarshaler marshaler, JsonSerializerOptions jsonOptions)
     {
         DynamicStateMachineInspector inspector = DynamicStateMachineInspector.Create(typeof(IStateMachineSuspender<>), typeof(IStateMachineResumer), typeResolver);
-        
+
         return new JsonDAsyncSerializer(inspector, typeResolver, marshaler, jsonOptions);
     }
 }

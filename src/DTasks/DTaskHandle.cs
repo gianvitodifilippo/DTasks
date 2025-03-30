@@ -115,7 +115,7 @@ internal sealed class DTaskHandle<TResult>(DAsyncId id) : DTask<TResult>, IDAsyn
     void IDAsyncResultBuilder<TResult>.SetException(Exception exception)
     {
         Debug.Assert(_status is DTaskStatus.Pending);
-        
+
         _status = DTaskStatus.Faulted;
         _exception = exception;
     }

@@ -1,6 +1,4 @@
-﻿using DTasks.Infrastructure;
-
-namespace DTasks.Infrastructure;
+﻿namespace DTasks.Infrastructure;
 
 internal partial class DAsyncFlow
 {

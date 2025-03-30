@@ -1,5 +1,4 @@
-﻿using DTasks.Infrastructure;
-using DTasks.Inspection;
+﻿using DTasks.Inspection;
 using DTasks.Marshaling;
 using DTasks.Utils;
 using System.Diagnostics;
@@ -152,7 +151,7 @@ internal partial class DAsyncFlow
 
             Assert.NotNull(stateMachine);
             Assert.Is<IDAsyncResultBuilder<TResult>>(resultBuilder);
-            
+
             Unsafe.As<IDAsyncResultBuilder<TResult>>(resultBuilder).SetResult(result);
             stateMachine.MoveNext();
         }

@@ -149,7 +149,7 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeRe
 
         Debug.WriteLine($"Dehydrating runnable {id} ({stateMachine}) with parent {parentId}.");
         _onDehydrate?.Invoke(id);
-        
+
         DehydratedRunnable<TStateMachine> runnable = new(_inspector, marshaler, parentId);
         runnable.Suspend(ref stateMachine, suspensionContext);
 

@@ -192,7 +192,7 @@ internal readonly ref struct JsonStateMachineWriter(
         public void MarshalAs<TToken>(TypeId typeId, TToken token)
         {
             WriteMarshaledPropertyName(writer, name);
-            
+
             writer.WriteStartObject();
             WriteTypeId(writer, typeId, jsonOptions);
             WriteToken(writer, token, jsonOptions);

@@ -36,7 +36,7 @@ public static class DAsyncMarshalerExtensions
     {
         public void UnmarshalAs<TConverter>(Type tokenType, ref TConverter converter) where TConverter : struct, ITokenConverter
             => action.UnmarshalAs(tokenType, ref converter);
- 
+
         public void UnmarshalAs(Type tokenType, ITokenConverter converter)
             => action.UnmarshalAs(tokenType, converter);
     }
