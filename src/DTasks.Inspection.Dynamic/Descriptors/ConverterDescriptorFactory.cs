@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics;
 using System.Reflection;
-using DTasks.Hosting;
 using DTasks.Marshaling;
 using DTasks.Utils;
+using DTasks.Infrastructure;
 
 namespace DTasks.Inspection.Dynamic.Descriptors;
 

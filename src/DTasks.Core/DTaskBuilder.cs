@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using DTasks.Hosting;
 using DTasks.Utils;
+using DTasks.Infrastructure;
 
 namespace DTasks;
 
@@ -69,12 +69,12 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
             }
         }
 
-        protected override void Run(IDAsyncFlow flow)
+        protected override void Run(IDAsyncRunner runner)
         {
             if (!IsPending)
                 throw new InvalidOperationException("The DTask was already run.");
 
-            flow.Start(this);
+            runner.Start(this);
         }
 
         public override void SetResult(TResult result)

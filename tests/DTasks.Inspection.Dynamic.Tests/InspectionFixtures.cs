@@ -1,5 +1,5 @@
 ﻿using DTasks.CompilerServices;
-using DTasks.Hosting;
+using DTasks.Infrastructure;
 using DTasks.Marshaling;
 using DTasks.Utils;
 using System.Diagnostics;
@@ -100,7 +100,7 @@ public static class InspectionFixtures
 
         public void GetResult() => throw new NotImplementedException();
 
-        public void Continue(IDAsyncFlow flow) => throw new NotImplementedException();
+        public void Continue(IDAsyncRunner runner) => throw new NotImplementedException();
 
         public void UnsafeOnCompleted(Action continuation) => throw new NotImplementedException();
 

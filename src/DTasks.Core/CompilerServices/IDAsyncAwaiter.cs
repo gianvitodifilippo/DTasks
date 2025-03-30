@@ -1,4 +1,4 @@
-﻿using DTasks.Hosting;
+﻿using DTasks.Infrastructure;
 using System.ComponentModel;
 
 namespace DTasks.CompilerServices;
@@ -8,5 +8,5 @@ public interface IDAsyncAwaiter
 {
     bool IsCompleted { get; }
 
-    void Continue(IDAsyncFlow flow);
+    void Continue(IDAsyncRunner runner);
 }

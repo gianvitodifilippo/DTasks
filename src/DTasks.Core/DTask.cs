@@ -1,5 +1,5 @@
 ﻿using DTasks.CompilerServices;
-using DTasks.Hosting;
+using DTasks.Infrastructure;
 using DTasks.Utils;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -58,9 +58,9 @@ public abstract class DTask : IDAsyncRunnable
 
     internal virtual TReturn Accept<TReturn>(IDTaskVisitor<TReturn> visitor) => visitor.Visit(this);
 
-    void IDAsyncRunnable.Run(IDAsyncFlow flow) => Run(flow);
+    void IDAsyncRunnable.Run(IDAsyncRunner runner) => Run(runner);
 
-    protected abstract void Run(IDAsyncFlow flow);
+    protected abstract void Run(IDAsyncRunner runner);
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     public Awaiter GetAwaiter() => new Awaiter(this);
@@ -152,9 +152,9 @@ public abstract class DTask : IDAsyncRunnable
             ExceptionDispatchInfo.Throw(_task.ExceptionInternal);
         }
 
-        public void Continue(IDAsyncFlow flow)
+        public void Continue(IDAsyncRunner runner)
         {
-            _task.Run(flow);
+            _task.Run(runner);
         }
 
         public void OnCompleted(Action continuation)
@@ -231,9 +231,9 @@ public abstract class DTask<TResult> : DTask
             throw new UnreachableException();
         }
 
-        public void Continue(IDAsyncFlow flow)
+        public void Continue(IDAsyncRunner runner)
         {
-            _task.Run(flow);
+            _task.Run(runner);
         }
 
         public void OnCompleted(Action continuation)

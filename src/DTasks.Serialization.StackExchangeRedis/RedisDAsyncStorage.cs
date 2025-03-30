@@ -1,4 +1,4 @@
-﻿using DTasks.Hosting;
+﻿using DTasks.Infrastructure;
 using StackExchange.Redis;
 
 namespace DTasks.Serialization.StackExchangeRedis;

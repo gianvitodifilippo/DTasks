@@ -1,4 +1,4 @@
-﻿using DTasks.Hosting;
+﻿using DTasks.Infrastructure;
 using DTasks.Utils;
 using System.Diagnostics;
 
@@ -19,23 +19,23 @@ internal sealed class DTaskHandle(DAsyncId id) : DTask, IDAsyncResultBuilder
             return _exception;
         }
     }
-    protected override void Run(IDAsyncFlow flow)
+    protected override void Run(IDAsyncRunner runner)
     {
-        if (flow is not IDAsyncFlowInternal flowInternal)
-            throw new ArgumentException("The provided flow does not support DTask handles.", nameof(flow)); // TODO: Improve message
+        if (runner is not IDAsyncRunnerInternal runnerInternal)
+            throw new ArgumentException("The provided runner does not support DTask handles.", nameof(runner)); // TODO: Improve message
 
         switch (_status)
         {
             case DTaskStatus.Pending:
-                flowInternal.Handle(id, this);
+                runnerInternal.Handle(id, this);
                 break;
 
             case DTaskStatus.Succeeded:
-                flow.Succeed();
+                runner.Succeed();
                 break;
 
             case DTaskStatus.Faulted:
-                flow.Fail(ExceptionCore);
+                runner.Fail(ExceptionCore);
                 break;
 
             default:
@@ -79,23 +79,23 @@ internal sealed class DTaskHandle<TResult>(DAsyncId id) : DTask<TResult>, IDAsyn
         }
     }
 
-    protected override void Run(IDAsyncFlow flow)
+    protected override void Run(IDAsyncRunner runner)
     {
-        if (flow is not IDAsyncFlowInternal flowInternal)
-            throw new ArgumentException("The provided flow does not support DTask handles.", nameof(flow)); // TODO: Improve message
+        if (runner is not IDAsyncRunnerInternal runnerInternal)
+            throw new ArgumentException("The provided runner does not support DTask handles.", nameof(runner)); // TODO: Improve message
 
         switch (_status)
         {
             case DTaskStatus.Pending:
-                flowInternal.Handle(id, this);
+                runnerInternal.Handle(id, this);
                 break;
 
             case DTaskStatus.Succeeded:
-                flow.Succeed(ResultCore);
+                runner.Succeed(ResultCore);
                 break;
 
             case DTaskStatus.Faulted:
-                flow.Fail(ExceptionCore);
+                runner.Fail(ExceptionCore);
                 break;
 
             default:
