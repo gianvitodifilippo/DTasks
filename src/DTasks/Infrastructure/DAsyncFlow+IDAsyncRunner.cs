@@ -9,6 +9,8 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
 {
     private static readonly object s_branchSuspensionSentinel = new();
 
+    IDAsyncCancellationManager IDAsyncRunner.CancellationFactory => this;
+
     private void Start()
     {
         Assert.NotNull(_stateMachine);

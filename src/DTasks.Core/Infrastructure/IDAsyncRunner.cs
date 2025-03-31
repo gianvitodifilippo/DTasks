@@ -5,6 +5,8 @@ namespace DTasks.Infrastructure;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IDAsyncRunner
 {
+    IDAsyncCancellationManager Cancellation { get; }
+
     void Start(IDAsyncStateMachine stateMachine);
 
     void Succeed();
@@ -12,6 +14,8 @@ public interface IDAsyncRunner
     void Succeed<TResult>(TResult result);
 
     void Fail(Exception exception);
+
+    void Cancel(CancellationToken cancellationToken);
 
     void Yield();
 

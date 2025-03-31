@@ -54,7 +54,18 @@ public abstract class DTask : IDAsyncRunnable
         }
     }
 
+    internal CancellationToken CancellationTokenInternal
+    {
+        get
+        {
+            AssertCanceled();
+            return CancellationTokenCore;
+        }
+    }
+
     protected virtual Exception ExceptionCore => throw new NotImplementedException($"If a DTask can be '{DTaskStatus.Faulted}' or '{DTaskStatus.Canceled}', then it should override {nameof(ExceptionCore)}.");
+
+    protected virtual CancellationToken CancellationTokenCore => throw new NotImplementedException($"If a DTask can be '{DTaskStatus.Canceled}', then it should override {nameof(CancellationTokenCore)}.");
 
     internal virtual TReturn Accept<TReturn>(IDTaskVisitor<TReturn> visitor) => visitor.Visit(this);
 
@@ -74,6 +85,8 @@ public abstract class DTask : IDAsyncRunnable
     public static DTask Delay(TimeSpan delay) => new DelayDTask(delay);
 
     public static DTask FromException(Exception exception) => new FaultedDTask(exception);
+
+    public static DTask FromCanceled(CancellationToken cancellationToken) => new CanceledDTask(cancellationToken);
 
     public static DTask WhenAll(params IEnumerable<DTask> tasks) => new WhenAllDTask(tasks);
 
@@ -120,6 +133,12 @@ public abstract class DTask : IDAsyncRunnable
     internal void AssertFailed()
     {
         Debug.Assert(IsFailed, $"The DTask was not failed (it was '{Status}').");
+    }
+
+    [Conditional("DEBUG")]
+    internal void AssertCanceled()
+    {
+        Debug.Assert(IsCanceled, $"The DTask was not canceled (it was '{Status}').");
     }
 
     [DoesNotReturn]
