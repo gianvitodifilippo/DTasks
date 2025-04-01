@@ -52,6 +52,24 @@ internal partial class DAsyncFlow : IAsyncStateMachine
                     Consume(ref _aggregateRunnable).Run(this);
                     break;
 
+                case FlowState.Awaiting:
+                    Task? awaitedTask = Consume(ref _awaitedTask);
+                    object? resultBuilder = Consume(ref _resultBuilder);
+
+                    Assert.NotNull(awaitedTask);
+                    Assert.Is<IDAsyncResultBuilder<Task>>(resultBuilder);
+
+                    try
+                    {
+                        GetVoidTaskResult();
+                        Unsafe.As<IDAsyncResultBuilder<Task>>(resultBuilder).SetResult(awaitedTask);
+                    }
+                    catch (Exception ex)
+                    {
+                        Unsafe.As<IDAsyncResultBuilder<Task>>(resultBuilder).SetException(ex);
+                    }
+                    break;
+
                 default:
                     Debug.Fail($"Invalid state after await: '{_state}'.");
                     break;
@@ -78,6 +96,7 @@ internal partial class DAsyncFlow : IAsyncStateMachine
         Dehydrating,
         Hydrating,
         Returning,
-        Aggregating
+        Aggregating,
+        Awaiting
     }
 }

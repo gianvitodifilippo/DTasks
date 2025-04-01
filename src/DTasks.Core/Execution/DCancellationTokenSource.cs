@@ -136,7 +136,7 @@ public abstract class DCancellationTokenSource
         [EditorBrowsable(EditorBrowsableState.Never)]
         public Awaiter GetAwaiter() => _awaiter;
 
-        public abstract class Awaiter : ICriticalNotifyCompletion, IDAsyncAwaiter, IDAsyncResultBuilder
+        public abstract class Awaiter : ICriticalNotifyCompletion, IDAsyncAwaiter, IDAsyncResultBuilder<Task>
         {
             private DCancellationTokenSource? _result;
             private Exception? _exception;
@@ -183,7 +183,7 @@ public abstract class DCancellationTokenSource
                 runner.Await(CreateAsync(runner.Cancellation, _result), this);
             }
 
-            public void SetResult()
+            public void SetResult(Task result)
             {
                 IsCompleted = true;
             }

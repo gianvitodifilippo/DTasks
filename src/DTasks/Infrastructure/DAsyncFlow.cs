@@ -1,5 +1,7 @@
-﻿using DTasks.Marshaling;
+﻿using DTasks.Execution;
+using DTasks.Marshaling;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -37,6 +39,7 @@ internal sealed partial class DAsyncFlow
     private int _branchCount;
     private IDictionary? _whenAllBranchResults;
     private IDAsyncRunnable? _aggregateRunnable;
+    private Task? _awaitedTask;
     private object? _resultBuilder;
     private Type? _handleResultType;
     private FlowContinuation? _continuation;
@@ -47,6 +50,7 @@ internal sealed partial class DAsyncFlow
     private readonly DTaskTokenConverter _taskTokenConverter;
     private readonly Dictionary<DTask, DTaskToken> _tokens;
     private readonly Dictionary<DAsyncId, DTask> _tasks;
+    private readonly ConcurrentDictionary<DCancellationTokenSource, DistributedCancellationInfo> _cancellations;
 
     public DAsyncFlow()
     {
@@ -61,6 +65,7 @@ internal sealed partial class DAsyncFlow
         _taskTokenConverter = new DTaskTokenConverter(this);
         _tokens = [];
         _tasks = [];
+        _cancellations = [];
     }
 
     [MemberNotNullWhen(true, nameof(_parent))]

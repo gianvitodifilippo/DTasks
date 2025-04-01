@@ -9,7 +9,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
 {
     private static readonly object s_branchSuspensionSentinel = new();
 
-    IDAsyncCancellationManager IDAsyncRunner.CancellationFactory => this;
+    IDAsyncCancellationManager IDAsyncRunner.Cancellation => this;
 
     private void Start()
     {
@@ -462,6 +462,11 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         }
     }
 
+    void IDAsyncRunner.Cancel(CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
     void IDAsyncRunner.Yield()
     {
         Assert.Null(_continuation);
@@ -693,5 +698,16 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         //_resultBuilder = builder;
         //_continuation = Continuations.Handle<TResult>;
         //currentStateMachine.Suspend(); // TODO: Should not suspend after a WhenAll
+    }
+
+    void IDAsyncRunner.Await(Task task, IDAsyncResultBuilder<Task> builder)
+    {
+        Assert.NotNull(builder);
+        Assert.Null(_resultBuilder);
+        Assert.Null(_continuation);
+
+        _suspendingAwaiterOrType = null;
+        _awaitedTask = task;
+        Await(task, FlowState.Awaiting);
     }
 }

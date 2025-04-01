@@ -33,7 +33,5 @@ public interface IDAsyncRunner
 
     void Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask<TResult>> builder);
 
-    void Await(Task task, IDAsyncResultBuilder builder);
-
-    void Await<TResult>(Task<TResult> task, IDAsyncResultBuilder<TResult> builder);
+    void Await(Task task, IDAsyncResultBuilder<Task> builder);
 }
