@@ -11,25 +11,33 @@ public readonly struct DCancellationToken : IEquatable<DCancellationToken>
         _source = source;
     }
 
+    public DCancellationToken(bool canceled)
+    {
+        if (!canceled)
+            return;
+        
+        _source = DCancellationTokenSource.CanceledSource;
+    }
+
+    public bool IsCancellationRequested => Source.IsCancellationRequested;
+
+    public bool CanBeCanceled => _source is not null;
+
+    private DCancellationTokenSource Source => _source ?? DCancellationTokenSource.NeverCanceledSource;
+
     public static DCancellationToken None => default;
 
-    //public static implicit operator CancellationToken(DCancellationToken token) => token._source?.Token ?? default;
+    public static DCancellationToken Canceled => new(DCancellationTokenSource.CanceledSource);
+
+    public static implicit operator CancellationToken(DCancellationToken token) => token.Source.LocalSource.Token;
 
     public bool Equals(DCancellationToken other) => _source == other._source;
 
     public override bool Equals([NotNullWhen(true)] object? obj) => obj is DCancellationToken other && Equals(other);
 
-    public override int GetHashCode() => _source.GetHashCode();
+    public override int GetHashCode() => Source.GetHashCode();
 
     public static bool operator ==(DCancellationToken left, DCancellationToken right) => left.Equals(right);
 
     public static bool operator !=(DCancellationToken left, DCancellationToken right) => !(left == right);
-
-    public static CancellationDAwaitable CreateSourceAsync(CancellationToken cancellationToken = default) => new(
-        new CancellationFactoryArguments(default, cancellationToken),
-        static (arguments, factory) => factory.Create(arguments.CancellationToken));
-
-    public static CancellationDAwaitable CreateSourceAsync(TimeSpan delay, CancellationToken cancellationToken = default) => new(
-        new CancellationFactoryArguments(delay, cancellationToken),
-        static (arguments, factory) => factory.Create(arguments.Delay, arguments.CancellationToken));
 }
