@@ -7,36 +7,45 @@ internal partial class DAsyncFlow : IDAsyncCancellationManager
 {
     Task IDAsyncCancellationManager.CreateAsync(DCancellationTokenSource source, DAsyncCancellationHandle handle, CancellationToken cancellationToken)
     {
-        DistributedCancellationInfo cancellationInfo = new(handle, DateTimeOffset.MaxValue);
-        bool added = _cancellations.TryAdd(source, cancellationInfo);
-        Debug.Assert(added, "Attempted to register a cancellation source multiple times.");
-
+        _ = Register(source, handle);
         return Task.CompletedTask;
     }
 
-    async Task IDAsyncCancellationManager.CreateAsync(DCancellationTokenSource source, DAsyncCancellationHandle handle, TimeSpan delay, CancellationToken cancellationToken)
+    Task IDAsyncCancellationManager.CreateAsync(DCancellationTokenSource source, DAsyncCancellationHandle handle, TimeSpan delay, CancellationToken cancellationToken)
     {
-        DistributedCancellationInfo cancellationInfo = new(handle, DateTimeOffset.UtcNow + delay);
-        bool added = _cancellations.TryAdd(source, cancellationInfo);
-        Debug.Assert(added, "Attempted to register a cancellation source multiple times.");
-
-        // TODO: Register with external provider
-        throw new NotImplementedException();
-    }
-
-    Task IDAsyncCancellationManager.CancelAfterAsync(DCancellationTokenSource source, TimeSpan delay, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
+        DateTimeOffset expirationTime = DateTimeOffset.Now + delay;
+        DCancellationId id = Register(source, handle);
+        return _cancellationProvider.CancelAsync(id, expirationTime, cancellationToken);
     }
 
     Task IDAsyncCancellationManager.CancelAsync(DCancellationTokenSource source, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        DistributedCancellationInfo info = _cancellationInfos[source];
+        return _cancellationProvider.CancelAsync(info.Id, cancellationToken);
     }
 
-    bool IDAsyncCancellationManager.IsCancellationRequested(DCancellationTokenSource source)
+    Task IDAsyncCancellationManager.CancelAfterAsync(DCancellationTokenSource source, TimeSpan delay, CancellationToken cancellationToken)
     {
-        DistributedCancellationInfo cancellationInfo = _cancellations[source];
-        return cancellationInfo.ExpirationTime <= DateTimeOffset.UtcNow;
+        DateTimeOffset expirationTime = DateTimeOffset.Now + delay;
+        DistributedCancellationInfo info = _cancellationInfos[source];
+        return _cancellationProvider.CancelAsync(info.Id, expirationTime, cancellationToken);
     }
+
+    private DCancellationId Register(DCancellationTokenSource source, DAsyncCancellationHandle handle)
+    {
+        DCancellationId id;
+        do
+        {
+            id = DCancellationId.New();
+        }
+        while (!_cancellations.TryAdd(id, source));
+
+        DistributedCancellationInfo info = new(id, handle);
+        bool added = _cancellationInfos.TryAdd(source, info);
+        Debug.Assert(added, "Attempted to register a cancellation source multiple times.");
+
+        return id;
+    }
+
+    private readonly record struct DistributedCancellationInfo(DCancellationId Id, DAsyncCancellationHandle Handle);
 }

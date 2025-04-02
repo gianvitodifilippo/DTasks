@@ -1,10 +1,13 @@
-﻿using DTasks.Marshaling;
+﻿using DTasks.Execution;
+using DTasks.Marshaling;
 
 namespace DTasks.Infrastructure;
 
 internal interface IDAsyncHost
 {
     ITypeResolver TypeResolver { get; }
+
+    IDistributedCancellationProvider CancellationProvider { get; }
 
     IDAsyncMarshaler CreateMarshaler();
 

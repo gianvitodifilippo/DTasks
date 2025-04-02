@@ -60,6 +60,7 @@ internal partial class DAsyncFlow : IValueTaskSource
 
         _tokens.Clear();
         _tasks.Clear();
+        _cancellationInfos.Clear();
         _cancellations.Clear();
     }
 }

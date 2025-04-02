@@ -6,8 +6,6 @@ namespace DTasks.Infrastructure;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IDAsyncCancellationManager
 {
-    bool IsCancellationRequested(DCancellationTokenSource source);
-
     Task CreateAsync(DCancellationTokenSource source, DAsyncCancellationHandle handle, CancellationToken cancellationToken);
 
     Task CreateAsync(DCancellationTokenSource source, DAsyncCancellationHandle handle, TimeSpan delay, CancellationToken cancellationToken);

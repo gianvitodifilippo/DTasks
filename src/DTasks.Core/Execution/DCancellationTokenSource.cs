@@ -44,7 +44,7 @@ public abstract class DCancellationTokenSource
 
     private sealed class Implementation(IDAsyncCancellationManager manager) : DCancellationTokenSource
     {
-        public override bool IsCancellationRequested => manager.IsCancellationRequested(this);
+        public override bool IsCancellationRequested => LocalSource.IsCancellationRequested;
 
         internal override CancellationTokenSource LocalSource { get; } = new();
 

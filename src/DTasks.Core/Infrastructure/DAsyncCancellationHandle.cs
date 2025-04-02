@@ -12,5 +12,7 @@ public readonly struct DAsyncCancellationHandle
         _localSource = localSource;
     }
 
+    public CancellationToken CancellationToken => _localSource.Token;
+
     public void Cancel() => _localSource.Cancel();
 }

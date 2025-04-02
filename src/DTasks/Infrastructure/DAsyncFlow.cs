@@ -20,6 +20,7 @@ internal sealed partial class DAsyncFlow
     private IDAsyncMarshaler _marshaler;
     private IDAsyncStateManager _stateManager;
     private ITypeResolver _typeResolver;
+    private IDistributedCancellationProvider _cancellationProvider;
     // TODO: Add distributed lock provider
 
     private TaskAwaiter _voidTa;
@@ -50,7 +51,8 @@ internal sealed partial class DAsyncFlow
     private readonly DTaskTokenConverter _taskTokenConverter;
     private readonly Dictionary<DTask, DTaskToken> _tokens;
     private readonly Dictionary<DAsyncId, DTask> _tasks;
-    private readonly ConcurrentDictionary<DCancellationTokenSource, DistributedCancellationInfo> _cancellations;
+    private readonly ConcurrentDictionary<DCancellationTokenSource, DistributedCancellationInfo> _cancellationInfos;
+    private readonly ConcurrentDictionary<DCancellationId, DCancellationTokenSource> _cancellations;
 
     public DAsyncFlow()
     {
@@ -61,10 +63,12 @@ internal sealed partial class DAsyncFlow
         _marshaler = s_nullMarshaler;
         _stateManager = s_nullStateManager;
         _typeResolver = s_nullTypeResolver;
+        _cancellationProvider = s_nullCancellationProvider;
 
         _taskTokenConverter = new DTaskTokenConverter(this);
         _tokens = [];
         _tasks = [];
+        _cancellationInfos = [];
         _cancellations = [];
     }
 

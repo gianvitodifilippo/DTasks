@@ -1,4 +1,5 @@
-﻿using DTasks.Marshaling;
+﻿using DTasks.Execution;
+using DTasks.Marshaling;
 using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
@@ -8,6 +9,8 @@ public abstract class DAsyncHost : IDAsyncHost
     // TODO: Pool flows
 
     protected abstract ITypeResolver TypeResolver { get; }
+
+    protected virtual IDistributedCancellationProvider CancellationProvider => DefaultDistributedCancellationProvider.Instance;
 
     protected abstract IDAsyncStateManager CreateStateManager(IDAsyncMarshaler marshaler);
 
@@ -62,6 +65,8 @@ public abstract class DAsyncHost : IDAsyncHost
     }
 
     ITypeResolver IDAsyncHost.TypeResolver => TypeResolver;
+
+    IDistributedCancellationProvider IDAsyncHost.CancellationProvider => CancellationProvider;
 
     IDAsyncMarshaler IDAsyncHost.CreateMarshaler() => CreateMarshaler();
 

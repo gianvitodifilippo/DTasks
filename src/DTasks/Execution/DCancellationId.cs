@@ -1,16 +1,16 @@
-﻿using DTasks.Utils;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using DTasks.Utils;
 
-namespace DTasks.Infrastructure;
+namespace DTasks.Execution;
 
+[EditorBrowsable(EditorBrowsableState.Never)]
 [StructLayout(LayoutKind.Sequential)]
-public readonly struct DAsyncId : IEquatable<DAsyncId>
+public readonly struct DCancellationId : IEquatable<DCancellationId>
 {
-    private const int ByteCount = 3 * sizeof(uint);
-
-    internal static readonly DAsyncId RootId = new(uint.MaxValue, uint.MaxValue, uint.MaxValue);
+    private const int ByteCount = 2 * sizeof(uint);
 
 #if DEBUG_TESTS
     private static int s_idCount = 0;
@@ -20,25 +20,19 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     private readonly uint _a;
     private readonly uint _b;
-    private readonly uint _c;
 
-    private DAsyncId(uint a, uint b, uint c)
+    private DCancellationId(uint a, uint b)
     {
         _a = a;
         _b = b;
-        _c = c;
     }
 
-    private DAsyncId(ReadOnlySpan<byte> bytes)
+    private DCancellationId(ReadOnlySpan<byte> bytes)
     {
         Debug.Assert(bytes.Length == ByteCount);
 
-        this = Unsafe.ReadUnaligned<DAsyncId>(ref MemoryMarshal.GetReference(bytes));
+        this = Unsafe.ReadUnaligned<DCancellationId>(ref MemoryMarshal.GetReference(bytes));
     }
-
-    internal bool IsDefault => this == default;
-
-    internal bool IsRoot => this == RootId;
 
     public byte[] ToByteArray()
     {
@@ -57,16 +51,15 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
         return true;
     }
 
-    public bool Equals(DAsyncId other) =>
+    public bool Equals(DCancellationId other) =>
         _a == other._a &&
-        _b == other._b &&
-        _c == other._c;
+        _b == other._b;
 
-    public override bool Equals(object? obj) => obj is DAsyncId other && Equals(other);
+    public override bool Equals(object? obj) => obj is DCancellationId other && Equals(other);
 
     public override int GetHashCode()
     {
-        ref int head = ref Unsafe.As<DAsyncId, int>(ref Unsafe.AsRef(in this));
+        ref int head = ref Unsafe.As<DCancellationId, int>(ref Unsafe.AsRef(in this));
         return head ^ Unsafe.Add(ref head, 1) ^ Unsafe.Add(ref head, 2);
     }
 
@@ -75,30 +68,27 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
         if (this == default)
             return "<default>";
 
-        if (this == RootId)
-            return "<root>";
-
-        ref byte head = ref Unsafe.As<DAsyncId, byte>(ref Unsafe.AsRef(in this));
+        ref byte head = ref Unsafe.As<DCancellationId, byte>(ref Unsafe.AsRef(in this));
         ReadOnlySpan<byte> bytes = MemoryMarshal.CreateReadOnlySpan(ref head, ByteCount);
 
         return Convert.ToBase64String(bytes);
     }
 
-    public static bool operator ==(DAsyncId left, DAsyncId right) => left.Equals(right);
+    public static bool operator ==(DCancellationId left, DCancellationId right) => left.Equals(right);
 
-    public static bool operator !=(DAsyncId left, DAsyncId right) => !left.Equals(right);
+    public static bool operator !=(DCancellationId left, DCancellationId right) => !left.Equals(right);
 
-    internal static DAsyncId New()
+    internal static DCancellationId New()
     {
         Span<byte> bytes = stackalloc byte[ByteCount];
-        DAsyncId id;
+        DCancellationId id;
 
         do
         {
             Randomize(bytes);
-            id = new DAsyncId(bytes);
+            id = new DCancellationId(bytes);
         }
-        while (id == default || id == RootId);
+        while (id == default);
 
         return id;
     }
@@ -117,37 +107,37 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 #endif
     }
 
-    public static DAsyncId Parse(string value)
+    public static DCancellationId Parse(string value)
     {
         ThrowHelper.ThrowIfNull(value);
 
-        if (!TryParseCore(value, out DAsyncId id))
-            throw new ArgumentException($"'{value}' does not represent a valid {nameof(DAsyncId)}.", nameof(value));
+        if (!TryParseCore(value, out DCancellationId id))
+            throw new ArgumentException($"'{value}' does not represent a valid {nameof(DCancellationId)}.", nameof(value));
 
         return id;
     }
 
-    public static bool TryParse(string value, out DAsyncId id)
+    public static bool TryParse(string value, out DCancellationId id)
     {
         ThrowHelper.ThrowIfNull(value);
 
         return TryParseCore(value, out id);
     }
 
-    public static DAsyncId ReadBytes(ReadOnlySpan<byte> bytes)
+    public static DCancellationId ReadBytes(ReadOnlySpan<byte> bytes)
     {
-        if (!TryReadBytesCore(bytes, out DAsyncId id))
-            throw new ArgumentException($"The provided bytes do not represent a valid {nameof(DAsyncId)}.", nameof(bytes));
+        if (!TryReadBytesCore(bytes, out DCancellationId id))
+            throw new ArgumentException($"The provided bytes do not represent a valid {nameof(DCancellationId)}.", nameof(bytes));
 
         return id;
     }
 
-    public static bool TryReadBytes(ReadOnlySpan<byte> bytes, out DAsyncId id)
+    public static bool TryReadBytes(ReadOnlySpan<byte> bytes, out DCancellationId id)
     {
         return TryReadBytesCore(bytes, out id);
     }
 
-    private static bool TryParseCore(string value, out DAsyncId id)
+    private static bool TryParseCore(string value, out DCancellationId id)
     {
         Span<byte> bytes = stackalloc byte[ByteCount];
         if (!Convert.TryFromBase64String(value, bytes, out int bytesWritten) || bytesWritten != ByteCount)
@@ -159,7 +149,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
         return TryReadBytesCore(bytes, out id);
     }
 
-    private static bool TryReadBytesCore(ReadOnlySpan<byte> bytes, out DAsyncId id)
+    private static bool TryReadBytesCore(ReadOnlySpan<byte> bytes, out DCancellationId id)
     {
         if (bytes.Length != ByteCount)
         {
@@ -167,7 +157,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
             return false;
         }
 
-        id = new DAsyncId(bytes);
+        id = new DCancellationId(bytes);
         return true;
     }
 }
