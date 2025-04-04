@@ -6,7 +6,7 @@ internal class CanceledDTask(CancellationToken cancellationToken) : DTask
 {
     private OperationCanceledException? _exception;
 
-    private new OperationCanceledException Exception => _exception ?? new DTaskCanceledException(this);
+    private new OperationCanceledException Exception => _exception ??= new DTaskCanceledException(this);
 
     public override DTaskStatus Status => DTaskStatus.Canceled;
 

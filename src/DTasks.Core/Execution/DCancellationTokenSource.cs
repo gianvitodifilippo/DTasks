@@ -38,6 +38,11 @@ public abstract class DCancellationTokenSource
         return CancelAfterCoreAsync(delay, cancellationToken);
     }
 
+    internal static DCancellationTokenSource Create(IDAsyncCancellationManager manager)
+    {
+        return new Implementation(manager);
+    }
+
     public static CancellationDAwaitable CreateAsync(CancellationToken cancellationToken = default) => new(new CreationAwaiter(cancellationToken));
 
     public static CancellationDAwaitable CreateAsync(TimeSpan delay, CancellationToken cancellationToken = default) => new(new CreationAwaiterWithDelay(delay, cancellationToken));
@@ -50,12 +55,12 @@ public abstract class DCancellationTokenSource
 
         private protected override DAsyncCancellationHandle Handle => new(LocalSource);
 
-        private protected override Task CancelCoreAsync(CancellationToken cancellationToken = default)
+        private protected override Task CancelCoreAsync(CancellationToken cancellationToken)
         {
             return manager.CancelAsync(this, cancellationToken);
         }
 
-        private protected override Task CancelAfterCoreAsync(TimeSpan delay, CancellationToken cancellationToken = default)
+        private protected override Task CancelAfterCoreAsync(TimeSpan delay, CancellationToken cancellationToken)
         {
             return manager.CancelAfterAsync(this, delay, cancellationToken);
         }
@@ -120,79 +125,6 @@ public abstract class DCancellationTokenSource
         {
             Debug.Fail($"'{nameof(CancelAfterAsync)}' should not be used for this source.");
             return Task.CompletedTask;
-        }
-    }
-
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public readonly ref struct CancellationDAwaitable
-    {
-        private readonly Awaiter _awaiter;
-
-        internal CancellationDAwaitable(Awaiter awaiter)
-        {
-            _awaiter = awaiter;
-        }
-
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public Awaiter GetAwaiter() => _awaiter;
-
-        public abstract class Awaiter : ICriticalNotifyCompletion, IDAsyncAwaiter, IDAsyncResultBuilder<Task>
-        {
-            private DCancellationTokenSource? _result;
-            private Exception? _exception;
-
-            internal Awaiter()
-            {
-            }
-
-            public bool IsCompleted { get; private set; }
-
-            bool IDAsyncAwaiter.IsCompleted => false;
-
-            private protected abstract Task CreateAsync(IDAsyncCancellationManager manager, DCancellationTokenSource source);
-
-            public DCancellationTokenSource GetResult()
-            {
-                if (!IsCompleted)
-                    throw new InvalidOperationException($"Attempted to create an instance of {nameof(DCancellationTokenSource)} without awaiting the call.");
-            
-                if (_exception is not null)
-                {
-                    ExceptionDispatchInfo.Throw(_exception);
-                    throw new UnreachableException();
-                }
-
-                Debug.Assert(_result is not null);
-                return _result;
-            }
-            public void OnCompleted(Action continuation)
-            {
-                ThrowHelper.ThrowIfNull(continuation);
-                DTask.ThrowInvalidAwait();
-            }
-
-            public void UnsafeOnCompleted(Action continuation)
-            {
-                ThrowHelper.ThrowIfNull(continuation);
-                DTask.ThrowInvalidAwait();
-            }
-
-            void IDAsyncAwaiter.Continue(IDAsyncRunner runner)
-            {
-                _result = new Implementation(runner.Cancellation);
-                runner.Await(CreateAsync(runner.Cancellation, _result), this);
-            }
-
-            public void SetResult(Task result)
-            {
-                IsCompleted = true;
-            }
-
-            public void SetException(Exception exception)
-            {
-                IsCompleted = true;
-                _exception = exception;
-            }
         }
     }
 
