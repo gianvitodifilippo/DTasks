@@ -38,6 +38,10 @@ internal sealed class DTaskHandle(DAsyncId id) : DTask, IDAsyncResultBuilder
                 runner.Fail(ExceptionCore);
                 break;
 
+            case DTaskStatus.Canceled:
+                runner.Cancel((OperationCanceledException)ExceptionCore);
+                break;
+
             default:
                 Debug.Fail("Invalid status.");
                 break;
@@ -95,7 +99,11 @@ internal sealed class DTaskHandle<TResult>(DAsyncId id) : DTask<TResult>, IDAsyn
                 break;
 
             case DTaskStatus.Faulted:
-                runner.Fail(ExceptionCore);
+                runner.Fail(Exception);
+                break;
+
+            case DTaskStatus.Canceled:
+            
                 break;
 
             default:

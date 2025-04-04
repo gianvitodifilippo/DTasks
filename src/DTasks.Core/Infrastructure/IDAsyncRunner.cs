@@ -5,6 +5,8 @@ namespace DTasks.Infrastructure;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IDAsyncRunner
 {
+    IDAsyncCancellationManager Cancellation { get; }
+
     void Start(IDAsyncStateMachine stateMachine);
 
     void Succeed();
@@ -12,6 +14,8 @@ public interface IDAsyncRunner
     void Succeed<TResult>(TResult result);
 
     void Fail(Exception exception);
+
+    void Cancel(OperationCanceledException exception);
 
     void Yield();
 
@@ -28,4 +32,6 @@ public interface IDAsyncRunner
     void Background(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask> builder);
 
     void Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask<TResult>> builder);
+
+    void Await(Task task, IDAsyncResultBuilder<Task> builder);
 }

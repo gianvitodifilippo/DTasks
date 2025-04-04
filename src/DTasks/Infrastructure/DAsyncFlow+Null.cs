@@ -1,4 +1,5 @@
-﻿using DTasks.Marshaling;
+﻿using DTasks.Execution;
+using DTasks.Marshaling;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
@@ -11,6 +12,7 @@ internal sealed partial class DAsyncFlow
     private static readonly IDAsyncMarshaler s_nullMarshaler = new NullDAsyncMarshaler();
     private static readonly IDAsyncStateManager s_nullStateManager = new NullDAsyncStateManager();
     private static readonly ITypeResolver s_nullTypeResolver = new NullTypeResolver();
+    private static readonly IDistributedCancellationProvider s_nullCancellationProvider = new NullDistributedCancellationProvider();
 
     [Conditional("DEBUG")]
     [ExcludeFromCodeCoverage]
@@ -31,6 +33,15 @@ internal sealed partial class DAsyncFlow
             }
         }
 
+        IDistributedCancellationProvider IDAsyncHost.CancellationProvider
+        {
+            get
+            {
+                FailForNull(nameof(_host));
+                throw new UnreachableException();
+            }
+        }
+
         IDAsyncMarshaler IDAsyncHost.CreateMarshaler()
         {
             FailForNull(nameof(_host));
@@ -43,31 +54,37 @@ internal sealed partial class DAsyncFlow
             throw new UnreachableException();
         }
 
-        Task IDAsyncHost.SucceedAsync(CancellationToken cancellationToken)
+        Task IDAsyncHost.OnSucceedAsync(CancellationToken cancellationToken)
         {
             FailForNull(nameof(_host));
             throw new UnreachableException();
         }
 
-        Task IDAsyncHost.SucceedAsync<TResult>(TResult result, CancellationToken cancellationToken)
+        Task IDAsyncHost.OnSucceedAsync<TResult>(TResult result, CancellationToken cancellationToken)
         {
             FailForNull(nameof(_host));
             throw new UnreachableException();
         }
 
-        Task IDAsyncHost.FailAsync(Exception exception, CancellationToken cancellationToken)
+        Task IDAsyncHost.OnFailAsync(Exception exception, CancellationToken cancellationToken)
         {
             FailForNull(nameof(_host));
             throw new UnreachableException();
         }
 
-        Task IDAsyncHost.YieldAsync(DAsyncId id, CancellationToken cancellationToken)
+        Task IDAsyncHost.OnCancelAsync(OperationCanceledException exception, CancellationToken cancellationToken)
         {
             FailForNull(nameof(_host));
             throw new UnreachableException();
         }
 
-        Task IDAsyncHost.DelayAsync(DAsyncId id, TimeSpan delay, CancellationToken cancellationToken)
+        Task IDAsyncHost.OnYieldAsync(DAsyncId id, CancellationToken cancellationToken)
+        {
+            FailForNull(nameof(_host));
+            throw new UnreachableException();
+        }
+
+        Task IDAsyncHost.OnDelayAsync(DAsyncId id, TimeSpan delay, CancellationToken cancellationToken)
         {
             FailForNull(nameof(_host));
             throw new UnreachableException();
@@ -152,6 +169,33 @@ internal sealed partial class DAsyncFlow
         TypeId ITypeResolver.GetTypeId(Type type)
         {
             FailForNull(nameof(_typeResolver));
+            throw new UnreachableException();
+        }
+    }
+
+    private sealed class NullDistributedCancellationProvider : IDistributedCancellationProvider
+    {
+        void IDistributedCancellationProvider.RegisterHandler(IDistributedCancellationHandler handler)
+        {
+            FailForNull(nameof(_cancellationProvider));
+            throw new UnreachableException();
+        }
+
+        void IDistributedCancellationProvider.UnregisterHandler(IDistributedCancellationHandler handler)
+        {
+            FailForNull(nameof(_cancellationProvider));
+            throw new UnreachableException();
+        }
+
+        Task IDistributedCancellationProvider.CancelAsync(DCancellationId id, CancellationToken cancellationToken)
+        {
+            FailForNull(nameof(_cancellationProvider));
+            throw new UnreachableException();
+        }
+
+        Task IDistributedCancellationProvider.CancelAsync(DCancellationId id, DateTimeOffset expirationTime, CancellationToken cancellationToken)
+        {
+            FailForNull(nameof(_cancellationProvider));
             throw new UnreachableException();
         }
     }

@@ -48,10 +48,12 @@ internal partial class DAsyncFlow : IValueTaskSource
         _state = FlowState.Pending;
         _valueTaskSource.Reset();
         _cancellationToken = default;
+        _cancellationProvider.UnregisterHandler(this);
 
         _host = s_nullHost;
         _marshaler = s_nullMarshaler;
         _stateManager = s_nullStateManager;
+        _cancellationProvider = s_nullCancellationProvider;
 
         _parentId = default;
         _id = default;
@@ -60,5 +62,7 @@ internal partial class DAsyncFlow : IValueTaskSource
 
         _tokens.Clear();
         _tasks.Clear();
+        _cancellationInfos.Clear();
+        _cancellations.Clear();
     }
 }

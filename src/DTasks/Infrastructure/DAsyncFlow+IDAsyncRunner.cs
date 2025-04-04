@@ -9,6 +9,8 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
 {
     private static readonly object s_branchSuspensionSentinel = new();
 
+    IDAsyncCancellationManager IDAsyncRunner.Cancellation => this;
+
     private void Start()
     {
         Assert.NotNull(_stateMachine);
@@ -38,7 +40,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
 
         if (id.IsRoot)
         {
-            Succeed();
+            AwaitOnSucceed();
         }
         else if (IsRunningAggregates && id == _parent._id)
         {
@@ -59,7 +61,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
 
         if (id.IsRoot)
         {
-            Succeed(result);
+            AwaitOnSucceed(result);
         }
         else if (IsRunningAggregates && id == _parent._id)
         {
@@ -80,7 +82,14 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
 
         if (id.IsRoot)
         {
-            Fail(exception);
+            if (exception is OperationCanceledException oce)
+            {
+                AwaitOnCancel(oce);
+            }
+            else
+            {
+                AwaitOnFail(exception);
+            }
         }
         else if (IsRunningAggregates && id == _parent._id)
         {
@@ -103,7 +112,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         }
 
         _suspendingAwaiterOrType = null;
-        Await(_host.YieldAsync(_id, _cancellationToken), FlowState.Returning);
+        Await(_host.OnYieldAsync(_id, _cancellationToken), FlowState.Returning);
     }
 
     private void Delay(TimeSpan delay)
@@ -116,7 +125,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         }
 
         _suspendingAwaiterOrType = null;
-        Await(_host.DelayAsync(_id, delay, _cancellationToken), FlowState.Returning);
+        Await(_host.OnDelayAsync(_id, delay, _cancellationToken), FlowState.Returning);
     }
 
     private void Callback(ISuspensionCallback callback)
@@ -167,6 +176,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
             childFlow._parentId = _id;
             childFlow._id = DAsyncId.New();
             childFlow._typeResolver = _typeResolver;
+            childFlow._cancellationProvider = _cancellationProvider;
 
             try
             {
@@ -249,6 +259,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
             childFlow._id = DAsyncId.New();
             childFlow._branchIndex = _branchCount;
             childFlow._typeResolver = _typeResolver;
+            childFlow._cancellationProvider = _cancellationProvider;
 
             try
             {
@@ -341,6 +352,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
             childFlow._parentId = _id;
             childFlow._id = DAsyncId.New();
             childFlow._typeResolver = _typeResolver;
+            childFlow._cancellationProvider = _cancellationProvider;
 
             try
             {
@@ -443,6 +455,24 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
     }
 
     void IDAsyncRunner.Fail(Exception exception)
+    {
+        Assert.NotNull(exception);
+        Assert.Null(_continuation);
+
+        IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
+
+        if (currentStateMachine is null)
+        {
+            Resume(_parentId, exception);
+        }
+        else
+        {
+            _continuation = self => self.Resume(self._parentId, exception);
+            currentStateMachine.Suspend();
+        }
+    }
+
+    void IDAsyncRunner.Cancel(OperationCanceledException exception)
     {
         Assert.NotNull(exception);
         Assert.Null(_continuation);
@@ -691,5 +721,16 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         //_resultBuilder = builder;
         //_continuation = Continuations.Handle<TResult>;
         //currentStateMachine.Suspend(); // TODO: Should not suspend after a WhenAll
+    }
+
+    void IDAsyncRunner.Await(Task task, IDAsyncResultBuilder<Task> builder)
+    {
+        Assert.NotNull(builder);
+        Assert.Null(_resultBuilder);
+        Assert.Null(_continuation);
+
+        _suspendingAwaiterOrType = null;
+        _awaitedTask = task;
+        Await(task, FlowState.Awaiting);
     }
 }

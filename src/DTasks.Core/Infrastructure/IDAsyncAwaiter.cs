@@ -1,7 +1,6 @@
-﻿using DTasks.Infrastructure;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 
-namespace DTasks.CompilerServices;
+namespace DTasks.Infrastructure;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IDAsyncAwaiter

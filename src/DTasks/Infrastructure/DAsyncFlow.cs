@@ -1,5 +1,7 @@
-﻿using DTasks.Marshaling;
+﻿using DTasks.Execution;
+using DTasks.Marshaling;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -18,6 +20,7 @@ internal sealed partial class DAsyncFlow
     private IDAsyncMarshaler _marshaler;
     private IDAsyncStateManager _stateManager;
     private ITypeResolver _typeResolver;
+    private IDistributedCancellationProvider _cancellationProvider;
     // TODO: Add distributed lock provider
 
     private TaskAwaiter _voidTa;
@@ -37,6 +40,7 @@ internal sealed partial class DAsyncFlow
     private int _branchCount;
     private IDictionary? _whenAllBranchResults;
     private IDAsyncRunnable? _aggregateRunnable;
+    private Task? _awaitedTask;
     private object? _resultBuilder;
     private Type? _handleResultType;
     private FlowContinuation? _continuation;
@@ -47,6 +51,8 @@ internal sealed partial class DAsyncFlow
     private readonly DTaskTokenConverter _taskTokenConverter;
     private readonly Dictionary<DTask, DTaskToken> _tokens;
     private readonly Dictionary<DAsyncId, DTask> _tasks;
+    private readonly ConcurrentDictionary<DCancellationTokenSource, DistributedCancellationInfo> _cancellationInfos;
+    private readonly ConcurrentDictionary<DCancellationId, DCancellationTokenSource> _cancellations;
 
     public DAsyncFlow()
     {
@@ -57,10 +63,13 @@ internal sealed partial class DAsyncFlow
         _marshaler = s_nullMarshaler;
         _stateManager = s_nullStateManager;
         _typeResolver = s_nullTypeResolver;
+        _cancellationProvider = s_nullCancellationProvider;
 
         _taskTokenConverter = new DTaskTokenConverter(this);
         _tokens = [];
         _tasks = [];
+        _cancellationInfos = [];
+        _cancellations = [];
     }
 
     [MemberNotNullWhen(true, nameof(_parent))]
@@ -132,21 +141,28 @@ internal sealed partial class DAsyncFlow
         _marshaler = host.CreateMarshaler();
         _stateManager = host.CreateStateManager(this);
         _typeResolver = host.TypeResolver;
+        _cancellationProvider = host.CancellationProvider;
+        _cancellationProvider.RegisterHandler(this);
     }
 
-    private void Succeed()
+    private void AwaitOnSucceed()
     {
-        Await(_host.SucceedAsync(_cancellationToken), FlowState.Returning);
+        Await(_host.OnSucceedAsync(_cancellationToken), FlowState.Returning);
     }
 
-    private void Succeed<TResult>(TResult result)
+    private void AwaitOnSucceed<TResult>(TResult result)
     {
-        Await(_host.SucceedAsync(result, _cancellationToken), FlowState.Returning);
+        Await(_host.OnSucceedAsync(result, _cancellationToken), FlowState.Returning);
     }
 
-    private void Fail(Exception exception)
+    private void AwaitOnFail(Exception exception)
     {
-        Await(_host.FailAsync(exception, _cancellationToken), FlowState.Returning);
+        Await(_host.OnFailAsync(exception, _cancellationToken), FlowState.Returning);
+    }
+
+    private void AwaitOnCancel(OperationCanceledException exception)
+    {
+        Await(_host.OnCancelAsync(exception, _cancellationToken), FlowState.Returning);
     }
 
     private void Return()

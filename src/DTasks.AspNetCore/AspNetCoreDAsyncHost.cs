@@ -36,7 +36,7 @@ public class AspNetCoreDAsyncHost(
         return new BinaryDAsyncStateManager(serializer, storage);
     }
 
-    protected override async Task SucceedAsync(CancellationToken cancellationToken = default)
+    protected override async Task OnSucceedAsync(CancellationToken cancellationToken = default)
     {
         if (_operationId is null)
         {
@@ -51,7 +51,7 @@ public class AspNetCoreDAsyncHost(
         }
     }
 
-    protected override async Task SucceedAsync<TResult>(TResult result, CancellationToken cancellationToken = default)
+    protected override async Task OnSucceedAsync<TResult>(TResult result, CancellationToken cancellationToken = default)
     {
         if (_operationId is null)
         {
@@ -75,12 +75,12 @@ public class AspNetCoreDAsyncHost(
         }
     }
 
-    protected override Task DelayAsync(DAsyncId id, TimeSpan delay, CancellationToken cancellationToken = default)
+    protected override Task OnDelayAsync(DAsyncId id, TimeSpan delay, CancellationToken cancellationToken = default)
     {
         return workQueue.DelayAsync(id, delay, cancellationToken);
     }
 
-    protected override Task YieldAsync(DAsyncId id, CancellationToken cancellationToken = default)
+    protected override Task OnYieldAsync(DAsyncId id, CancellationToken cancellationToken = default)
     {
         return workQueue.YieldAsync(id, cancellationToken);
     }
