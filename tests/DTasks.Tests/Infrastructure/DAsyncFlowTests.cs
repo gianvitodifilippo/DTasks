@@ -41,7 +41,7 @@ public class DAsyncFlowTests
         await _sut.StartAsync(_host, task);
 
         // Assert
-        await _host.Received(1).SucceedAsync();
+        await _host.Received(1).OnSucceedAsync();
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class DAsyncFlowTests
         await _sut.StartAsync(_host, task);
 
         // Assert
-        await _host.Received(1).SucceedAsync(result);
+        await _host.Received(1).OnSucceedAsync(result);
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public class DAsyncFlowTests
         await _sut.StartAsync(_host, task);
 
         // Assert
-        await _host.Received(1).FailAsync(exception);
+        await _host.Received(1).OnFailAsync(exception);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class DAsyncFlowTests
         await _sut.StartAsync(_host, task);
 
         // Assert
-        await _host.Received(1).FailAsync(exception);
+        await _host.Received(1).OnFailAsync(exception);
     }
 
     [Fact]
@@ -94,7 +94,7 @@ public class DAsyncFlowTests
 
         DAsyncId id = default;
         _host
-            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .When(host => host.OnYieldAsync(Arg.Any<DAsyncId>()))
             .Do(call => id = call.Arg<DAsyncId>());
 
         // Act
@@ -102,8 +102,8 @@ public class DAsyncFlowTests
         await _sut.ResumeAsync(_host, id);
 
         // Assert
-        await _host.Received(1).YieldAsync(Arg.Is(NonReservedId));
-        await _host.Received(1).SucceedAsync();
+        await _host.Received(1).OnYieldAsync(Arg.Is(NonReservedId));
+        await _host.Received(1).OnSucceedAsync();
         _stateManager.Count.Should().Be(0);
     }
 
@@ -116,7 +116,7 @@ public class DAsyncFlowTests
 
         DAsyncId id = default;
         _host
-            .When(host => host.DelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>()))
+            .When(host => host.OnDelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>()))
             .Do(call => id = call.Arg<DAsyncId>());
 
         // Act
@@ -124,8 +124,8 @@ public class DAsyncFlowTests
         await _sut.ResumeAsync(_host, id);
 
         // Assert
-        await _host.Received(1).DelayAsync(Arg.Is(NonReservedId), delay);
-        await _host.Received(1).SucceedAsync();
+        await _host.Received(1).OnDelayAsync(Arg.Is(NonReservedId), delay);
+        await _host.Received(1).OnSucceedAsync();
         _stateManager.Count.Should().Be(0);
     }
 
@@ -147,7 +147,7 @@ public class DAsyncFlowTests
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId));
-        await _host.Received(1).SucceedAsync();
+        await _host.Received(1).OnSucceedAsync();
         _stateManager.Count.Should().Be(0);
     }
 
@@ -169,7 +169,7 @@ public class DAsyncFlowTests
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId));
-        await _host.Received(1).SucceedAsync();
+        await _host.Received(1).OnSucceedAsync();
         _stateManager.Count.Should().Be(0);
     }
 
@@ -192,7 +192,7 @@ public class DAsyncFlowTests
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId), state);
-        await _host.Received(1).SucceedAsync();
+        await _host.Received(1).OnSucceedAsync();
         _stateManager.Count.Should().Be(0);
     }
 
@@ -215,7 +215,7 @@ public class DAsyncFlowTests
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId), state);
-        await _host.Received(1).SucceedAsync();
+        await _host.Received(1).OnSucceedAsync();
         _stateManager.Count.Should().Be(0);
     }
 
@@ -237,7 +237,7 @@ public class DAsyncFlowTests
 
         // Assert
         await callback.Received(1).Invoke(Arg.Is(NonReservedId));
-        await _host.Received(1).SucceedAsync();
+        await _host.Received(1).OnSucceedAsync();
         _stateManager.Count.Should().Be(0);
     }
 
@@ -259,7 +259,7 @@ public class DAsyncFlowTests
 
         // Assert
         await callback.Received(1).Invoke(Arg.Is(NonReservedId));
-        await _host.Received(1).SucceedAsync();
+        await _host.Received(1).OnSucceedAsync();
         _stateManager.Count.Should().Be(0);
     }
 
@@ -282,7 +282,7 @@ public class DAsyncFlowTests
 
         // Assert
         await callback.Received(1).Invoke(Arg.Is(NonReservedId), state);
-        await _host.Received(1).SucceedAsync();
+        await _host.Received(1).OnSucceedAsync();
         _stateManager.Count.Should().Be(0);
     }
 
@@ -305,7 +305,7 @@ public class DAsyncFlowTests
 
         // Assert
         await callback.Received(1).Invoke(Arg.Is(NonReservedId), state);
-        await _host.Received(1).SucceedAsync();
+        await _host.Received(1).OnSucceedAsync();
         _stateManager.Count.Should().Be(0);
     }
 
@@ -325,7 +325,7 @@ public class DAsyncFlowTests
         await _sut.StartAsync(_host, task);
 
         // Assert
-        await _host.Received(1).SucceedAsync(result);
+        await _host.Received(1).OnSucceedAsync(result);
         _stateManager.Count.Should().Be(0);
     }
 
@@ -346,7 +346,7 @@ public class DAsyncFlowTests
         await _sut.StartAsync(_host, task);
 
         // Assert
-        await _host.Received(1).SucceedAsync(result);
+        await _host.Received(1).OnSucceedAsync(result);
         _stateManager.Count.Should().Be(0);
     }
 
@@ -367,7 +367,7 @@ public class DAsyncFlowTests
         await _sut.StartAsync(_host, task);
 
         // Assert
-        await _host.Received(1).SucceedAsync(result);
+        await _host.Received(1).OnSucceedAsync(result);
         _stateManager.Count.Should().Be(0);
     }
 
@@ -386,7 +386,7 @@ public class DAsyncFlowTests
         await _sut.StartAsync(_host, task);
 
         // Assert
-        await _host.Received(1).SucceedAsync();
+        await _host.Received(1).OnSucceedAsync();
         _stateManager.Count.Should().Be(0);
     }
 
@@ -406,7 +406,7 @@ public class DAsyncFlowTests
         await _sut.StartAsync(_host, task);
 
         // Assert
-        await _host.Received(1).SucceedAsync(result);
+        await _host.Received(1).OnSucceedAsync(result);
         _stateManager.Count.Should().Be(0);
     }
 
@@ -426,7 +426,7 @@ public class DAsyncFlowTests
         await _sut.StartAsync(_host, task);
 
         // Assert
-        await _host.Received(1).FailAsync(exception);
+        await _host.Received(1).OnFailAsync(exception);
         _stateManager.Count.Should().Be(0);
     }
 
@@ -452,7 +452,7 @@ public class DAsyncFlowTests
         await _sut.StartAsync(_host, task);
 
         // Assert
-        await _host.Received(1).SucceedAsync(result + 1);
+        await _host.Received(1).OnSucceedAsync(result + 1);
         _stateManager.Count.Should().Be(0);
     }
 
@@ -469,7 +469,7 @@ public class DAsyncFlowTests
 
         DAsyncId id = default;
         _host
-            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .When(host => host.OnYieldAsync(Arg.Any<DAsyncId>()))
             .Do(call => id = call.Arg<DAsyncId>());
 
         DTask task = M1();
@@ -479,8 +479,8 @@ public class DAsyncFlowTests
         await _sut.ResumeAsync(_host, id);
 
         // Assert
-        await _host.Received(1).YieldAsync(Arg.Any<DAsyncId>());
-        await _host.Received(1).SucceedAsync(result);
+        await _host.Received(1).OnYieldAsync(Arg.Any<DAsyncId>());
+        await _host.Received(1).OnSucceedAsync(result);
         _stateManager.Count.Should().Be(0);
     }
 
@@ -498,7 +498,7 @@ public class DAsyncFlowTests
 
         DAsyncId id = default;
         _host
-            .When(host => host.DelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>()))
+            .When(host => host.OnDelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>()))
             .Do(call => id = call.Arg<DAsyncId>());
 
         DTask task = M1(delay);
@@ -508,8 +508,8 @@ public class DAsyncFlowTests
         await _sut.ResumeAsync(_host, id);
 
         // Assert
-        await _host.Received(1).DelayAsync(Arg.Any<DAsyncId>(), delay);
-        await _host.Received(1).SucceedAsync(result);
+        await _host.Received(1).OnDelayAsync(Arg.Any<DAsyncId>(), delay);
+        await _host.Received(1).OnSucceedAsync(result);
         _stateManager.Count.Should().Be(0);
     }
 
@@ -538,7 +538,7 @@ public class DAsyncFlowTests
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
-        await _host.Received(1).SucceedAsync(result);
+        await _host.Received(1).OnSucceedAsync(result);
         _stateManager.Count.Should().Be(0);
     }
 
@@ -566,7 +566,7 @@ public class DAsyncFlowTests
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
-        await _host.Received(1).SucceedAsync(result);
+        await _host.Received(1).OnSucceedAsync(result);
         _stateManager.Count.Should().Be(0);
     }
 
@@ -588,7 +588,7 @@ public class DAsyncFlowTests
         DAsyncId yieldId2 = default;
 
         _host
-            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .When(host => host.OnYieldAsync(Arg.Any<DAsyncId>()))
             .Do(call =>
             {
                 if (hostYieldId1 == default)
@@ -646,7 +646,7 @@ public class DAsyncFlowTests
         hostYieldId2.Should().Be(yieldId2);
         hostYieldId1.Should().NotBe(hostYieldId2);
         id1.Should().Be(id2).And.NotBe(hostYieldId1).And.NotBe(hostYieldId2);
-        await _host.Received(2).YieldAsync(Arg.Any<DAsyncId>());
+        await _host.Received(2).OnYieldAsync(Arg.Any<DAsyncId>());
         _stateManager.Count.Should().Be(0);
     }
 
@@ -674,10 +674,10 @@ public class DAsyncFlowTests
         DAsyncId id2 = default;
         DAsyncId id3 = default;
         _host
-            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .When(host => host.OnYieldAsync(Arg.Any<DAsyncId>()))
             .Do(call => id1 = call.Arg<DAsyncId>());
         _host
-            .When(host => host.DelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>()))
+            .When(host => host.OnDelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>()))
             .Do(call => id2 = call.Arg<DAsyncId>());
         callback
             .When(callback => callback.InvokeAsync(Arg.Any<DAsyncId>()))
@@ -693,9 +693,9 @@ public class DAsyncFlowTests
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
-        await _host.Received(1).YieldAsync(Arg.Any<DAsyncId>());
-        await _host.Received(1).DelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>());
-        await _host.Received(1).SucceedAsync();
+        await _host.Received(1).OnYieldAsync(Arg.Any<DAsyncId>());
+        await _host.Received(1).OnDelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>());
+        await _host.Received(1).OnSucceedAsync();
         _stateManager.Count.Should().Be(0);
     }
 
@@ -727,7 +727,7 @@ public class DAsyncFlowTests
         DAsyncId id3 = default;
         DAsyncId id4 = default;
         _host
-            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .When(host => host.OnYieldAsync(Arg.Any<DAsyncId>()))
             .Do(call =>
             {
                 if (id1 == default)
@@ -768,8 +768,8 @@ public class DAsyncFlowTests
 
         // Assert
         task.Status.Should().Be(DTaskStatus.Suspended);
-        await _host.Received(4).YieldAsync(Arg.Any<DAsyncId>());
-        await _host.Received(1).SucceedAsync(Arg.Is<int[]>(results => results.SequenceEqual(new[] { result1, result3, result2 })));
+        await _host.Received(4).OnYieldAsync(Arg.Any<DAsyncId>());
+        await _host.Received(1).OnSucceedAsync(Arg.Is<int[]>(results => results.SequenceEqual(new[] { result1, result3, result2 })));
         _stateManager.Count.Should().Be(0);
     }
 
@@ -796,7 +796,7 @@ public class DAsyncFlowTests
         DAsyncId id1 = default;
         DAsyncId id2 = default;
         _host
-            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .When(host => host.OnYieldAsync(Arg.Any<DAsyncId>()))
             .Do(call => id1 = call.Arg<DAsyncId>());
         callback
             .When(callback => callback.InvokeAsync(Arg.Any<DAsyncId>()))
@@ -811,9 +811,9 @@ public class DAsyncFlowTests
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
-        await _host.Received(1).YieldAsync(Arg.Any<DAsyncId>());
-        await _host.Received(1).DelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>());
-        await _host.Received(1).SucceedAsync(true);
+        await _host.Received(1).OnYieldAsync(Arg.Any<DAsyncId>());
+        await _host.Received(1).OnDelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>());
+        await _host.Received(1).OnSucceedAsync(true);
 
         // TODO: Restore this assertion when we properly manage to clean up the state machines of the handles
         // _stateManager.Count.Should().Be(0);
@@ -853,7 +853,7 @@ public class DAsyncFlowTests
         DAsyncId id3 = default;
         DAsyncId id4 = default;
         _host
-            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .When(host => host.OnYieldAsync(Arg.Any<DAsyncId>()))
             .Do(call =>
             {
                 if (id1 == default)
@@ -893,7 +893,7 @@ public class DAsyncFlowTests
         await _sut.ResumeAsync(_host, id4);
 
         // Assert
-        await _host.Received(1).SucceedAsync(true);
+        await _host.Received(1).OnSucceedAsync(true);
 
         // TODO: Restore this assertion when we properly manage to clean up the state machines of the handles
         // _stateManager.Count.Should().Be(0);
@@ -935,7 +935,7 @@ public class DAsyncFlowTests
         DAsyncId id3 = default;
         DAsyncId id4 = default;
         _host
-            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .When(host => host.OnYieldAsync(Arg.Any<DAsyncId>()))
             .Do(call =>
             {
                 if (id1 == default)
@@ -975,7 +975,7 @@ public class DAsyncFlowTests
         await _sut.ResumeAsync(_host, id4);
 
         // Assert
-        await _host.Received(1).SucceedAsync(true);
+        await _host.Received(1).OnSucceedAsync(true);
 
         // TODO: Restore this assertion when we properly manage to clean up the state machines of the handles
         //_stateManager.Count.Should().Be(0);
@@ -1007,7 +1007,7 @@ public class DAsyncFlowTests
         DAsyncId id3 = default;
         DAsyncId id4 = default;
         _host
-            .When(host => host.YieldAsync(Arg.Any<DAsyncId>()))
+            .When(host => host.OnYieldAsync(Arg.Any<DAsyncId>()))
             .Do(call =>
             {
                 if (id1 == default)

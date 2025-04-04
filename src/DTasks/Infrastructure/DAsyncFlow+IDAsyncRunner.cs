@@ -40,7 +40,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
 
         if (id.IsRoot)
         {
-            Succeed();
+            AwaitOnSucceed();
         }
         else if (IsRunningAggregates && id == _parent._id)
         {
@@ -61,7 +61,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
 
         if (id.IsRoot)
         {
-            Succeed(result);
+            AwaitOnSucceed(result);
         }
         else if (IsRunningAggregates && id == _parent._id)
         {
@@ -82,7 +82,14 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
 
         if (id.IsRoot)
         {
-            Fail(exception);
+            if (exception is OperationCanceledException oce)
+            {
+                AwaitOnCancel(oce);
+            }
+            else
+            {
+                AwaitOnFail(exception);
+            }
         }
         else if (IsRunningAggregates && id == _parent._id)
         {
@@ -105,7 +112,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         }
 
         _suspendingAwaiterOrType = null;
-        Await(_host.YieldAsync(_id, _cancellationToken), FlowState.Returning);
+        Await(_host.OnYieldAsync(_id, _cancellationToken), FlowState.Returning);
     }
 
     private void Delay(TimeSpan delay)
@@ -118,7 +125,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         }
 
         _suspendingAwaiterOrType = null;
-        Await(_host.DelayAsync(_id, delay, _cancellationToken), FlowState.Returning);
+        Await(_host.OnDelayAsync(_id, delay, _cancellationToken), FlowState.Returning);
     }
 
     private void Callback(ISuspensionCallback callback)
@@ -462,9 +469,22 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         }
     }
 
-    void IDAsyncRunner.Cancel(CancellationToken cancellationToken)
+    void IDAsyncRunner.Cancel(OperationCanceledException exception)
     {
-        throw new NotImplementedException();
+        Assert.NotNull(exception);
+        Assert.Null(_continuation);
+
+        IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
+
+        if (currentStateMachine is null)
+        {
+            Resume(_parentId, exception);
+        }
+        else
+        {
+            _continuation = self => self.Resume(self._parentId, exception);
+            currentStateMachine.Suspend();
+        }
     }
 
     void IDAsyncRunner.Yield()

@@ -143,19 +143,24 @@ internal sealed partial class DAsyncFlow
         _typeResolver = host.TypeResolver;
     }
 
-    private void Succeed()
+    private void AwaitOnSucceed()
     {
-        Await(_host.SucceedAsync(_cancellationToken), FlowState.Returning);
+        Await(_host.OnSucceedAsync(_cancellationToken), FlowState.Returning);
     }
 
-    private void Succeed<TResult>(TResult result)
+    private void AwaitOnSucceed<TResult>(TResult result)
     {
-        Await(_host.SucceedAsync(result, _cancellationToken), FlowState.Returning);
+        Await(_host.OnSucceedAsync(result, _cancellationToken), FlowState.Returning);
     }
 
-    private void Fail(Exception exception)
+    private void AwaitOnFail(Exception exception)
     {
-        Await(_host.FailAsync(exception, _cancellationToken), FlowState.Returning);
+        Await(_host.OnFailAsync(exception, _cancellationToken), FlowState.Returning);
+    }
+
+    private void AwaitOnCancel(OperationCanceledException exception)
+    {
+        Await(_host.OnCancelAsync(exception, _cancellationToken), FlowState.Returning);
     }
 
     private void Return()

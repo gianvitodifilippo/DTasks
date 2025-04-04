@@ -54,31 +54,37 @@ internal sealed partial class DAsyncFlow
             throw new UnreachableException();
         }
 
-        Task IDAsyncHost.SucceedAsync(CancellationToken cancellationToken)
+        Task IDAsyncHost.OnSucceedAsync(CancellationToken cancellationToken)
         {
             FailForNull(nameof(_host));
             throw new UnreachableException();
         }
 
-        Task IDAsyncHost.SucceedAsync<TResult>(TResult result, CancellationToken cancellationToken)
+        Task IDAsyncHost.OnSucceedAsync<TResult>(TResult result, CancellationToken cancellationToken)
         {
             FailForNull(nameof(_host));
             throw new UnreachableException();
         }
 
-        Task IDAsyncHost.FailAsync(Exception exception, CancellationToken cancellationToken)
+        Task IDAsyncHost.OnFailAsync(Exception exception, CancellationToken cancellationToken)
         {
             FailForNull(nameof(_host));
             throw new UnreachableException();
         }
 
-        Task IDAsyncHost.YieldAsync(DAsyncId id, CancellationToken cancellationToken)
+        Task IDAsyncHost.OnCancelAsync(OperationCanceledException exception, CancellationToken cancellationToken)
         {
             FailForNull(nameof(_host));
             throw new UnreachableException();
         }
 
-        Task IDAsyncHost.DelayAsync(DAsyncId id, TimeSpan delay, CancellationToken cancellationToken)
+        Task IDAsyncHost.OnYieldAsync(DAsyncId id, CancellationToken cancellationToken)
+        {
+            FailForNull(nameof(_host));
+            throw new UnreachableException();
+        }
+
+        Task IDAsyncHost.OnDelayAsync(DAsyncId id, TimeSpan delay, CancellationToken cancellationToken)
         {
             FailForNull(nameof(_host));
             throw new UnreachableException();

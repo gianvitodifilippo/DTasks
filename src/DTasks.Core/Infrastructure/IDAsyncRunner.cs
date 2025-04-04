@@ -15,7 +15,7 @@ public interface IDAsyncRunner
 
     void Fail(Exception exception);
 
-    void Cancel(CancellationToken cancellationToken);
+    void Cancel(OperationCanceledException exception);
 
     void Yield();
 
