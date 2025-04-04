@@ -141,6 +141,8 @@ internal sealed partial class DAsyncFlow
         _marshaler = host.CreateMarshaler();
         _stateManager = host.CreateStateManager(this);
         _typeResolver = host.TypeResolver;
+        _cancellationProvider = host.CancellationProvider;
+        _cancellationProvider.RegisterHandler(this);
     }
 
     private void AwaitOnSucceed()

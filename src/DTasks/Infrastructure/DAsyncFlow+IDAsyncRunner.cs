@@ -176,6 +176,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
             childFlow._parentId = _id;
             childFlow._id = DAsyncId.New();
             childFlow._typeResolver = _typeResolver;
+            childFlow._cancellationProvider = _cancellationProvider;
 
             try
             {
@@ -258,6 +259,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
             childFlow._id = DAsyncId.New();
             childFlow._branchIndex = _branchCount;
             childFlow._typeResolver = _typeResolver;
+            childFlow._cancellationProvider = _cancellationProvider;
 
             try
             {
@@ -350,6 +352,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
             childFlow._parentId = _id;
             childFlow._id = DAsyncId.New();
             childFlow._typeResolver = _typeResolver;
+            childFlow._cancellationProvider = _cancellationProvider;
 
             try
             {
