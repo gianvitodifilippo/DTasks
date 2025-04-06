@@ -10,14 +10,13 @@ public abstract class DAsyncHost : IDAsyncHost
 
     protected abstract ITypeResolver TypeResolver { get; }
 
-    protected virtual IDistributedCancellationProvider CancellationProvider => DefaultDistributedCancellationProvider.Instance;
+    protected abstract IDAsyncHeap Heap { get; }
+
+    protected virtual IDAsyncCancellationProvider CancellationProvider => DefaultDAsyncCancellationProvider.Instance;
 
     protected abstract IDAsyncStateManager CreateStateManager(IDAsyncMarshaler marshaler);
 
-    protected virtual IDAsyncMarshaler CreateMarshaler()
-    {
-        return NullDAsyncMarshaler.Instance;
-    }
+    protected virtual IDAsyncMarshaler CreateMarshaler() => DefaultDAsyncMarshaler.Instance;
 
     public ValueTask StartAsync(IDAsyncRunnable runnable, CancellationToken cancellationToken = default)
     {
@@ -82,7 +81,7 @@ public abstract class DAsyncHost : IDAsyncHost
 
     ITypeResolver IDAsyncHost.TypeResolver => TypeResolver;
 
-    IDistributedCancellationProvider IDAsyncHost.CancellationProvider => CancellationProvider;
+    IDAsyncCancellationProvider IDAsyncHost.CancellationProvider => CancellationProvider;
 
     IDAsyncMarshaler IDAsyncHost.CreateMarshaler() => CreateMarshaler();
 

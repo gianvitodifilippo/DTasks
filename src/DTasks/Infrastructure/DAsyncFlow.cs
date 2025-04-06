@@ -20,7 +20,7 @@ internal sealed partial class DAsyncFlow
     private IDAsyncMarshaler _marshaler;
     private IDAsyncStateManager _stateManager;
     private ITypeResolver _typeResolver;
-    private IDistributedCancellationProvider _cancellationProvider;
+    private IDAsyncCancellationProvider _cancellationProvider;
     // TODO: Add distributed lock provider
 
     private TaskAwaiter _voidTa;

@@ -1,0 +1,17 @@
+using System.ComponentModel;
+using DTasks.Utils;
+
+namespace DTasks.Infrastructure;
+
+[EditorBrowsable(EditorBrowsableState.Never)]
+public interface IDAsyncHeap
+{
+    Task SaveAsync<TKey, TValue>(TKey key, TValue value, CancellationToken cancellationToken = default)
+        where TKey : notnull;
+    
+    Task<Option<TValue>> LoadAsync<TKey, TValue>(TKey key, CancellationToken cancellationToken = default)
+        where TKey : notnull;
+    
+    Task DeleteAsync<TKey>(TKey key, CancellationToken cancellationToken = default)
+        where TKey : notnull;
+}

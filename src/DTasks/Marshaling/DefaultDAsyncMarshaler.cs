@@ -1,10 +1,10 @@
 ﻿namespace DTasks.Marshaling;
 
-internal sealed class NullDAsyncMarshaler : IDAsyncMarshaler
+internal sealed class DefaultDAsyncMarshaler : IDAsyncMarshaler
 {
-    public static readonly NullDAsyncMarshaler Instance = new();
+    public static readonly DefaultDAsyncMarshaler Instance = new();
 
-    private NullDAsyncMarshaler()
+    private DefaultDAsyncMarshaler()
     {
     }
 

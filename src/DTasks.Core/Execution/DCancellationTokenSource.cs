@@ -1,9 +1,5 @@
-﻿using System.ComponentModel;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
+﻿using System.Diagnostics;
 using DTasks.Infrastructure;
-using DTasks.Utils;
 
 namespace DTasks.Execution;
 
@@ -43,9 +39,9 @@ public abstract class DCancellationTokenSource
         return new Implementation(manager);
     }
 
-    public static CancellationDAwaitable CreateAsync(CancellationToken cancellationToken = default) => new(new CreationAwaiter(cancellationToken));
+    public static CancellationDAwaitable CreateAsync(CancellationToken cancellationToken = default) => new(new DAsyncBuilder(cancellationToken));
 
-    public static CancellationDAwaitable CreateAsync(TimeSpan delay, CancellationToken cancellationToken = default) => new(new CreationAwaiterWithDelay(delay, cancellationToken));
+    public static CancellationDAwaitable CreateAsync(TimeSpan delay, CancellationToken cancellationToken = default) => new(new DAsyncBuilderWithDelay(delay, cancellationToken));
 
     private sealed class Implementation(IDAsyncCancellationManager manager) : DCancellationTokenSource
     {
@@ -128,17 +124,17 @@ public abstract class DCancellationTokenSource
         }
     }
 
-    private sealed class CreationAwaiter(CancellationToken cancellationToken) : CancellationDAwaitable.Awaiter
+    private sealed class DAsyncBuilder(CancellationToken cancellationToken) : DCancellationSourceDAsyncBuilder
     {
-        private protected override Task CreateAsync(IDAsyncCancellationManager manager, DCancellationTokenSource source)
+        protected override Task CreateAsync(IDAsyncCancellationManager manager, DCancellationTokenSource source)
         {
             return manager.CreateAsync(source, source.Handle, cancellationToken);
         }
     }
 
-    private sealed class CreationAwaiterWithDelay(TimeSpan delay, CancellationToken cancellationToken) : CancellationDAwaitable.Awaiter
+    private sealed class DAsyncBuilderWithDelay(TimeSpan delay, CancellationToken cancellationToken) : DCancellationSourceDAsyncBuilder
     {
-        private protected override Task CreateAsync(IDAsyncCancellationManager manager, DCancellationTokenSource source)
+        protected override Task CreateAsync(IDAsyncCancellationManager manager, DCancellationTokenSource source)
         {
             return manager.CreateAsync(source, source.Handle, delay, cancellationToken);
         }

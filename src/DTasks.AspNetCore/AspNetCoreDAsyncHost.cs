@@ -25,6 +25,8 @@ public class AspNetCoreDAsyncHost(
 
     protected override ITypeResolver TypeResolver => typeResolver;
 
+    protected override IDAsyncHeap Heap => throw new NotImplementedException();
+
     protected override IDAsyncMarshaler CreateMarshaler()
     {
         return marshaler;

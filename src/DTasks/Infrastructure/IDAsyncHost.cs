@@ -7,7 +7,7 @@ internal interface IDAsyncHost
 {
     ITypeResolver TypeResolver { get; }
 
-    IDistributedCancellationProvider CancellationProvider { get; }
+    IDAsyncCancellationProvider CancellationProvider { get; }
 
     IDAsyncMarshaler CreateMarshaler();
 

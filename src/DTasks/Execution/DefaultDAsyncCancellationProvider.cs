@@ -1,11 +1,11 @@
 
 namespace DTasks.Execution;
 
-internal sealed class DefaultDistributedCancellationProvider : IDistributedCancellationProvider
+internal sealed class DefaultDAsyncCancellationProvider : IDAsyncCancellationProvider
 {
-    public static readonly DefaultDistributedCancellationProvider Instance = new();
+    public static readonly DefaultDAsyncCancellationProvider Instance = new();
 
-    private DefaultDistributedCancellationProvider()
+    private DefaultDAsyncCancellationProvider()
     {
     }
 
@@ -19,11 +19,11 @@ internal sealed class DefaultDistributedCancellationProvider : IDistributedCance
         throw new NotSupportedException("The current d-async host does not support distributed cancellation.");
     }
 
-    public void RegisterHandler(IDistributedCancellationHandler handler)
+    public void RegisterHandler(IDAsyncCancellationHandler handler)
     {
     }
 
-    public void UnregisterHandler(IDistributedCancellationHandler handler)
+    public void UnregisterHandler(IDAsyncCancellationHandler handler)
     {
     }
 }

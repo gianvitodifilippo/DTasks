@@ -3,11 +3,11 @@ using System.ComponentModel;
 namespace DTasks.Execution;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface IDistributedCancellationProvider
+public interface IDAsyncCancellationProvider
 {
-    void RegisterHandler(IDistributedCancellationHandler handler);
+    void RegisterHandler(IDAsyncCancellationHandler handler);
 
-    void UnregisterHandler(IDistributedCancellationHandler handler);
+    void UnregisterHandler(IDAsyncCancellationHandler handler);
 
     Task CancelAsync(DCancellationId id, CancellationToken cancellationToken = default);
 

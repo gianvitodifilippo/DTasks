@@ -3,7 +3,7 @@ using System.ComponentModel;
 namespace DTasks.Execution;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface IDistributedCancellationHandler
+public interface IDAsyncCancellationHandler
 {
     void Cancel(DCancellationId id);
 }
