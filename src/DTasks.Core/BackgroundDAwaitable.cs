@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace DTasks;
 
-public readonly struct BackgroundDAwaitable(IDAsyncRunnable runnable)
+public readonly ref struct BackgroundDAwaitable(IDAsyncRunnable runnable)
 {
     private readonly BackgroundDTask<DTask> _backgroundTask = new(runnable);
 
@@ -103,7 +103,7 @@ internal sealed class BackgroundDTask<TTask>(IDAsyncRunnable runnable) : DTask<T
 
     protected override void Run(IDAsyncRunner runner)
     {
-        Debug.Fail($"'{nameof(Run)}' should not be invoked on {nameof(BackgroundDTask<>)}.");
+        Debug.Fail($"'{nameof(Run)}' should not be invoked on {nameof(BackgroundDTask<DTask>)}.");
     }
 
     void IDAsyncResultBuilder<TTask>.SetResult(TTask result)

@@ -1,6 +1,4 @@
-﻿using DTasks.Marshaling;
-
-namespace DTasks.Extensions.DependencyInjection.Marshaling;
+﻿namespace DTasks.Extensions.DependencyInjection.Marshaling;
 
 internal class ServiceToken
 {

@@ -11,7 +11,7 @@ public interface IDAsyncResultBuilder
 }
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface IDAsyncResultBuilder<TResult>
+public interface IDAsyncResultBuilder<in TResult>
 {
     void SetResult(TResult result);
 

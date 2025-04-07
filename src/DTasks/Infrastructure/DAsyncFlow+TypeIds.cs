@@ -1,10 +1,10 @@
-﻿using DTasks.Marshaling;
-using DTasks.Utils;
+﻿using DTasks.Utils;
 using System.Reflection;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Infrastructure;
 
-internal partial class DAsyncFlow
+public sealed partial class DAsyncFlow
 {
     private static readonly MethodInfo s_whenAllDAsyncMethod = typeof(DAsyncFlow).GetRequiredMethod(
         name: nameof(WhenAllDAsync),

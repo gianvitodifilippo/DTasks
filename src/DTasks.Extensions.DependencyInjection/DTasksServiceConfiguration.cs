@@ -1,8 +1,8 @@
 ﻿using DTasks.Extensions.DependencyInjection.Marshaling;
-using DTasks.Marshaling;
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Extensions.DependencyInjection;
 
@@ -17,7 +17,7 @@ internal sealed class DTasksServiceConfiguration(IServiceCollection services) : 
 
     public ServiceContainerBuilder CreateContainerBuilder()
     {
-        ITypeResolverBuilder typeResolverBuilder = _typeResolverBuilder ?? TypeResolverBuilder.CreateDefault();
+        ITypeResolverBuilder typeResolverBuilder = _typeResolverBuilder ?? DAsyncTypeResolverBuilder.CreateDefault();
         _configureTypeResolver?.Invoke(typeResolverBuilder);
         typeResolverBuilder.Register(typeof(ServiceToken));
         typeResolverBuilder.Register(typeof(KeyedServiceToken<string>));

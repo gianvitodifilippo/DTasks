@@ -1,6 +1,4 @@
-﻿using DTasks.Marshaling;
-
-namespace DTasks.Serialization.Json;
+﻿namespace DTasks.Serialization.Json;
 
 internal interface IStateMachineSuspender<TStateMachine>
     where TStateMachine : notnull

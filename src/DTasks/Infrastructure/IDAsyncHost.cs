@@ -1,27 +1,35 @@
-﻿using DTasks.Execution;
-using DTasks.Marshaling;
+using System.ComponentModel;
+using DTasks.Execution;
+using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 
 namespace DTasks.Infrastructure;
 
-internal interface IDAsyncHost
+[EditorBrowsable(EditorBrowsableState.Never)]
+public interface IDAsyncHost
 {
-    ITypeResolver TypeResolver { get; }
+    IDAsyncStateManager StateManager { get; }
 
+    IDAsyncMarshaler Marshaler { get; }
+    
+    IDAsyncTypeResolver TypeResolver { get; }
+    
     IDAsyncCancellationProvider CancellationProvider { get; }
+    
+    IDAsyncSuspensionHandler SuspensionHandler { get; }
+    
+    // TODO: Add distributed lock provider
+    
+    Task OnStartAsync(CancellationToken cancellationToken);
+    
+    Task OnSuspendAsync(CancellationToken cancellationToken);
 
-    IDAsyncMarshaler CreateMarshaler();
+    Task OnSucceedAsync(CancellationToken cancellationToken);
 
-    IDAsyncStateManager CreateStateManager(IDAsyncMarshaler marshaler);
+    Task OnSucceedAsync<TResult>(TResult result, CancellationToken cancellationToken);
 
-    Task OnSucceedAsync(CancellationToken cancellationToken = default);
+    Task OnFailAsync(Exception exception, CancellationToken cancellationToken);
 
-    Task OnSucceedAsync<TResult>(TResult result, CancellationToken cancellationToken = default);
-
-    Task OnFailAsync(Exception exception, CancellationToken cancellationToken = default);
-
-    Task OnCancelAsync(OperationCanceledException exception, CancellationToken cancellationToken = default);
-
-    Task OnYieldAsync(DAsyncId id, CancellationToken cancellationToken = default);
-
-    Task OnDelayAsync(DAsyncId id, TimeSpan delay, CancellationToken cancellationToken = default);
+    Task OnCancelAsync(OperationCanceledException exception, CancellationToken cancellationToken);
 }

@@ -1,6 +1,5 @@
 ﻿using DTasks.Extensions.DependencyInjection.Mapping;
 using DTasks.Extensions.DependencyInjection.Marshaling;
-using DTasks.Marshaling;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq.Expressions;
 using static FluentAssertions.FluentActions;
@@ -36,7 +35,7 @@ public partial class ServiceContainerBuilderTests
             .Returns(_typeId);
 
         _registerBuilder
-            .Build(Arg.Any<ITypeResolver>())
+            .Build(Arg.Any<IDAsyncTypeResolver>())
             .Returns(_register);
 
         _mapper

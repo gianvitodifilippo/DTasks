@@ -2,5 +2,5 @@
 
 internal interface IDAsyncHttpResult
 {
-    Task ExecuteAsync(IDAsyncContext context, CancellationToken cancellationToken = default);
+    Task ExecuteAsync(IAsyncResultHandler handler, CancellationToken cancellationToken = default);
 }

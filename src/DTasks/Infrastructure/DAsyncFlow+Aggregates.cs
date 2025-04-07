@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace DTasks.Infrastructure;
 
-internal partial class DAsyncFlow
+public sealed partial class DAsyncFlow
 {
     private void SetBranchResult()
     {
@@ -54,7 +54,7 @@ internal partial class DAsyncFlow
 
     private void SetBranchException(Exception exception)
     {
-        _aggregateExceptions ??= new(1);
+        _aggregateExceptions ??= new List<Exception>(1);
         _aggregateExceptions.Add(exception);
 
         switch (_aggregateType)

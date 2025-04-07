@@ -35,7 +35,7 @@ public class RedisWorkQueue(
                     await using AsyncServiceScope scope = services.CreateAsyncScope();
                     IServiceProvider scopeServices = scope.ServiceProvider;
 
-                    AspNetCoreDAsyncHost host = scopeServices.GetRequiredService<AspNetCoreDAsyncHost>();
+                    Infrastructure.AspNetCoreDAsyncHost host = scopeServices.GetRequiredService<Infrastructure.AspNetCoreDAsyncHost>();
                     await host.ResumeAsync(id, stoppingToken);
                     await redis.HashDeleteAsync(s_reminderKey, entry.Name);
                 }

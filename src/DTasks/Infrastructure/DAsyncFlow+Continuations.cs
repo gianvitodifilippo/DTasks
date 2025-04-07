@@ -1,9 +1,10 @@
 ﻿using DTasks.Utils;
 using System.Runtime.CompilerServices;
+using DTasks.Execution;
 
 namespace DTasks.Infrastructure;
 
-internal partial class DAsyncFlow
+public sealed partial class DAsyncFlow
 {
     private static class Continuations
     {
@@ -24,7 +25,7 @@ internal partial class DAsyncFlow
 
         public static void Delay(DAsyncFlow self)
         {
-            TimeSpan? delay = self.Consume(ref self._delay);
+            TimeSpan? delay = Consume(ref self._delay);
 
             Assert.NotNull(delay);
             self.Delay(delay.Value);
@@ -32,7 +33,7 @@ internal partial class DAsyncFlow
 
         public static void Callback(DAsyncFlow self)
         {
-            ISuspensionCallback? callback = self.Consume(ref self._callback);
+            ISuspensionCallback? callback = Consume(ref self._callback);
 
             Assert.NotNull(callback);
             self.Callback(callback);
@@ -40,8 +41,8 @@ internal partial class DAsyncFlow
 
         public static void WhenAll(DAsyncFlow self)
         {
-            IEnumerable<IDAsyncRunnable>? aggregateBranches = self.Consume(ref self._aggregateBranches);
-            object? resultBuilder = self.Consume(ref self._resultBuilder);
+            IEnumerable<IDAsyncRunnable>? aggregateBranches = Consume(ref self._aggregateBranches);
+            object? resultBuilder = Consume(ref self._resultBuilder);
 
             Assert.NotNull(aggregateBranches);
             Assert.Is<IDAsyncResultBuilder>(resultBuilder);
@@ -50,8 +51,8 @@ internal partial class DAsyncFlow
 
         public static void WhenAll<TResult>(DAsyncFlow self)
         {
-            IEnumerable<IDAsyncRunnable>? aggregateBranches = self.Consume(ref self._aggregateBranches);
-            object? resultBuilder = self.Consume(ref self._resultBuilder);
+            IEnumerable<IDAsyncRunnable>? aggregateBranches = Consume(ref self._aggregateBranches);
+            object? resultBuilder = Consume(ref self._resultBuilder);
 
             Assert.NotNull(aggregateBranches);
             Assert.Is<IDAsyncResultBuilder<TResult[]>>(resultBuilder);
@@ -60,8 +61,8 @@ internal partial class DAsyncFlow
 
         public static void WhenAny(DAsyncFlow self)
         {
-            IEnumerable<IDAsyncRunnable>? aggregateBranches = self.Consume(ref self._aggregateBranches);
-            object? resultBuilder = self.Consume(ref self._resultBuilder);
+            IEnumerable<IDAsyncRunnable>? aggregateBranches = Consume(ref self._aggregateBranches);
+            object? resultBuilder = Consume(ref self._resultBuilder);
 
             Assert.NotNull(aggregateBranches);
             Assert.Is<IDAsyncResultBuilder<DTask>>(resultBuilder);
@@ -70,8 +71,8 @@ internal partial class DAsyncFlow
 
         public static void WhenAny<TResult>(DAsyncFlow self)
         {
-            IEnumerable<IDAsyncRunnable>? aggregateBranches = self.Consume(ref self._aggregateBranches);
-            object? resultBuilder = self.Consume(ref self._resultBuilder);
+            IEnumerable<IDAsyncRunnable>? aggregateBranches = Consume(ref self._aggregateBranches);
+            object? resultBuilder = Consume(ref self._resultBuilder);
 
             Assert.NotNull(aggregateBranches);
             Assert.Is<IDAsyncResultBuilder<DTask<TResult>>>(resultBuilder);
@@ -80,8 +81,8 @@ internal partial class DAsyncFlow
 
         public static void Background(DAsyncFlow self)
         {
-            IDAsyncRunnable? backgroundRunnable = self.Consume(ref self._aggregateRunnable);
-            object? resultBuilder = self.Consume(ref self._resultBuilder);
+            IDAsyncRunnable? backgroundRunnable = Consume(ref self._aggregateRunnable);
+            object? resultBuilder = Consume(ref self._resultBuilder);
 
             Assert.NotNull(backgroundRunnable);
             Assert.Is<IDAsyncResultBuilder<DTask>>(resultBuilder);
@@ -90,8 +91,8 @@ internal partial class DAsyncFlow
 
         public static void Background<TResult>(DAsyncFlow self)
         {
-            IDAsyncRunnable? backgroundRunnable = self.Consume(ref self._aggregateRunnable);
-            object? resultBuilder = self.Consume(ref self._resultBuilder);
+            IDAsyncRunnable? backgroundRunnable = Consume(ref self._aggregateRunnable);
+            object? resultBuilder = Consume(ref self._resultBuilder);
 
             Assert.NotNull(backgroundRunnable);
             Assert.Is<IDAsyncResultBuilder<DTask<TResult>>>(resultBuilder);
@@ -100,8 +101,8 @@ internal partial class DAsyncFlow
 
         //public static void Handle(DAsyncFlow self)
         //{
-        //    DAsyncId id = self.Consume(ref self._handleId);
-        //    object? resultBuilder = self.Consume(ref self._resultBuilder);
+        //    DAsyncId id = Consume(ref self._handleId);
+        //    object? resultBuilder = Consume(ref self._resultBuilder);
 
         //    Assert.Is<IDAsyncResultBuilder>(resultBuilder);
         //    self.Handle(id, Unsafe.As<IDAsyncResultBuilder>(resultBuilder));
@@ -109,8 +110,8 @@ internal partial class DAsyncFlow
 
         //public static void Handle<TResult>(DAsyncFlow self)
         //{
-        //    DAsyncId id = self.Consume(ref self._handleId);
-        //    object? resultBuilder = self.Consume(ref self._resultBuilder);
+        //    DAsyncId id = Consume(ref self._handleId);
+        //    object? resultBuilder = Consume(ref self._resultBuilder);
 
         //    Assert.Is<IDAsyncResultBuilder<TResult>>(resultBuilder);
         //    self.Handle(id, Unsafe.As<IDAsyncResultBuilder<TResult>>(resultBuilder));
@@ -118,7 +119,7 @@ internal partial class DAsyncFlow
 
         public static void HandleWrapper(DAsyncFlow self)
         {
-            IDAsyncRunnable? runnable = self.Consume(ref self._aggregateRunnable);
+            IDAsyncRunnable? runnable = Consume(ref self._aggregateRunnable);
 
             Assert.NotNull(runnable);
             runnable.Run(self);

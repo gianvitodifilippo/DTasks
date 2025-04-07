@@ -1,5 +1,4 @@
-﻿using DTasks.Marshaling;
-using System.Collections.Frozen;
+﻿using System.Collections.Frozen;
 using System.Diagnostics;
 
 namespace DTasks.Extensions.DependencyInjection;
@@ -18,7 +17,7 @@ internal sealed class DAsyncServiceRegisterBuilder(ITypeResolverBuilder typeReso
         return typeId;
     }
 
-    public IDAsyncServiceRegister Build(ITypeResolver typeResolver)
+    public IDAsyncServiceRegister Build(IDAsyncTypeResolver typeResolver)
     {
         return new DAsyncServiceRegister(_types.ToFrozenSet(), typeResolver);
     }

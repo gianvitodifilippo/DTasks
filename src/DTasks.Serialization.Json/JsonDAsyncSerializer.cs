@@ -1,22 +1,22 @@
 ﻿using DTasks.Infrastructure;
 using DTasks.Inspection;
 using DTasks.Inspection.Dynamic;
-using DTasks.Marshaling;
 using System.Buffers;
 using System.Text;
 using System.Text.Json;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json;
 
 public sealed class JsonDAsyncSerializer : IDAsyncSerializer
 {
     private readonly IStateMachineInspector _inspector;
-    private readonly ITypeResolver _typeResolver;
+    private readonly IDAsyncTypeResolver _typeResolver;
     private readonly IDAsyncMarshaler _marshaler;
     private readonly StateMachineReferenceResolver _referenceResolver;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public JsonDAsyncSerializer(IStateMachineInspector inspector, ITypeResolver typeResolver, IDAsyncMarshaler marshaler, JsonSerializerOptions jsonOptions)
+    public JsonDAsyncSerializer(IStateMachineInspector inspector, IDAsyncTypeResolver typeResolver, IDAsyncMarshaler marshaler, JsonSerializerOptions jsonOptions)
     {
         _inspector = inspector;
         _typeResolver = typeResolver;
@@ -75,7 +75,7 @@ public sealed class JsonDAsyncSerializer : IDAsyncSerializer
         throw new NotImplementedException();
     }
 
-    public static JsonDAsyncSerializer Create(ITypeResolver typeResolver, IDAsyncMarshaler marshaler, JsonSerializerOptions jsonOptions)
+    public static JsonDAsyncSerializer Create(IDAsyncTypeResolver typeResolver, IDAsyncMarshaler marshaler, JsonSerializerOptions jsonOptions)
     {
         DynamicStateMachineInspector inspector = DynamicStateMachineInspector.Create(typeof(IStateMachineSuspender<>), typeof(IStateMachineResumer), typeResolver);
 

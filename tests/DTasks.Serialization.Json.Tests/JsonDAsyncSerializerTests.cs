@@ -1,7 +1,6 @@
 ﻿using DTasks.Infrastructure;
 using DTasks.Inspection;
 using DTasks.Inspection.Dynamic;
-using DTasks.Marshaling;
 using System.Buffers;
 using System.Text;
 using System.Text.Json;
@@ -15,7 +14,7 @@ public partial class JsonDAsyncSerializerTests
 {
     private readonly JsonDTaskConverterFixture _fixture;
     private readonly IStateMachineInspector _inspector;
-    private readonly ITypeResolver _typeResolver;
+    private readonly IDAsyncTypeResolver _typeResolver;
     private readonly IDAsyncMarshaler _marshaler;
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly JsonDAsyncSerializer _sut;
@@ -24,7 +23,7 @@ public partial class JsonDAsyncSerializerTests
     {
         _fixture = JsonDTaskConverterFixture.Create();
         _inspector = Substitute.For<IStateMachineInspector>();
-        _typeResolver = Substitute.For<ITypeResolver>();
+        _typeResolver = Substitute.For<IDAsyncTypeResolver>();
         _marshaler = new MockDAsyncMarshaler(_fixture);
         _jsonOptions = new()
         {

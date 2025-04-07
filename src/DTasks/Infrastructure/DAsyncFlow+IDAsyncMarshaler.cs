@@ -1,12 +1,12 @@
-﻿using DTasks.Marshaling;
-using DTasks.Utils;
+﻿using DTasks.Utils;
 using System.Diagnostics;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Infrastructure;
 
-internal partial class DAsyncFlow : IDAsyncMarshaler
+public sealed partial class DAsyncFlow : IDAsyncMarshaler
 {
-    private static readonly HandleRunnableTokenConverter _handleRunnableConverter = new();
+    private static readonly HandleRunnableTokenConverter s_handleRunnableConverter = new();
 
     bool IDAsyncMarshaler.TryMarshal<T, TAction>(in T value, scoped ref TAction action)
     {
@@ -22,7 +22,7 @@ internal partial class DAsyncFlow : IDAsyncMarshaler
                 _tokens.Add(task, taskToken);
             }
 
-            taskToken.Write<T, TAction>(ref action, _typeResolver);
+            taskToken.Write<T, TAction>(ref action, _host.TypeResolver);
             return true;
         }
 
@@ -33,14 +33,14 @@ internal partial class DAsyncFlow : IDAsyncMarshaler
             return true;
         }
 
-        return _marshaler.TryMarshal(in value, ref action);
+        return _host.Marshaler.TryMarshal(in value, ref action);
     }
 
     bool IDAsyncMarshaler.TryUnmarshal<T, TAction>(TypeId typeId, scoped ref TAction action)
     {
         Type objectType = typeId == default
             ? typeof(T)
-            : _typeResolver.GetType(typeId);
+            : _host.TypeResolver.GetType(typeId);
 
         if (objectType == typeof(DTask))
         {
@@ -60,11 +60,11 @@ internal partial class DAsyncFlow : IDAsyncMarshaler
             Type? handleResultType = Consume(ref _handleResultType);
             Assert.NotNull(handleResultType);
 
-            action.UnmarshalAs(handleResultType, _handleRunnableConverter);
+            action.UnmarshalAs(handleResultType, s_handleRunnableConverter);
             return true;
         }
 
-        return _marshaler.TryUnmarshal<T, TAction>(typeId, ref action);
+        return _host.Marshaler.TryUnmarshal<T, TAction>(typeId, ref action);
     }
 
     private sealed class DTaskTokenConverter(DAsyncFlow flow) : ITokenConverter

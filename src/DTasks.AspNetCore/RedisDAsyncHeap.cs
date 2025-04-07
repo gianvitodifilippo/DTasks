@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DTasks.Infrastructure;
+using DTasks.Infrastructure.State;
 using DTasks.Utils;
 using StackExchange.Redis;
 

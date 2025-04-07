@@ -1,5 +1,4 @@
 ﻿using DTasks.Inspection.Dynamic.Descriptors;
-using DTasks.Marshaling;
 using DTasks.Utils;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -135,7 +134,7 @@ public sealed class DynamicStateMachineInspector : IStateMachineInspector
         return constructor;
     }
 
-    public static DynamicStateMachineInspector Create(Type suspenderType, Type resumerType, ITypeResolver typeResolver)
+    public static DynamicStateMachineInspector Create(Type suspenderType, Type resumerType, IDAsyncTypeResolver typeResolver)
     {
         if (!ConverterDescriptorFactory.TryCreate(suspenderType, resumerType, out ConverterDescriptorFactory? converterDescriptorFactory))
             throw new ArgumentException("The provided converter type is not compliant.", nameof(suspenderType));

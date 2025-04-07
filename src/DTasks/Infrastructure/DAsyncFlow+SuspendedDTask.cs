@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace DTasks.Infrastructure;
 
-internal sealed partial class DAsyncFlow
+public sealed partial class DAsyncFlow
 {
     private sealed class SuspendedDTask : DTask
     {
@@ -20,7 +20,7 @@ internal sealed partial class DAsyncFlow
             Assert.Is<DAsyncFlow>(runner);
             DAsyncFlow flow = Unsafe.As<DAsyncFlow>(runner);
 
-            IDAsyncStateMachine? stateMachine = flow.Consume(ref flow._stateMachine);
+            IDAsyncStateMachine? stateMachine = Consume(ref flow._stateMachine);
             Assert.NotNull(stateMachine);
 
             flow._continuation = Continuations.Return;

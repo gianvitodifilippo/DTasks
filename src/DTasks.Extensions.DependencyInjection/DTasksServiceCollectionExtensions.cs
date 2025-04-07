@@ -1,7 +1,7 @@
-﻿using DTasks.Extensions.DependencyInjection;
-using DTasks.Utils;
+﻿using DTasks.Utils;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace Microsoft.Extensions.DependencyInjection;
+namespace DTasks.Extensions.DependencyInjection;
 
 public static class DTasksServiceCollectionExtensions
 {

@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace DTasks.Infrastructure;
 
-internal partial class DAsyncFlow : IAsyncStateMachine
+public sealed partial class DAsyncFlow : IAsyncStateMachine
 {
     void IAsyncStateMachine.MoveNext()
     {
@@ -38,8 +38,13 @@ internal partial class DAsyncFlow : IAsyncStateMachine
                     _state = FlowState.Running;
                     runnable.Run(this);
                     break;
+                
+                case FlowState.Suspending: // After awaiting a method that results in suspending the d-async flow
+                    GetVoidTaskResult();
+                    AwaitOnSuspend();
+                    break;
 
-                case FlowState.Returning: // After awaiting a method that results in completing the d-async flow
+                case FlowState.Returning: // After awaiting a method that results in completing the current run
                     GetVoidTaskResult();
                     _valueTaskSource.SetResult(default);
                     break;
@@ -91,12 +96,14 @@ internal partial class DAsyncFlow : IAsyncStateMachine
 
     private enum FlowState
     {
-        Pending,
-        Running,
-        Dehydrating,
-        Hydrating,
-        Returning,
-        Aggregating,
-        Awaiting
+        Idling, // In the pool
+        Pending, // Leased, waiting for runnable
+        Running, // Executing the runnable
+        Dehydrating, // Awaiting DehydrateAsync
+        Hydrating, // Awaiting HydrateAsync
+        Suspending, // Awaiting suspension callback
+        Returning, // Returning from the runnable
+        Aggregating, // Running multiple aggregated runnables
+        Awaiting // Awaiting a custom task
     }
 }

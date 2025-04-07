@@ -1,7 +1,6 @@
 ﻿using DTasks.Extensions.DependencyInjection.Mapping;
 using DTasks.Extensions.DependencyInjection.Marshaling;
 using DTasks.Extensions.DependencyInjection.Utils;
-using DTasks.Marshaling;
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
@@ -104,7 +103,7 @@ internal sealed class ServiceContainerBuilder(
 
     public void AddDTaskServices()
     {
-        ITypeResolver typeResolver = typeResolverBuilder.Build();
+        IDAsyncTypeResolver typeResolver = typeResolverBuilder.Build();
         IDAsyncServiceRegister register = registerBuilder.Build(typeResolver);
 
         DAsyncServiceValidator validator = _validationErrors.Count == 0

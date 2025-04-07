@@ -3,7 +3,7 @@
 using System.Reflection.Emit;
 using Xunit.Sdk;
 
-namespace DTasks.Generated.Emit;
+namespace DTasks.Inspection.Dynamic;
 
 public static class ILGeneratorInterceptors
 {

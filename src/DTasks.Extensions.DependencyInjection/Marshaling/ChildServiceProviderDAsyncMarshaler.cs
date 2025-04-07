@@ -1,12 +1,11 @@
 ﻿using DTasks.Extensions.DependencyInjection.Mapping;
-using DTasks.Marshaling;
 
 namespace DTasks.Extensions.DependencyInjection.Marshaling;
 
 internal class ChildServiceProviderDAsyncMarshaler(
     IServiceProvider provider,
     IDAsyncServiceRegister register,
-    ITypeResolver typeResolver,
+    IDAsyncTypeResolver typeResolver,
     IRootDAsyncMarshaler rootMarshaler) : ServiceProviderDAsyncMarshaler(provider, register, typeResolver), IRootDAsyncMarshaler, IChildServiceMapper
 {
     protected override bool TryMarshal<T, TAction>(in T value, scoped ref TAction action)
