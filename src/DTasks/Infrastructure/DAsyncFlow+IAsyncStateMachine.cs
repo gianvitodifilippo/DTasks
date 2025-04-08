@@ -13,6 +13,26 @@ public sealed partial class DAsyncFlow : IAsyncStateMachine
         {
             switch (_state)
             {
+                case FlowState.Starting:
+                    Assert.NotNull(_runnable);
+                    
+                    GetVoidTaskResult();
+                    object? resultOrException = Consume(ref _resultOrException);
+                    if (resultOrException is null)
+                    {
+                        Consume(ref _runnable).Run(this);
+                    }
+                    else if (resultOrException is Exception exception)
+                    {
+                        _valueTaskSource.SetException(exception);
+                    }
+                    else
+                    {
+                        Debug.Assert(resultOrException == s_resultSentinel, $"'{nameof(_resultOrException)}' should be either null, an exception or the result sentinel.");
+                        _valueTaskSource.SetResult(default);
+                    }
+                    break;
+                
                 case FlowState.Running: // After awaiting a regular awaitable or a completed d-awaitable
                     Assert.NotNull(_stateMachine);
 
@@ -98,6 +118,7 @@ public sealed partial class DAsyncFlow : IAsyncStateMachine
     {
         Idling, // In the pool
         Pending, // Leased, waiting for runnable
+        Starting, // Starting the runnable
         Running, // Executing the runnable
         Dehydrating, // Awaiting DehydrateAsync
         Hydrating, // Awaiting HydrateAsync

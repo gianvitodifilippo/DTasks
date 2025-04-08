@@ -21,7 +21,7 @@ public interface IDAsyncHost
     
     // TODO: Add distributed lock provider
     
-    Task OnStartAsync(CancellationToken cancellationToken);
+    Task OnStartAsync(IDAsyncResultBuilder resultBuilder, CancellationToken cancellationToken);
     
     Task OnSuspendAsync(CancellationToken cancellationToken);
 

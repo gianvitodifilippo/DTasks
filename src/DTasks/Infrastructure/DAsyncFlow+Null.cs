@@ -33,7 +33,7 @@ public sealed partial class DAsyncFlow
 
         IDAsyncSuspensionHandler IDAsyncHost.SuspensionHandler => Fail<IDAsyncSuspensionHandler>();
 
-        Task IDAsyncHost.OnStartAsync(CancellationToken cancellationToken) => Fail<Task>();
+        Task IDAsyncHost.OnStartAsync(IDAsyncResultBuilder resultBuilder, CancellationToken cancellationToken) => Fail<Task>();
 
         Task IDAsyncHost.OnSuspendAsync(CancellationToken cancellationToken) => Fail<Task>();
 

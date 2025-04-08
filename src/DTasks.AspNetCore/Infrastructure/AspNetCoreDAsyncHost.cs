@@ -1,9 +1,12 @@
-﻿using DTasks.Infrastructure;
+﻿using DTasks.AspNetCore.Http;
+using DTasks.AspNetCore.Infrastructure.Http;
+using DTasks.Infrastructure;
 using DTasks.Infrastructure.Execution;
+using Microsoft.AspNetCore.Http;
 
 namespace DTasks.AspNetCore.Infrastructure;
 
-internal abstract partial class AspNetCoreDAsyncHost : IDAsyncStarter, IDAsyncResumer, IAsyncResultHandler
+public abstract partial class AspNetCoreDAsyncHost : IAsyncHttpResultHandler
 {
     protected abstract IServiceProvider Services { get; }
 
@@ -24,7 +27,7 @@ internal abstract partial class AspNetCoreDAsyncHost : IDAsyncStarter, IDAsyncRe
 
     public ValueTask ResumeAsync<TResult>(DAsyncId id, TResult result, CancellationToken cancellationToken = default)
     {
-        return DAsyncFlow.ResumeAsync<TResult>(ExecutionMode.Snapshot, this, id, result, cancellationToken);
+        return DAsyncFlow.ResumeAsync(ExecutionMode.Snapshot, this, id, result, cancellationToken);
     }
 
     public ValueTask ResumeAsync(DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
@@ -32,8 +35,15 @@ internal abstract partial class AspNetCoreDAsyncHost : IDAsyncStarter, IDAsyncRe
         return DAsyncFlow.ResumeAsync(ExecutionMode.Snapshot, this, id, exception, cancellationToken);
     }
 
-    Task IAsyncResultHandler.SucceedAsync(CancellationToken cancellationToken) => SucceedAsync(cancellationToken);
+    Task IAsyncHttpResultHandler.SucceedAsync(CancellationToken cancellationToken) => SucceedAsync(cancellationToken);
 
-    Task IAsyncResultHandler.SucceedAsync<TResult>(TResult result, CancellationToken cancellationToken) =>
+    Task IAsyncHttpResultHandler.SucceedAsync<TResult>(TResult result, CancellationToken cancellationToken) =>
         SucceedAsync(result, cancellationToken);
+
+    public static AspNetCoreDAsyncHost CreateHttpHost(HttpContext httpContext)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+
+        return new HttpRequestDAsyncHost(httpContext);
+    }
 }

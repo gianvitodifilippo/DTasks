@@ -18,6 +18,7 @@ public sealed partial class DAsyncFlow
     private ManualResetValueTaskSourceCore<VoidDTaskResult> _valueTaskSource;
     private CancellationToken _cancellationToken;
     private IDAsyncHost _host;
+    private object? _resultOrException;
     
     private bool _returnToCache;
 #if DEBUG
@@ -31,6 +32,7 @@ public sealed partial class DAsyncFlow
     private DAsyncId _parentId;
     private DAsyncId _id;
     private DAsyncId _childId;
+    private IDAsyncRunnable? _runnable;
     private IDAsyncStateMachine? _stateMachine;
     private object? _suspendingAwaiterOrType;
     private TimeSpan? _delay;
@@ -125,13 +127,13 @@ public sealed partial class DAsyncFlow
         if (_state is not FlowState.Pending)
             throw new InvalidOperationException($"Detected invalid usage of {nameof(DAsyncFlow)}");
 
-        _state = FlowState.Running;
+        _runnable = runnable;
         _cancellationToken = cancellationToken;
         _parentId = DAsyncId.RootId;
         _id = DAsyncId.New();
         Initialize(host);
 
-        runnable.Run(this);
+        AwaitOnStart();
         return new ValueTask(this, _valueTaskSource.Version);
     }
 
@@ -148,7 +150,7 @@ public sealed partial class DAsyncFlow
         return new ValueTask(this, _valueTaskSource.Version);
     }
 
-    public ValueTask ResumeCoreAsync<TResult>(IDAsyncHost host, DAsyncId id, TResult result, CancellationToken cancellationToken = default)
+    private ValueTask ResumeCoreAsync<TResult>(IDAsyncHost host, DAsyncId id, TResult result, CancellationToken cancellationToken = default)
     {
         if (_state is not FlowState.Pending)
             throw new InvalidOperationException($"Detected invalid usage of {nameof(DAsyncFlow)}");
@@ -156,7 +158,7 @@ public sealed partial class DAsyncFlow
         _state = FlowState.Running;
         _cancellationToken = cancellationToken;
         Initialize(host);
-
+        
         Resume(id, result);
         return new ValueTask(this, _valueTaskSource.Version);
     }
@@ -176,7 +178,7 @@ public sealed partial class DAsyncFlow
 
     private void AwaitOnStart()
     {
-        throw new NotImplementedException();
+        Await(_host.OnStartAsync(this, _cancellationToken), FlowState.Running);
     }
 
     private void AwaitOnSuspend()

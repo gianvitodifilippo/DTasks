@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.AspNetCore.Infrastructure;
 
-internal abstract partial class AspNetCoreDAsyncHost : DAsyncHost
+public abstract partial class AspNetCoreDAsyncHost : DAsyncHost
 {
     private IDAsyncMarshaler? _marshaler;
     private IDAsyncStateManager? _stateManager;

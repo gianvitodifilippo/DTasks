@@ -43,9 +43,11 @@ public sealed partial class DAsyncFlow : IValueTaskSource
         Assert.Null(_whenAllBranchResults);
         Assert.Null(_aggregateRunnable);
         Assert.Null(_resultBuilder);
+        Assert.Null(_resultOrException);
         Debug.Assert(_branchIndex == -1);
 
         _state = FlowState.Pending;
+        _runnable = null;
         _valueTaskSource.Reset();
         _cancellationToken = CancellationToken.None;
         _host.CancellationProvider.UnregisterHandler(this);

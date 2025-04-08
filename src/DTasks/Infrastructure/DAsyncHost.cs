@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel;
-using DTasks.Execution;
 using DTasks.Infrastructure.Execution;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
@@ -19,7 +18,7 @@ public abstract class DAsyncHost : IDAsyncHost
 
     protected virtual IDAsyncSuspensionHandler SuspensionHandler => DefaultDAsyncSuspensionHandler.Instance;
 
-    protected virtual Task OnStartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    protected virtual Task OnStartAsync(IDAsyncResultBuilder resultBuilder, CancellationToken cancellationToken) => Task.CompletedTask;
 
     protected virtual Task OnSuspendAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
@@ -41,7 +40,7 @@ public abstract class DAsyncHost : IDAsyncHost
 
     IDAsyncSuspensionHandler IDAsyncHost.SuspensionHandler => SuspensionHandler;
     
-    Task IDAsyncHost.OnStartAsync(CancellationToken cancellationToken) => OnStartAsync(cancellationToken);
+    Task IDAsyncHost.OnStartAsync(IDAsyncResultBuilder resultBuilder, CancellationToken cancellationToken) => OnStartAsync(resultBuilder, cancellationToken);
 
     Task IDAsyncHost.OnSuspendAsync(CancellationToken cancellationToken) => OnSuspendAsync(cancellationToken);
 

@@ -1,6 +1,6 @@
 ﻿namespace DTasks.AspNetCore;
 
-internal interface IAsyncResultHandler
+internal interface IAsyncHttpResultHandler
 {
     Task SucceedAsync(CancellationToken cancellationToken = default);
 

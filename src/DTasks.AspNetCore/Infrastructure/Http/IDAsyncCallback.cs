@@ -1,4 +1,4 @@
-﻿namespace DTasks.AspNetCore;
+﻿namespace DTasks.AspNetCore.Infrastructure.Http;
 
 public interface IDAsyncCallback
 {

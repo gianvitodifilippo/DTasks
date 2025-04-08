@@ -1,4 +1,6 @@
-﻿namespace DTasks.AspNetCore;
+﻿using DTasks.AspNetCore.Infrastructure.Http;
+
+namespace DTasks.AspNetCore;
 
 public class WebSocketsDAsyncCallback(string operationId, string connectionId, IWebSocketHandler handler) : IDAsyncCallback
 {

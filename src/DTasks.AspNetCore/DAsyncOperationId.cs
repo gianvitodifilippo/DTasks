@@ -18,6 +18,10 @@ public readonly struct DAsyncOperationId : IEquatable<DAsyncOperationId>
     public override int GetHashCode() => _value.GetHashCode();
 
     public override string ToString() => _value.ToString();
+
+    public static bool operator ==(DAsyncOperationId left, DAsyncOperationId right) => left.Equals(right);
+
+    public static bool operator !=(DAsyncOperationId left, DAsyncOperationId right) => !(left == right);
     
     public static DAsyncOperationId New() => new(Guid.NewGuid());
 }
