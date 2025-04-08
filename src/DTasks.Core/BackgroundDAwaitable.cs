@@ -103,7 +103,7 @@ internal sealed class BackgroundDTask<TTask>(IDAsyncRunnable runnable) : DTask<T
 
     protected override void Run(IDAsyncRunner runner)
     {
-        Debug.Fail($"'{nameof(Run)}' should not be invoked on {nameof(BackgroundDTask<>)}.");
+        Debug.Fail($"'{nameof(Run)}' should not be invoked on {nameof(BackgroundDTask<DTask>)}.");
     }
 
     void IDAsyncResultBuilder<TTask>.SetResult(TTask result)
