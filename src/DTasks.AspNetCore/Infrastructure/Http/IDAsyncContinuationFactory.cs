@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace DTasks.AspNetCore.Infrastructure.Http;
 
-internal interface IDAsyncContinuationFactory
+public interface IDAsyncContinuationFactory
 {
     bool TryCreateMemento(CallbackType callbackType, IHeaderDictionary headers, out TypedInstance<object> memento);
 }

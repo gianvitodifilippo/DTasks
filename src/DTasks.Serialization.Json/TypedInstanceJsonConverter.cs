@@ -22,6 +22,7 @@ public sealed class TypedInstanceJsonConverter<TValue>(IDAsyncTypeResolver typeR
         {
             reader.MoveNext();
             TypeId typeId = JsonSerializer.Deserialize<TypeId>(ref reader, options);
+            reader.MoveNext();
             
             type = typeResolver.GetType(typeId);
         }
@@ -34,7 +35,8 @@ public sealed class TypedInstanceJsonConverter<TValue>(IDAsyncTypeResolver typeR
             : (TValue?)JsonSerializer.Deserialize(ref reader, type, options);
         
         reader.ExpectToken(JsonTokenType.EndObject);
-
+        reader.MoveNext();
+        
         return value is null
             ? default
             : new TypedInstance<TValue>(type, value);

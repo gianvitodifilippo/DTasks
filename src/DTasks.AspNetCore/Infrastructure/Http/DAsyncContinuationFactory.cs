@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace DTasks.AspNetCore.Infrastructure.Http;
 
-internal sealed class DAsyncContinuationFactory : IDAsyncContinuationFactory
+public sealed class DAsyncContinuationFactory : IDAsyncContinuationFactory
 {
     // TODO: Add a builder interface to make configurable
     

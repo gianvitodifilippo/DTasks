@@ -231,8 +231,7 @@ public sealed partial class DAsyncFlow
         return flow;
     }
     
-    public static ValueTask StartFlowAsync(IDAsyncHost host, IDAsyncRunnable runnable,
-        CancellationToken cancellationToken = default)
+    public static ValueTask StartFlowAsync(IDAsyncHost host, IDAsyncRunnable runnable, CancellationToken cancellationToken = default)
     {
         ThrowHelper.ThrowIfNull(host);
         ThrowHelper.ThrowIfNull(runnable);
@@ -243,8 +242,7 @@ public sealed partial class DAsyncFlow
         return flow.StartCoreAsync(host, runnable, cancellationToken);
     }
     
-    public static ValueTask ResumeFlowAsync(IDAsyncHost host, DAsyncId id,
-        CancellationToken cancellationToken = default)
+    public static ValueTask ResumeFlowAsync(IDAsyncHost host, DAsyncId id, CancellationToken cancellationToken = default)
     {
         ThrowHelper.ThrowIfNull(host);
         
@@ -254,8 +252,7 @@ public sealed partial class DAsyncFlow
         return flow.ResumeCoreAsync(host, id, cancellationToken);
     }
     
-    public static ValueTask ResumeFlowAsync<TResult>(IDAsyncHost host, DAsyncId id, TResult result,
-        CancellationToken cancellationToken = default)
+    public static ValueTask ResumeFlowAsync<TResult>(IDAsyncHost host, DAsyncId id, TResult result, CancellationToken cancellationToken = default)
     {
         ThrowHelper.ThrowIfNull(host);
         
@@ -265,8 +262,7 @@ public sealed partial class DAsyncFlow
         return flow.ResumeCoreAsync(host, id, result, cancellationToken);
     }
     
-    public static ValueTask ResumeFlowAsync(IDAsyncHost host, DAsyncId id, Exception exception,
-        CancellationToken cancellationToken = default)
+    public static ValueTask ResumeFlowAsync(IDAsyncHost host, DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
     {
         ThrowHelper.ThrowIfNull(host);
         

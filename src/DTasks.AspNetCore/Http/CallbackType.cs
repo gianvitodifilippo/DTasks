@@ -4,8 +4,8 @@ namespace DTasks.AspNetCore.Http;
 
 public readonly struct CallbackType : IEquatable<CallbackType>
 {
-    public static readonly CallbackType Webhook = nameof(Webhook);
-    public static readonly CallbackType WebSockets = nameof(WebSockets);
+    public static readonly CallbackType Webhook = "webhook";
+    public static readonly CallbackType WebSockets = "websockets";
     
     private readonly string _value;
 

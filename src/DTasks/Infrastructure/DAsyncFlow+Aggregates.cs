@@ -174,7 +174,7 @@ public sealed partial class DAsyncFlow
             WhenAnyStateMachine stateMachine = default;
             //stateMachine.BranchCount = branchCount;
             flow._suspendingAwaiterOrType = typeof(WhenAnyAwaiter);
-            flow._continuation = Continuations.Return;
+            flow._continuation = Continuations.Suspend;
             flow.Dehydrate(flow._parentId, flow._id, ref stateMachine);
         }
     }

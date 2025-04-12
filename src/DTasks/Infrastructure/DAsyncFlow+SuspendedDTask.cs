@@ -23,7 +23,7 @@ public sealed partial class DAsyncFlow
             IDAsyncStateMachine? stateMachine = Consume(ref flow._stateMachine);
             Assert.NotNull(stateMachine);
 
-            flow._continuation = Continuations.Return;
+            flow._continuation = Continuations.Suspend;
             flow._suspendingAwaiterOrType = awaiterType;
 
             stateMachine.Suspend();

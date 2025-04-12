@@ -10,7 +10,7 @@ namespace DTasks.Infrastructure.Marshaling;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public static class TypeResolverBuilderExtensions
 {
-    public static void RegisterDAsyncMethod(this ITypeResolverBuilder builder, MethodInfo method)
+    public static void RegisterDAsyncMethod(this IDAsyncTypeResolverBuilder builder, MethodInfo method)
     {
         ThrowHelper.ThrowIfNull(builder);
         ThrowHelper.ThrowIfNull(method);
@@ -33,7 +33,7 @@ public static class TypeResolverBuilderExtensions
         builder.Register(stateMachineType);
     }
 
-    public static void RegisterDAsyncType(this ITypeResolverBuilder builder, Type type)
+    public static void RegisterDAsyncType(this IDAsyncTypeResolverBuilder builder, Type type)
     {
         ThrowHelper.ThrowIfNull(builder);
         ThrowHelper.ThrowIfNull(type);
@@ -41,14 +41,14 @@ public static class TypeResolverBuilderExtensions
         RegisterDAsyncTypeCore(builder, type);
     }
 
-    public static void RegisterDAsyncType<T>(this ITypeResolverBuilder builder)
+    public static void RegisterDAsyncType<T>(this IDAsyncTypeResolverBuilder builder)
     {
         ThrowHelper.ThrowIfNull(builder);
 
         RegisterDAsyncTypeCore(builder, typeof(T));
     }
 
-    private static void RegisterDAsyncTypeCore(ITypeResolverBuilder builder, Type type)
+    private static void RegisterDAsyncTypeCore(IDAsyncTypeResolverBuilder builder, Type type)
     {
         if (type.ContainsGenericParameters)
             throw new ArgumentException("Invalid d-async type.", nameof(type));

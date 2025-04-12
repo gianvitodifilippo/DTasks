@@ -173,7 +173,7 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
             childFlow._parent = this;
             childFlow._parentId = _id;
             childFlow._id = DAsyncId.New();
-            childFlow.Initialize(_host);
+            childFlow.Initialize(this);
 
             try
             {
@@ -252,7 +252,7 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
             childFlow._parentId = _id;
             childFlow._id = DAsyncId.New();
             childFlow._branchIndex = _branchCount;
-            childFlow.Initialize(_host);
+            childFlow.Initialize(this);
 
             try
             {
@@ -341,7 +341,7 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
             childFlow._parent = this;
             childFlow._parentId = _id;
             childFlow._id = DAsyncId.New();
-            childFlow.Initialize(_host);
+            childFlow.Initialize(this);
             
             try
             {

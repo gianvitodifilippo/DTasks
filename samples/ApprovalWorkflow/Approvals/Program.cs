@@ -13,6 +13,8 @@ using DTasks.Extensions.Hosting;
 using DTasks.Infrastructure.Execution;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
+using DTasks.AspNetCore.Infrastructure.Http;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +23,7 @@ builder.Host.UseDTasks(dTasks => dTasks
         .ConfigureTypeResolver(typeResolver =>
         {
             typeResolver.RegisterDAsyncType<AsyncEndpoints>();
+            AspNetCoreDAsyncHost.RegisterTypeIds(typeResolver);
         })));
 
 #region In library
@@ -31,21 +34,24 @@ builder.Services
 builder.Services
     .AddSingleton<IDAsyncSerializer>(sp => JsonDAsyncSerializer.Create(sp.GetRequiredService<IDAsyncTypeResolver>(), sp.GetRequiredService<JsonSerializerOptions>()))
     .AddSingleton<IDAsyncStorage, RedisDAsyncStorage>()
-    .AddSingleton(new JsonSerializerOptions()
+    .AddSingleton(sp => new JsonSerializerOptions()
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         WriteIndented = true,
         Converters =
         {
             new TypeIdJsonConverter(),
-            new DAsyncIdJsonConverter()
+            new DAsyncIdJsonConverter(),
+            new TypedInstanceJsonConverter<object>(sp.GetRequiredService<IDAsyncTypeResolver>()),
+            new TypedInstanceJsonConverter<IDAsyncContinuationMemento>(sp.GetRequiredService<IDAsyncTypeResolver>()),
         }
     })
     .AddHttpClient()
     .AddSingleton<RedisDAsyncSuspensionHandler>()
     .AddHostedService(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
     .AddSingleton<IDAsyncSuspensionHandler>(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
-    .AddSingleton<IDAsyncStateManager, BinaryDAsyncStateManager>();
+    .AddSingleton<IDAsyncStateManager, BinaryDAsyncStateManager>()
+    .AddSingleton<IDAsyncContinuationFactory, DAsyncContinuationFactory>();
 #endregion
 
 builder.Services
@@ -55,7 +61,7 @@ builder.Services
 var app = builder.Build();
 
 #region Generated
-app.MapPost("/approvals", (
+app.MapPost("/approvals", async (
     HttpContext httpContext,
     [FromServices] AsyncEndpoints endpoints,
     [FromBody] NewApprovalRequest request,
@@ -64,13 +70,14 @@ app.MapPost("/approvals", (
     AspNetCoreDAsyncHost host = AspNetCoreDAsyncHost.CreateHttpHost(httpContext, "GetApprovalsStatus");
     DTask<IResult> task = endpoints.NewApproval(request);
 
-    return host.StartAsync(task, cancellationToken);
+    await host.StartAsync(task, cancellationToken);
 });
 
 app.MapGet("/approvals/{operationId}", async (
     [FromServices] IDatabase redis,
     string operationId) =>
 {
+    operationId = WebUtility.UrlDecode(operationId);
     string? value = await redis.StringGetAsync(operationId);
     if (value is null)
         return Results.NotFound();
@@ -78,7 +85,7 @@ app.MapGet("/approvals/{operationId}", async (
     JsonElement obj = JsonSerializer.Deserialize<JsonElement>(value);
     string status = obj.GetProperty("status").GetString()!;
 
-    if (status is "complete")
+    if (status is "succeeded")
         return Results.Ok(new
         {
             status,

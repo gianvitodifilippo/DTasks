@@ -8,9 +8,9 @@ public sealed partial class DAsyncFlow
 {
     private static class Continuations
     {
-        public static void Return(DAsyncFlow self)
+        public static void Suspend(DAsyncFlow self)
         {
-            self.Return();
+            self.AwaitOnSuspend();
         }
 
         public static void Start(DAsyncFlow self)

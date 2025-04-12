@@ -1,9 +1,8 @@
 ﻿using System.Net.Http.Json;
-using DTasks.AspNetCore.Infrastructure.Http;
 using DTasks.Infrastructure.Marshaling;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DTasks.AspNetCore;
+namespace DTasks.AspNetCore.Infrastructure.Http;
 
 internal sealed class WebhookDAsyncContinuation(IHttpClientFactory httpClientFactory, Uri callbackAddress) : IDAsyncContinuation
 {
@@ -12,7 +11,7 @@ internal sealed class WebhookDAsyncContinuation(IHttpClientFactory httpClientFac
         using HttpClient http = httpClientFactory.CreateClient();
         await http.PostAsJsonAsync(callbackAddress, new
         {
-            operationId = flowId
+            operationId = flowId.ToString()
         }, cancellationToken);
     }
 
@@ -21,7 +20,7 @@ internal sealed class WebhookDAsyncContinuation(IHttpClientFactory httpClientFac
         using HttpClient http = httpClientFactory.CreateClient();
         await http.PostAsJsonAsync(callbackAddress, new
         {
-            operationId = flowId,
+            operationId = flowId.ToString(),
             result
         }, cancellationToken);
     }
@@ -41,7 +40,7 @@ internal sealed class WebhookDAsyncContinuation(IHttpClientFactory httpClientFac
         return new Memento(callbackAddress);
     }
 
-    private sealed class Memento(Uri callbackAddress) : IDAsyncContinuationMemento
+    public sealed class Memento(Uri callbackAddress) : IDAsyncContinuationMemento
     {
         public Uri CallbackAddress { get; } = callbackAddress;
         

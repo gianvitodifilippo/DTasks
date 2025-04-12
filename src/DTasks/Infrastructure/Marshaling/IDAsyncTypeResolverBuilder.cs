@@ -3,7 +3,7 @@
 namespace DTasks.Infrastructure.Marshaling;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface ITypeResolverBuilder
+public interface IDAsyncTypeResolverBuilder
 {
     TypeId Register(Type type);
 

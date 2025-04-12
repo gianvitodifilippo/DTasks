@@ -3,12 +3,16 @@ using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Utils;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using StackExchange.Redis;
+using System.Text.Json;
 
 namespace DTasks.AspNetCore.Infrastructure;
 
 public abstract partial class AspNetCoreDAsyncHost
 {
     private delegate Task ContinuationAction<in T>(IDAsyncContinuation continuation, DAsyncId flowId, T value, CancellationToken cancellationToken);
+    private delegate Task StatusMonitorAction<in T>(IDatabase redis, DAsyncId flowId, T value, CancellationToken cancellationToken);
 
     private bool _isOnStart;
     private TypedInstance<object> _continuationMemento;
@@ -55,27 +59,32 @@ public abstract partial class AspNetCoreDAsyncHost
         return OnStartCoreAsync(context, cancellationToken);
     }
 
-    protected override Task OnSuspendAsync(CancellationToken cancellationToken)
+    protected override async Task OnSuspendAsync(CancellationToken cancellationToken)
     {
         if (!_isOnStart)
-            return Task.CompletedTask;
+            return;
+
+        IDatabase redis = Services.GetRequiredService<IDatabase>();
+        await redis.StringSetAsync(FlowId.ToString(), """
+        {
+          "status": "running"
+        }
+        """);
 
         if (_continuationMemento != default)
         {
             string callbackKey = GetContinuationKey(FlowId);
-            return StateManager.Heap.SaveAsync(callbackKey, _continuationMemento, cancellationToken);
+            await StateManager.Heap.SaveAsync(callbackKey, _continuationMemento, cancellationToken);
         }
-
-        if (_continuationMementoArray is not null)
+        else if (_continuationMementoArray is not null)
         {
             string continuationKey = GetContinuationKey(FlowId);
             TypedInstance<object> continuationMemento = AggregateDAsyncContinuation.CreateMemento(_continuationMementoArray);
-            return StateManager.Heap.SaveAsync(continuationKey, continuationMemento, cancellationToken);
+            await StateManager.Heap.SaveAsync(continuationKey, continuationMemento, cancellationToken);
         }
-        
-        return Task.CompletedTask;
-    }
 
+        await SuspendOnStartAsync(cancellationToken);
+    }
 
     protected override Task OnSucceedAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken)
     {
@@ -116,8 +125,7 @@ public abstract partial class AspNetCoreDAsyncHost
         return FailOnResumeAsync(context, exception, cancellationToken);
     }
 
-    protected override Task OnCancelAsync(IDAsyncFlowCompletionContext context, OperationCanceledException exception,
-        CancellationToken cancellationToken)
+    protected override Task OnCancelAsync(IDAsyncFlowCompletionContext context, OperationCanceledException exception, CancellationToken cancellationToken)
     {
         if (_isOnStart)
         {
@@ -129,6 +137,7 @@ public abstract partial class AspNetCoreDAsyncHost
 
         return CancelOnResumeAsync(context, cancellationToken);
     }
+
     protected void SetContinuation(TypedInstance<object> memento)
     {
         _continuationMemento = memento;
@@ -157,6 +166,11 @@ public abstract partial class AspNetCoreDAsyncHost
         return CompleteOnResumeAsync(
             context,
             default(VoidResult),
+            static (redis, flowId, value, cancellationToken) => redis.StringSetAsync(flowId.ToString(), """
+            {
+              "status": "succeeded"
+            }
+            """),
             static (continuation, id, value, cancellationToken) => continuation.OnSucceedAsync(id, cancellationToken),
             cancellationToken);
     }
@@ -166,6 +180,12 @@ public abstract partial class AspNetCoreDAsyncHost
         return CompleteOnResumeAsync(
             context,
             result,
+            static (redis, flowId, value, cancellationToken) => redis.StringSetAsync(flowId.ToString(), $$"""
+            {
+              "status": "succeeded",
+              "value": {{JsonSerializer.Serialize(value)}}
+            }
+            """),
             static (continuation, id, value, cancellationToken) => continuation.OnSucceedAsync(id, value, cancellationToken),
             cancellationToken);
     }
@@ -175,6 +195,11 @@ public abstract partial class AspNetCoreDAsyncHost
         return CompleteOnResumeAsync(
             context,
             exception,
+            static (redis, flowId, value, cancellationToken) => redis.StringSetAsync(flowId.ToString(), """
+            {
+              "status": "failed"
+            }
+            """),
             static (continuation, id, value, cancellationToken) => continuation.OnFailAsync(id, value, cancellationToken),
             cancellationToken);
     }
@@ -184,19 +209,33 @@ public abstract partial class AspNetCoreDAsyncHost
         return CompleteOnResumeAsync(
             context,
             default(VoidResult),
+            static (redis, flowId, value, cancellationToken) => redis.StringSetAsync(flowId.ToString(), """
+            {
+              "status": "canceled"
+            }
+            """),
             static (continuation, id, value, cancellationToken) => continuation.OnCancelAsync(id, cancellationToken),
             cancellationToken);
     }
 
-    private async Task CompleteOnResumeAsync<TResult>(IDAsyncFlowCompletionContext context, TResult result, ContinuationAction<TResult> continuationAction, CancellationToken cancellationToken)
+    private async Task CompleteOnResumeAsync<T>(
+        IDAsyncFlowCompletionContext context,
+        T value,
+        StatusMonitorAction<T> statusMonitorAction,
+        ContinuationAction<T> continuationAction,
+        CancellationToken cancellationToken)
     {
         DAsyncId flowId = context.FlowId;
+
+        IDatabase redis = Services.GetRequiredService<IDatabase>();
+        await statusMonitorAction(redis, flowId, value, cancellationToken);
+
         string continuationKey = GetContinuationKey(flowId);
         Option<TypedInstance<IDAsyncContinuationMemento>> loadResult = await StateManager.Heap.LoadAsync<string, TypedInstance<IDAsyncContinuationMemento>>(continuationKey, cancellationToken);
         
         // TODO: Check before and decide what to do should it be empty
         IDAsyncContinuation continuation = loadResult.Value.Value.Restore(Services);
-        await continuationAction(continuation, flowId, result, cancellationToken);
+        await continuationAction(continuation, flowId, value, cancellationToken);
     }
 
     private void Reset()
@@ -219,6 +258,12 @@ public abstract partial class AspNetCoreDAsyncHost
         ArgumentNullException.ThrowIfNull(monitorActionName);
 
         return new HttpRequestDAsyncHost(httpContext, monitorActionName);
+    }
+
+    public static void RegisterTypeIds(IDAsyncTypeResolverBuilder typeResolverBuilder) // TODO: Remove
+    {
+        typeResolverBuilder.Register(typeof(WebhookDAsyncContinuation.Memento));
+        typeResolverBuilder.Register(typeof(WebSocketsDAsyncContinuation.Memento));
     }
 
     private readonly struct VoidResult;

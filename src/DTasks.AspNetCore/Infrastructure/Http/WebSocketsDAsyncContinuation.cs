@@ -1,8 +1,7 @@
-﻿using DTasks.AspNetCore.Infrastructure.Http;
-using DTasks.Infrastructure.Marshaling;
+﻿using DTasks.Infrastructure.Marshaling;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DTasks.AspNetCore;
+namespace DTasks.AspNetCore.Infrastructure.Http;
 
 internal sealed class WebSocketsDAsyncContinuation(IWebSocketHandler handler, string connectionId) : IDAsyncContinuation
 {
@@ -10,7 +9,7 @@ internal sealed class WebSocketsDAsyncContinuation(IWebSocketHandler handler, st
     {
         var message = new
         {
-            operationId = flowId
+            operationId = flowId.ToString()
         };
         
         return handler.SendAsync(connectionId, message, cancellationToken);
@@ -20,7 +19,7 @@ internal sealed class WebSocketsDAsyncContinuation(IWebSocketHandler handler, st
     {
         var message = new
         {
-            operationId = flowId,
+            operationId = flowId.ToString(),
             result
         };
         
@@ -42,7 +41,7 @@ internal sealed class WebSocketsDAsyncContinuation(IWebSocketHandler handler, st
         return new Memento(connectionId);
     }
     
-    private sealed class Memento(string connectionId) : IDAsyncContinuationMemento
+    public sealed class Memento(string connectionId) : IDAsyncContinuationMemento
     {
         public string ConnectionId { get; } = connectionId;
         

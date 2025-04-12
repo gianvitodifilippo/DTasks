@@ -18,7 +18,7 @@ public sealed partial class DAsyncFlow
         bindingAttr: BindingFlags.Static | BindingFlags.NonPublic,
         parameterTypes: [typeof(Dictionary<,>).MakeGenericType(typeof(int), Type.MakeGenericMethodParameter(0)), typeof(int)]);
 
-    public static void RegisterTypeIds(ITypeResolverBuilder builder)
+    public static void RegisterTypeIds(IDAsyncTypeResolverBuilder builder)
     {
         builder.Register(typeof(HostIndirectionStateMachine));
         builder.Register(typeof(HandleStateMachine));
@@ -28,7 +28,7 @@ public sealed partial class DAsyncFlow
         builder.RegisterDAsyncMethod(s_whenAllDAsyncMethod);
     }
 
-    public static void RegisterGenericTypeIds(ITypeResolverBuilder builder, Type resultType)
+    public static void RegisterGenericTypeIds(IDAsyncTypeResolverBuilder builder, Type resultType)
     {
         builder.RegisterDAsyncMethod(s_whenAllDAsyncGenericMethod.MakeGenericMethod(resultType));
     }

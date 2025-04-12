@@ -64,7 +64,7 @@ internal sealed class HttpRequestDAsyncHost(HttpContext httpContext, string moni
 
     protected override Task SuspendOnStartAsync(CancellationToken cancellationToken)
     {
-        var value = new { operationId = FlowId };
+        var value = new { operationId = FlowId.ToString() };
         return Results.AcceptedAtRoute(monitorActionName, value, value).ExecuteAsync(httpContext);
     }
 

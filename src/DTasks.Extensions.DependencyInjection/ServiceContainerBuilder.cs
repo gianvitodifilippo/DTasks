@@ -16,7 +16,7 @@ using ServiceFactory = Func<IServiceProvider, object>;
 
 internal sealed class ServiceContainerBuilder(
     IServiceCollection services,
-    ITypeResolverBuilder typeResolverBuilder,
+    IDAsyncTypeResolverBuilder typeResolverBuilder,
     IDAsyncServiceRegisterBuilder registerBuilder) : IServiceContainerBuilder
 {
     private readonly MethodInfo _mapSingletonMethod = typeof(IServiceMapper).GetRequiredMethod(
