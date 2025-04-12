@@ -95,7 +95,7 @@ For example, calling `GET /process-document/{operationId}` before a result is av
 
 ```json
 {
-    "status": "pending"
+    "status": "running"
 }
 ```
 
@@ -103,7 +103,7 @@ Once the workflow completes, the response would be:
 
 ```json
 {
-    "status": "complete"
+    "status": "succeeded"
 }
 ```
 

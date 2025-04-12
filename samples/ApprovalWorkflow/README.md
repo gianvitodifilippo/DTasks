@@ -89,7 +89,7 @@ For example, calling `GET /approvals/{operationId}` before a result is available
 
 ```json
 {
-    "status": "pending"
+    "status": "running"
 }
 ```
 
@@ -97,7 +97,7 @@ Once the workflow completes, the response would be:
 
 ```json
 {
-    "status": "complete",
+    "status": "succeeded",
     "value": 1
 }
 ```
