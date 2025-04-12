@@ -13,15 +13,13 @@ public sealed class JsonDAsyncSerializer : IDAsyncSerializer
 {
     private readonly IStateMachineInspector _inspector;
     private readonly IDAsyncTypeResolver _typeResolver;
-    private readonly IDAsyncMarshaler _marshaler;
     private readonly StateMachineReferenceResolver _referenceResolver;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public JsonDAsyncSerializer(IStateMachineInspector inspector, IDAsyncTypeResolver typeResolver, IDAsyncMarshaler marshaler, JsonSerializerOptions jsonOptions)
+    public JsonDAsyncSerializer(IStateMachineInspector inspector, IDAsyncTypeResolver typeResolver, JsonSerializerOptions jsonOptions)
     {
         _inspector = inspector;
         _typeResolver = typeResolver;
-        _marshaler = marshaler;
         _referenceResolver = new();
         _jsonOptions = new JsonSerializerOptions(jsonOptions)
         {
@@ -56,24 +54,24 @@ public sealed class JsonDAsyncSerializer : IDAsyncSerializer
         return JsonSerializer.Deserialize<TValue>(ref reader, _jsonOptions)!;
     }
 
-    public void SerializeStateMachine<TStateMachine>(IBufferWriter<byte> buffer, ISuspensionContext context, ref TStateMachine stateMachine)
+    public void SerializeStateMachine<TStateMachine>(IBufferWriter<byte> buffer, ISuspensionContext context, DAsyncId parentId, ref TStateMachine stateMachine)
         where TStateMachine : notnull
     {
         _referenceResolver.InitForWriting();
 
-        JsonStateMachineWriter stateMachineWriter = new(buffer, _jsonOptions, _referenceResolver, _marshaler);
+        JsonStateMachineWriter stateMachineWriter = new(buffer, _jsonOptions, _referenceResolver, context.Marshaler);
         IStateMachineSuspender<TStateMachine> suspender = (IStateMachineSuspender<TStateMachine>)_inspector.GetSuspender(typeof(TStateMachine));
         TypeId typeId = _typeResolver.GetTypeId(typeof(TStateMachine));
 
-        stateMachineWriter.SerializeStateMachine(ref stateMachine, typeId, context, suspender);
+        stateMachineWriter.SerializeStateMachine(ref stateMachine, typeId, context, parentId, suspender);
         _referenceResolver.Clear();
     }
 
-    public DAsyncLink DeserializeStateMachine(ReadOnlySpan<byte> bytes)
+    public DAsyncLink DeserializeStateMachine(IResumptionContext context, ReadOnlySpan<byte> bytes)
     {
         _referenceResolver.InitForReading();
 
-        JsonStateMachineReader stateMachineReader = new(bytes, _jsonOptions, _referenceResolver, _marshaler);
+        JsonStateMachineReader stateMachineReader = new(bytes, _jsonOptions, _referenceResolver, context.Marshaler);
         DAsyncLink link = stateMachineReader.DeserializeStateMachine(_inspector, _typeResolver, null, static delegate (IStateMachineResumer resumer, object? result, ref JsonStateMachineReader reader)
         {
             return resumer.Resume(ref reader);
@@ -83,12 +81,12 @@ public sealed class JsonDAsyncSerializer : IDAsyncSerializer
         return link;
     }
 
-    public DAsyncLink DeserializeStateMachine<TResult>(ReadOnlySpan<byte> bytes, TResult result)
+    public DAsyncLink DeserializeStateMachine<TResult>(IResumptionContext context, ReadOnlySpan<byte> bytes, TResult result)
     {
         string json = Encoding.UTF8.GetString(bytes);
         _referenceResolver.InitForReading();
 
-        JsonStateMachineReader stateMachineReader = new(bytes, _jsonOptions, _referenceResolver, _marshaler);
+        JsonStateMachineReader stateMachineReader = new(bytes, _jsonOptions, _referenceResolver, context.Marshaler);
         DAsyncLink link = stateMachineReader.DeserializeStateMachine(_inspector, _typeResolver, result, static delegate (IStateMachineResumer resumer, TResult result, ref JsonStateMachineReader reader)
         {
             return resumer.Resume(ref reader, result);
@@ -98,15 +96,15 @@ public sealed class JsonDAsyncSerializer : IDAsyncSerializer
         return link;
     }
 
-    public DAsyncLink DeserializeStateMachine(ReadOnlySpan<byte> bytes, Exception exception)
+    public DAsyncLink DeserializeStateMachine(IResumptionContext context, ReadOnlySpan<byte> bytes, Exception exception)
     {
         throw new NotImplementedException();
     }
 
-    public static JsonDAsyncSerializer Create(IDAsyncTypeResolver typeResolver, IDAsyncMarshaler marshaler, JsonSerializerOptions jsonOptions)
+    public static JsonDAsyncSerializer Create(IDAsyncTypeResolver typeResolver, JsonSerializerOptions jsonOptions)
     {
         DynamicStateMachineInspector inspector = DynamicStateMachineInspector.Create(typeof(IStateMachineSuspender<>), typeof(IStateMachineResumer), typeResolver);
 
-        return new JsonDAsyncSerializer(inspector, typeResolver, marshaler, jsonOptions);
+        return new JsonDAsyncSerializer(inspector, typeResolver, jsonOptions);
     }
 }

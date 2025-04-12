@@ -101,7 +101,7 @@ public class DAsyncFlowTests
 
         // Assert
         await _host.SuspensionHandler.Received(1).OnYieldAsync(Arg.Is(NonReservedId), Arg.Any<CancellationToken>());
-        await _host.Received(1).OnSucceedAsync(_sut, id, Arg.Any<CancellationToken>());
+        await _host.Received(1).OnSucceedAsync(_sut, Arg.Any<CancellationToken>());
         _stateManager.Count.Should().Be(0);
     }
 
@@ -408,6 +408,7 @@ public class DAsyncFlowTests
         _stateManager.Count.Should().Be(0);
     }
 
+    [Fact(Skip = "Not implemented yet")]
     public async Task RunsDTaskThatAwaitsExceptionResumingDTask()
     {
         // Arrange

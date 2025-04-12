@@ -19,6 +19,8 @@ internal interface IFakeStateMachineResumer
     IDAsyncRunnable Resume(FakeStateMachineReader reader);
 
     IDAsyncRunnable Resume<TResult>(FakeStateMachineReader reader, TResult result);
+
+    // IDAsyncRunnable Resume(FakeStateMachineReader reader, Exception exception);
 }
 
 internal abstract class MarshaledValue(TypeId typeId)
@@ -145,12 +147,9 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, IDAsync
 
     IDAsyncHeap IDAsyncStateManager.Heap => this;
 
-    public ValueTask DehydrateAsync<TStateMachine>(ISuspensionContext context, ref TStateMachine stateMachine,
+    public ValueTask DehydrateAsync<TStateMachine>(ISuspensionContext context, DAsyncId parentId, DAsyncId id, ref TStateMachine stateMachine,
         CancellationToken cancellationToken = default) where TStateMachine : notnull
     {
-        DAsyncId id = context.Id;
-        DAsyncId parentId = context.ParentId;
-        
         if (id.IsDefault)
             throw FailException.ForFailure($"Id was defaulted.");
 
@@ -163,14 +162,12 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, IDAsync
         DehydratedRunnable<TStateMachine> runnable = new(_inspector, marshaler, parentId);
         runnable.Suspend(ref stateMachine, context);
 
-        _runnables[id] = runnable;
+        _runnables.Add(id, runnable);
         return default;
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync(IResumptionContext context, CancellationToken cancellationToken = default)
+    public ValueTask<DAsyncLink> HydrateAsync(DAsyncId id, CancellationToken cancellationToken = default)
     {
-        DAsyncId id = context.Id;
-        
         DehydratedRunnable runnable = _runnables[id];
         _runnables.Remove(id);
 
@@ -179,11 +176,9 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, IDAsync
         return new(link);
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync<TResult>(IResumptionContext context, TResult result,
+    public ValueTask<DAsyncLink> HydrateAsync<TResult>(DAsyncId id, TResult result,
         CancellationToken cancellationToken = default)
     {
-        DAsyncId id = context.Id;
-
         DehydratedRunnable runnable = _runnables[id];
         _runnables.Remove(id);
 
@@ -192,9 +187,14 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, IDAsync
         return new(link);
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync(IResumptionContext context, Exception exception, CancellationToken cancellationToken = default)
+    public ValueTask<DAsyncLink> HydrateAsync(DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        DehydratedRunnable runnable = _runnables[id];
+        _runnables.Remove(id);
+
+        DAsyncLink link = runnable.Resume(exception);
+        Debug.WriteLine($"Hydrated task {id} with parent {link.ParentId}.");
+        return new(link);
     }
 
     public ValueTask<DAsyncId> DeleteAsync(DAsyncId id, CancellationToken cancellationToken = default)
@@ -240,6 +240,8 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, IDAsync
         public abstract DAsyncLink Resume();
 
         public abstract DAsyncLink Resume<TResult>(TResult result);
+
+        public abstract DAsyncLink Resume(Exception exception);
     }
 
     private sealed class DehydratedRunnable<TStateMachine>(IStateMachineInspector inspector, IDAsyncMarshaler marshaler, DAsyncId parentId) : DehydratedRunnable
@@ -275,6 +277,11 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, IDAsync
             IDAsyncRunnable runnable = converter.Resume(reader, result);
 
             return new DAsyncLink(parentId, runnable);
+        }
+
+        public override DAsyncLink Resume(Exception exception)
+        {
+            throw new NotImplementedException();
         }
     }
 }

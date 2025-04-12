@@ -59,7 +59,7 @@ public sealed partial class DAsyncFlow
 
     internal DAsyncFlow()
     {
-        _state = FlowState.Pending;
+        _state = FlowState.Idling;
         _builder = AsyncTaskMethodBuilder.Create();
         _host = s_nullHost;
         _taskTokenConverter = new DTaskTokenConverter(this);
@@ -178,7 +178,7 @@ public sealed partial class DAsyncFlow
 
     private void AwaitOnStart()
     {
-        Await(_host.OnStartAsync(this, _cancellationToken), FlowState.Running);
+        Await(_host.OnStartAsync(this, _cancellationToken), FlowState.Starting);
     }
 
     private void AwaitOnSuspend()

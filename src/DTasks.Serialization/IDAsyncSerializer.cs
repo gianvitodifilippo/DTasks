@@ -10,12 +10,12 @@ public interface IDAsyncSerializer
     
     TValue Deserialize<TValue>(ReadOnlySpan<byte> bytes);
     
-    void SerializeStateMachine<TStateMachine>(IBufferWriter<byte> buffer, ISuspensionContext context, ref TStateMachine stateMachine)
+    void SerializeStateMachine<TStateMachine>(IBufferWriter<byte> buffer, ISuspensionContext context, DAsyncId parentId, ref TStateMachine stateMachine)
         where TStateMachine : notnull;
 
-    DAsyncLink DeserializeStateMachine(ReadOnlySpan<byte> bytes);
+    DAsyncLink DeserializeStateMachine(IResumptionContext context, ReadOnlySpan<byte> bytes);
 
-    DAsyncLink DeserializeStateMachine<TResult>(ReadOnlySpan<byte> bytes, TResult result);
+    DAsyncLink DeserializeStateMachine<TResult>(IResumptionContext context, ReadOnlySpan<byte> bytes, TResult result);
 
-    DAsyncLink DeserializeStateMachine(ReadOnlySpan<byte> bytes, Exception exception);
+    DAsyncLink DeserializeStateMachine(IResumptionContext context, ReadOnlySpan<byte> bytes, Exception exception);
 }

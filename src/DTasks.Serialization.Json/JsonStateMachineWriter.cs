@@ -29,12 +29,12 @@ internal readonly ref struct JsonStateMachineWriter(
 #endif
     });
 
-    public void SerializeStateMachine<TStateMachine>(ref TStateMachine stateMachine, TypeId typeId, ISuspensionContext context, IStateMachineSuspender<TStateMachine> suspender)
+    public void SerializeStateMachine<TStateMachine>(ref TStateMachine stateMachine, TypeId typeId, ISuspensionContext context, DAsyncId parentId, IStateMachineSuspender<TStateMachine> suspender)
         where TStateMachine : notnull
     {
         _writer.WriteStartObject();
         _writer.WriteTypeId("$typeId", typeId);
-        _writer.WriteDAsyncId("$parentId", context.ParentId);
+        _writer.WriteDAsyncId("$parentId", parentId);
         suspender.Suspend(ref stateMachine, context, in this);
         _writer.WriteEndObject();
         _writer.Flush();

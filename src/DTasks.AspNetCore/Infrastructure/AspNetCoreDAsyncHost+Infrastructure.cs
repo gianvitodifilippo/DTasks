@@ -12,7 +12,7 @@ public abstract partial class AspNetCoreDAsyncHost : DAsyncHost
     private IDAsyncMarshaler? _marshaler;
     private IDAsyncStateManager? _stateManager;
     private IDAsyncTypeResolver? _typeResolver;
-    private IDAsyncCancellationProvider? _cancellationProvider;
+    // private IDAsyncCancellationProvider? _cancellationProvider;
     private IDAsyncSuspensionHandler? _suspensionHandler;
 
     protected override IDAsyncMarshaler Marshaler => GetService(ref _marshaler);
@@ -21,7 +21,7 @@ public abstract partial class AspNetCoreDAsyncHost : DAsyncHost
 
     protected override IDAsyncTypeResolver TypeResolver => GetService(ref _typeResolver);
 
-    protected override IDAsyncCancellationProvider CancellationProvider => GetService(ref _cancellationProvider);
+    // protected override IDAsyncCancellationProvider CancellationProvider => GetService(ref _cancellationProvider);
 
     protected override IDAsyncSuspensionHandler SuspensionHandler => GetService(ref _suspensionHandler);
 

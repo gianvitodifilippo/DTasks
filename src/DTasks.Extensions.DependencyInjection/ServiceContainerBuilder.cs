@@ -109,7 +109,7 @@ internal sealed class ServiceContainerBuilder(
 
         DAsyncServiceValidator validator = _validationErrors.Count == 0
             ? () => { }
-        : () => throw new AggregateException("Some d-async services are not able to be constructed.", _validationErrors);
+            : () => throw new AggregateException("Some d-async services are not able to be constructed.", _validationErrors);
 
         services
             .AddSingleton(typeResolver)

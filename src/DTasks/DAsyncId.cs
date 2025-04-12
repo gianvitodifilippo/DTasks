@@ -9,12 +9,13 @@ namespace DTasks;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 [StructLayout(LayoutKind.Sequential)]
+[DebuggerDisplay("{DebuggerDisplay,nq}")]
 public readonly struct DAsyncId : IEquatable<DAsyncId>
 {
     private const int ByteCount = 3 * sizeof(uint);
-    private const byte ReservedBitsMask = 0b_00001111;
+    private const byte ReservedBitsMask = 0b_11110000;
     private const byte ReservedBitsInvertedMask = ~ReservedBitsMask & byte.MaxValue;
-    private const byte FlowIdMask = 0b_00000001;
+    private const byte FlowIdMask = 0b_10000000;
 
 #if DEBUG_TESTS
     private static int s_idCount = 0;
@@ -42,7 +43,14 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     internal bool IsDefault => this == default;
 
-    internal bool IsFlowId => (_c & FlowIdMask) == FlowIdMask;
+    internal bool IsFlowId
+    {
+        get
+        {
+            ref byte firstByte = ref Unsafe.As<DAsyncId, byte>(ref Unsafe.AsRef(in this));
+            return (firstByte & FlowIdMask) != 0;
+        }
+    }
 
     public byte[] ToByteArray()
     {
@@ -76,9 +84,6 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     public override string ToString()
     {
-        if (IsDefault)
-            return "<default>";
-
         ref byte head = ref Unsafe.As<DAsyncId, byte>(ref Unsafe.AsRef(in this));
         ReadOnlySpan<byte> bytes = MemoryMarshal.CreateReadOnlySpan(ref head, ByteCount);
 
@@ -102,7 +107,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
         Span<byte> bytes = stackalloc byte[ByteCount];
         
         Create(bytes);
-        bytes[ByteCount - 1] |= FlowIdMask;
+        bytes[0] |= FlowIdMask;
         return new(bytes);
     }
 
@@ -114,7 +119,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
         }
         while (IsDefault(bytes));
 
-        bytes[ByteCount - 1] &= ReservedBitsInvertedMask;
+        bytes[0] &= ReservedBitsInvertedMask;
 
         static bool IsDefault(Span<byte> bytes)
         {
@@ -194,5 +199,17 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
         id = new DAsyncId(bytes);
         return true;
+    }
+
+    private string DebuggerDisplay
+    {
+        get
+        {
+            if (IsDefault)
+                return "<default>";
+
+            string id = ToString()[^4..];
+            return IsFlowId ? $"root:{id}" : id;
+        }
     }
 }

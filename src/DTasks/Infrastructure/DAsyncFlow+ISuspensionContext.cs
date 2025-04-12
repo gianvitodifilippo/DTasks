@@ -5,10 +5,6 @@ namespace DTasks.Infrastructure;
 
 public sealed partial class DAsyncFlow : ISuspensionContext
 {
-    DAsyncId ISuspensionContext.Id => _id;
-
-    DAsyncId ISuspensionContext.ParentId => _parentId;
-
     IDAsyncMarshaler ISuspensionContext.Marshaler => this;
 
     bool ISuspensionContext.IsSuspended<TAwaiter>(ref TAwaiter awaiter)

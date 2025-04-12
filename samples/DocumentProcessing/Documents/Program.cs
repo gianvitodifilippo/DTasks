@@ -2,10 +2,8 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using Documents;
-using Documents.Generated;
 using DTasks;
 using DTasks.AspNetCore;
-using DTasks.Marshaling;
 using DTasks.Serialization;
 using DTasks.Serialization.Json;
 using DTasks.Serialization.StackExchangeRedis;
@@ -15,15 +13,18 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DTasks.AspNetCore.Infrastructure;
+using DTasks.Extensions.Hosting;
+using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Marshaling;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseDTasks(configuration => configuration
+builder.Host.UseDTasks(dTasks => dTasks
     .ConfigureDTasks(configuration => configuration
         .ConfigureTypeResolver(typeResolver =>
         {
             typeResolver.RegisterDAsyncType<AsyncEndpoints>();
-            typeResolver.RegisterDAsyncType<DAsyncRunner>();
         })));
 
 #region In library
@@ -32,7 +33,7 @@ builder.Services
     .AddSingleton(sp => ConnectionMultiplexer.Connect("localhost:6379"))
     .AddSingleton(sp => sp.GetRequiredService<ConnectionMultiplexer>().GetDatabase());
 builder.Services
-    .AddSingleton(sp => new Func<IDAsyncMarshaler, IDAsyncSerializer>(marshaler => JsonDAsyncSerializer.Create(sp.GetRequiredService<ITypeResolver>(), marshaler, sp.GetRequiredService<JsonSerializerOptions>())))
+    .AddSingleton<IDAsyncSerializer>(sp => JsonDAsyncSerializer.Create(sp.GetRequiredService<IDAsyncTypeResolver>(), sp.GetRequiredService<JsonSerializerOptions>()))
     .AddSingleton<IDAsyncStorage, RedisDAsyncStorage>()
     .AddSingleton(new JsonSerializerOptions()
     {
@@ -44,11 +45,9 @@ builder.Services
             new DAsyncIdJsonConverter()
         }
     })
-    .AddScoped<AspNetCoreDAsyncHost>()
-    .AddSingleton<RedisWorkQueue>()
-    .AddHostedService(sp => sp.GetRequiredService<RedisWorkQueue>())
-    .AddSingleton<IWorkQueue>(sp => sp.GetRequiredService<RedisWorkQueue>())
-    .AddScoped<DAsyncRunner>()
+    .AddSingleton<RedisDAsyncSuspensionHandler>()
+    .AddHostedService(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
+    .AddSingleton<IDAsyncSuspensionHandler>(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
     .AddSingleton<WebSocketHandler>()
     .AddSingleton<IWebSocketHandler>(sp => sp.GetRequiredService<WebSocketHandler>());
 #endregion
@@ -80,7 +79,7 @@ var app = builder.Build();
 app.UseCors();
 app.UseWebSockets();
 
-app.MapPost("/upload-request", (HttpContext context, BlobContainerClient containerClient) =>
+app.MapPost("/upload-request", (BlobContainerClient containerClient) =>
 {
     string documentId = Guid.NewGuid().ToString();
     string blobName = $"{documentId}.pdf";
@@ -105,45 +104,16 @@ app.MapPost("/upload-request", (HttpContext context, BlobContainerClient contain
 });
 
 #region Generated
-app.MapPost("/process-document/{documentId}", async (
-    [FromServices] DAsyncRunner runner,
-    [FromServices] AspNetCoreDAsyncHost host,
-    [FromServices] IDatabase redis,
-    [FromHeader(Name = "Async-CallbackType")] string callbackType,
-    [FromHeader(Name = "Async-ConnectionId")] string? connectionId,
+app.MapPost("/process-document/{documentId}", (
+    HttpContext httpContext,
+    [FromServices] AsyncEndpoints endpoints,
     string documentId,
     CancellationToken cancellationToken) =>
 {
-    string operationId = Guid.NewGuid().ToString();
-    DTask<IResult> task;
+    AspNetCoreDAsyncHost host = AspNetCoreDAsyncHost.CreateHttpHost(httpContext, "GetDocumentStatus");
+    DTask<IResult> task = endpoints.ProcessDocument(documentId);
 
-    if (callbackType is "websockets")
-    {
-        if (connectionId is null)
-            return Results.BadRequest();
-
-        task = runner.ProcessDocument_Websockets(operationId, connectionId, documentId);
-    }
-    else
-    {
-        task = runner.ProcessDocument(operationId, documentId);
-    }
-
-    host.IsSyncContext = true;
-    await host.StartAsync(task, cancellationToken);
-
-    if (host.Result is IResult result)
-        return result;
-
-    await redis.StringSetAsync(operationId, $$"""
-    {
-      "type": "void",
-      "status": "pending"
-    }
-    """);
-
-    object value = new { operationId };
-    return Results.AcceptedAtRoute("GetDocumentStatus", value, value);
+    return host.StartAsync(task, cancellationToken);
 });
 
 app.MapGet("/process-document/{operationId}", async (

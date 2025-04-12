@@ -20,6 +20,7 @@ public sealed partial class DAsyncFlow : IAsyncStateMachine
                     object? resultOrException = Consume(ref _resultOrException);
                     if (resultOrException is null)
                     {
+                        _state = FlowState.Running;
                         Consume(ref _runnable).Run(this);
                     }
                     else if (resultOrException is Exception exception)
