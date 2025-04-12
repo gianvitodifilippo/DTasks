@@ -17,6 +17,8 @@ using DTasks.AspNetCore.Infrastructure;
 using DTasks.Extensions.Hosting;
 using DTasks.Infrastructure.Execution;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.AspNetCore.Infrastructure.Http;
+using DTasks.Infrastructure.State;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +27,7 @@ builder.Host.UseDTasks(dTasks => dTasks
         .ConfigureTypeResolver(typeResolver =>
         {
             typeResolver.RegisterDAsyncType<AsyncEndpoints>();
+            AspNetCoreDAsyncHost.RegisterTypeIds(typeResolver);
         })));
 
 #region In library
@@ -35,21 +38,25 @@ builder.Services
 builder.Services
     .AddSingleton<IDAsyncSerializer>(sp => JsonDAsyncSerializer.Create(sp.GetRequiredService<IDAsyncTypeResolver>(), sp.GetRequiredService<JsonSerializerOptions>()))
     .AddSingleton<IDAsyncStorage, RedisDAsyncStorage>()
-    .AddSingleton(new JsonSerializerOptions()
+    .AddSingleton(sp => new JsonSerializerOptions()
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         WriteIndented = true,
         Converters =
         {
             new TypeIdJsonConverter(),
-            new DAsyncIdJsonConverter()
+            new DAsyncIdJsonConverter(),
+            new TypedInstanceJsonConverter<object>(sp.GetRequiredService<IDAsyncTypeResolver>()),
+            new TypedInstanceJsonConverter<IDAsyncContinuationMemento>(sp.GetRequiredService<IDAsyncTypeResolver>())
         }
     })
     .AddSingleton<RedisDAsyncSuspensionHandler>()
     .AddHostedService(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
     .AddSingleton<IDAsyncSuspensionHandler>(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
     .AddSingleton<WebSocketHandler>()
-    .AddSingleton<IWebSocketHandler>(sp => sp.GetRequiredService<WebSocketHandler>());
+    .AddSingleton<IWebSocketHandler>(sp => sp.GetRequiredService<WebSocketHandler>())
+    .AddSingleton<IDAsyncStateManager, BinaryDAsyncStateManager>()
+    .AddSingleton<IDAsyncContinuationFactory, DAsyncContinuationFactory>(); ;
 #endregion
 
 const string storageConnectionString = "UseDevelopmentStorage=true";
@@ -127,7 +134,7 @@ app.MapGet("/process-document/{operationId}", async (
     JsonElement obj = JsonSerializer.Deserialize<JsonElement>(value);
     string status = obj.GetProperty("status").GetString()!;
 
-    if (status is "complete")
+    if (status is "succeeded")
         return Results.Ok(new
         {
             status,

@@ -1,6 +1,5 @@
 ﻿using Azure.Storage.Blobs;
 using DTasks;
-using DTasks.AspNetCore;
 using DTasks.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,7 +17,7 @@ public class AsyncEndpoints(BlobContainerClient containerClient)
         await DTask.Yield();
 
         // Simulating the processing with a delay
-        await Task.Delay(TimeSpan.FromSeconds(30));
+        await Task.Delay(TimeSpan.FromSeconds(15));
 
         return AsyncResults.Success();
     }
