@@ -31,7 +31,7 @@
     </ItemGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Tests|AnyCPU' Or '$(Configuration)|$(Platform)'=='Release-Tests|AnyCPU'">
-        <InterceptorsPreviewNamespaces>$(InterceptorsPreviewNamespaces);DTasks.Generated.Emit</InterceptorsPreviewNamespaces>
+        <InterceptorsNamespaces>$(InterceptorsNamespaces);DTasks.Inspection.Dynamic</InterceptorsNamespaces>
     </PropertyGroup>
 
 </Project>

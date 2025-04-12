@@ -26,7 +26,7 @@ internal static class ILGeneratorInterceptorsRenderer
             #pragma warning restore CS9113 // Parameter is unread.
             }
 
-            namespace DTasks.Generated.Emit
+            namespace DTasks.Inspection.Dynamic
             {
                 using System.Diagnostics;
                 using System.Diagnostics.CodeAnalysis;
