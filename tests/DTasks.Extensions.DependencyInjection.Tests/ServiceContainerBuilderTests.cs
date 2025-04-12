@@ -15,7 +15,7 @@ public partial class ServiceContainerBuilderTests
     private readonly IDAsyncServiceRegisterBuilder _registerBuilder;
     private readonly IDAsyncServiceRegister _register;
     private readonly IServiceCollection _services;
-    private readonly ITypeResolverBuilder typeResolverBuilder;
+    private readonly IDAsyncTypeResolverBuilder _typeResolverBuilder;
     private readonly TypeId _typeId;
     private readonly string _serviceKey;
     private readonly ServiceContainerBuilder _sut;
@@ -26,10 +26,10 @@ public partial class ServiceContainerBuilderTests
         _registerBuilder = Substitute.For<IDAsyncServiceRegisterBuilder>();
         _register = Substitute.For<IDAsyncServiceRegister>();
         _services = new TestServiceCollection(_mapper);
-        typeResolverBuilder = Substitute.For<ITypeResolverBuilder>();
+        _typeResolverBuilder = Substitute.For<IDAsyncTypeResolverBuilder>();
         _typeId = new TypeId("typeId");
         _serviceKey = "serviceKey";
-        _sut = new ServiceContainerBuilder(_services, typeResolverBuilder, _registerBuilder);
+        _sut = new ServiceContainerBuilder(_services, _typeResolverBuilder, _registerBuilder);
 
         _registerBuilder
             .AddServiceType(Arg.Any<Type>())
