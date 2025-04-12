@@ -129,7 +129,7 @@ internal struct FakeUnmarshalingAction<TField>(MarshaledValue marshaledValue) : 
 }
 #endif
 
-internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, IDAsyncTypeResolver typeResolver) : IDAsyncStateManager, IDAsyncStack, IDAsyncHeap
+internal sealed class FakeDAsyncStateManager(IDAsyncTypeResolver typeResolver) : IDAsyncStateManager, IDAsyncStack, IDAsyncHeap
 {
     private readonly DynamicStateMachineInspector _inspector = DynamicStateMachineInspector.Create(typeof(IFakeStateMachineSuspender<>), typeof(IFakeStateMachineResumer), typeResolver);
     private readonly Dictionary<DAsyncId, DehydratedRunnable> _runnables = [];
@@ -159,40 +159,40 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, IDAsync
         Debug.WriteLine($"Dehydrating runnable {id} ({stateMachine}) with parent {parentId}.");
         _onDehydrate?.Invoke(id);
 
-        DehydratedRunnable<TStateMachine> runnable = new(_inspector, marshaler, parentId);
-        runnable.Suspend(ref stateMachine, context);
+        DehydratedRunnable<TStateMachine> runnable = new(_inspector, parentId);
+        runnable.Suspend(context, ref stateMachine);
 
         _runnables.Add(id, runnable);
         return default;
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync(DAsyncId id, CancellationToken cancellationToken = default)
+    public ValueTask<DAsyncLink> HydrateAsync(IResumptionContext context, DAsyncId id, CancellationToken cancellationToken = default)
     {
         DehydratedRunnable runnable = _runnables[id];
         _runnables.Remove(id);
 
-        DAsyncLink link = runnable.Resume();
+        DAsyncLink link = runnable.Resume(context);
         Debug.WriteLine($"Hydrated task {id} with parent {link.ParentId}.");
         return new(link);
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync<TResult>(DAsyncId id, TResult result,
+    public ValueTask<DAsyncLink> HydrateAsync<TResult>(IResumptionContext context, DAsyncId id, TResult result,
         CancellationToken cancellationToken = default)
     {
         DehydratedRunnable runnable = _runnables[id];
         _runnables.Remove(id);
 
-        DAsyncLink link = runnable.Resume(result);
+        DAsyncLink link = runnable.Resume(context, result);
         Debug.WriteLine($"Hydrated task {id} with parent {link.ParentId}.");
         return new(link);
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync(DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
+    public ValueTask<DAsyncLink> HydrateAsync(IResumptionContext context, DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
     {
         DehydratedRunnable runnable = _runnables[id];
         _runnables.Remove(id);
 
-        DAsyncLink link = runnable.Resume(exception);
+        DAsyncLink link = runnable.Resume(context, exception);
         Debug.WriteLine($"Hydrated task {id} with parent {link.ParentId}.");
         return new(link);
     }
@@ -237,31 +237,31 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, IDAsync
     {
         public abstract DAsyncId ParentId { get; }
 
-        public abstract DAsyncLink Resume();
+        public abstract DAsyncLink Resume(IResumptionContext context);
 
-        public abstract DAsyncLink Resume<TResult>(TResult result);
+        public abstract DAsyncLink Resume<TResult>(IResumptionContext context, TResult result);
 
-        public abstract DAsyncLink Resume(Exception exception);
+        public abstract DAsyncLink Resume(IResumptionContext context, Exception exception);
     }
 
-    private sealed class DehydratedRunnable<TStateMachine>(IStateMachineInspector inspector, IDAsyncMarshaler marshaler, DAsyncId parentId) : DehydratedRunnable
+    private sealed class DehydratedRunnable<TStateMachine>(IStateMachineInspector inspector, DAsyncId parentId) : DehydratedRunnable
         where TStateMachine : notnull
     {
         private readonly Dictionary<string, object?> _values = [];
 
         public override DAsyncId ParentId => parentId;
 
-        public void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext)
+        public void Suspend(ISuspensionContext context, ref TStateMachine stateMachine)
         {
-            FakeStateMachineWriter writer = new(_values, marshaler);
+            FakeStateMachineWriter writer = new(_values, context.Marshaler);
 
             var converter = (IFakeStateMachineSuspender<TStateMachine>)inspector.GetSuspender(typeof(TStateMachine));
-            converter.Suspend(ref stateMachine, suspensionContext, writer);
+            converter.Suspend(ref stateMachine, context, writer);
         }
 
-        public override DAsyncLink Resume()
+        public override DAsyncLink Resume(IResumptionContext context)
         {
-            FakeStateMachineReader reader = new(_values, marshaler);
+            FakeStateMachineReader reader = new(_values, context.Marshaler);
 
             var converter = (IFakeStateMachineResumer)inspector.GetResumer(typeof(TStateMachine));
             IDAsyncRunnable runnable = converter.Resume(reader);
@@ -269,9 +269,9 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, IDAsync
             return new DAsyncLink(parentId, runnable);
         }
 
-        public override DAsyncLink Resume<TResult>(TResult result)
+        public override DAsyncLink Resume<TResult>(IResumptionContext context, TResult result)
         {
-            FakeStateMachineReader reader = new(_values, marshaler);
+            FakeStateMachineReader reader = new(_values, context.Marshaler);
 
             var converter = (IFakeStateMachineResumer)inspector.GetResumer(typeof(TStateMachine));
             IDAsyncRunnable runnable = converter.Resume(reader, result);
@@ -279,7 +279,7 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, IDAsync
             return new DAsyncLink(parentId, runnable);
         }
 
-        public override DAsyncLink Resume(Exception exception)
+        public override DAsyncLink Resume(IResumptionContext context, Exception exception)
         {
             throw new NotImplementedException();
         }

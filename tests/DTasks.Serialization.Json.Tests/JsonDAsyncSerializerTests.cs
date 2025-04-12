@@ -32,7 +32,7 @@ public partial class JsonDAsyncSerializerTests
             TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
-        _sut = new(_inspector, _typeResolver, _marshaler, _jsonOptions);
+        _sut = new(_inspector, _typeResolver, _jsonOptions);
 
         _typeResolver
             .GetTypeId(typeof(StateMachine1))
@@ -68,6 +68,8 @@ public partial class JsonDAsyncSerializerTests
             .GetSuspender(typeof(StateMachine2))
             .Returns(suspender2);
 
+        context.Marshaler.Returns(_marshaler);
+
         // Act
         _sut.SerializeStateMachine(buffer1, context, parentId1, ref stateMachine1);
         _sut.SerializeStateMachine(buffer2, context, parentId2, ref stateMachine2);
@@ -84,6 +86,7 @@ public partial class JsonDAsyncSerializerTests
     public void Deserialization_ShouldCorrectlyDeserializeState()
     {
         // Arrange
+        IResumptionContext context = Substitute.For<IResumptionContext>();
         byte[] stateMachine1Bytes = Encoding.UTF8.GetBytes(_fixture.Jsons.StateMachine1Json);
         byte[] stateMachine2Bytes = Encoding.UTF8.GetBytes(_fixture.Jsons.StateMachine2Json);
         StateMachine1Resumer resumer1 = new();
@@ -91,6 +94,8 @@ public partial class JsonDAsyncSerializerTests
 
         ref StateMachine1 stateMachine1 = ref resumer1.StateMachine;
         ref StateMachine2 stateMachine2 = ref resumer2.StateMachine;
+
+        context.Marshaler.Returns(_marshaler);
 
         _inspector
             .GetResumer(typeof(StateMachine1))
@@ -100,8 +105,8 @@ public partial class JsonDAsyncSerializerTests
             .Returns(resumer2);
 
         // Act
-        _ = _sut.DeserializeStateMachine(stateMachine1Bytes);
-        _ = _sut.DeserializeStateMachine(stateMachine2Bytes, new object());
+        _ = _sut.DeserializeStateMachine(context, stateMachine1Bytes);
+        _ = _sut.DeserializeStateMachine(context, stateMachine2Bytes, new object());
 
         // Assert
         stateMachine1.__this.Should().Be(_fixture.Services.Service1);

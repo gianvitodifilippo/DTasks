@@ -57,7 +57,7 @@ public sealed partial class DAsyncFlow
     private readonly ConcurrentDictionary<DCancellationTokenSource, DistributedCancellationInfo> _cancellationInfos;
     private readonly ConcurrentDictionary<DCancellationId, DCancellationTokenSource> _cancellations;
 
-    internal DAsyncFlow()
+    private DAsyncFlow()
     {
         _state = FlowState.Idling;
         _builder = AsyncTaskMethodBuilder.Create();

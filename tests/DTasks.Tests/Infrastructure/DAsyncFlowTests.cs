@@ -22,8 +22,8 @@ public class DAsyncFlowTests
         typeResolver.GetTypeId(Arg.Any<Type>()).Throws<NotImplementedException>();
 
         _host = Substitute.For<IDAsyncHost>();
-        _sut = new();
-        _stateManager = new(_sut, typeResolver);
+        _sut = DAsyncFlow.Create();
+        _stateManager = new(typeResolver);
 
         _host.Marshaler.Returns(new FakeDAsyncMarshaler());
         _host.StateManager.Returns(_stateManager);
