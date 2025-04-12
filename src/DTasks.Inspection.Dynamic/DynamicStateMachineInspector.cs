@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Inspection.Dynamic;
 

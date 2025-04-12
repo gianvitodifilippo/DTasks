@@ -1,10 +1,12 @@
-﻿using DTasks.Infrastructure;
+﻿using DTasks.Utils;
 
 namespace DTasks.Serialization;
 
 public interface IDAsyncStorage
 {
-    Task<ReadOnlyMemory<byte>> LoadAsync(DAsyncId id, CancellationToken cancellationToken = default);
+    Task<Option<ReadOnlyMemory<byte>>> LoadAsync<TKey>(TKey key, CancellationToken cancellationToken = default)
+        where TKey : notnull;
 
-    Task SaveAsync(DAsyncId id, ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default);
+    Task SaveAsync<TKey>(TKey key, ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default)
+        where TKey : notnull;
 }

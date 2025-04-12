@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json;
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Collections;
 using System.Linq.Expressions;
 using System.Reflection;
+using DTasks.Infrastructure.Marshaling;
 using Xunit.Sdk;
 
 namespace DTasks.Extensions.DependencyInjection;

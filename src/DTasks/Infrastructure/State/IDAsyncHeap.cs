@@ -7,7 +7,7 @@ namespace DTasks.Infrastructure.State;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IDAsyncHeap
 {
-    Task SaveAsync<TKey, TValue>(TKey key, TypedInstance<TValue> value, CancellationToken cancellationToken = default)
+    Task SaveAsync<TKey, TValue>(TKey key, TValue value, CancellationToken cancellationToken = default)
         where TKey : notnull;
     
     Task<Option<TValue>> LoadAsync<TKey, TValue>(TKey key, CancellationToken cancellationToken = default)

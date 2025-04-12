@@ -1,4 +1,6 @@
-﻿namespace DTasks.Infrastructure;
+﻿using DTasks.Infrastructure.Marshaling;
+
+namespace DTasks.Infrastructure;
 
 internal class FakeDAsyncMarshaler : IDAsyncMarshaler
 {

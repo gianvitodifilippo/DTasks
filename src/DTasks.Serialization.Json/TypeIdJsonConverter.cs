@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json;
 

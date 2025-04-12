@@ -2,6 +2,7 @@
 using DTasks.Extensions.DependencyInjection.Marshaling;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq.Expressions;
+using DTasks.Infrastructure.Marshaling;
 using static FluentAssertions.FluentActions;
 
 namespace DTasks.Extensions.DependencyInjection;

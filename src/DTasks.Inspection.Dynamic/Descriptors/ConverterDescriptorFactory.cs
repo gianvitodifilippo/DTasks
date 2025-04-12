@@ -3,6 +3,7 @@ using DTasks.Utils;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Inspection.Dynamic.Descriptors;
 

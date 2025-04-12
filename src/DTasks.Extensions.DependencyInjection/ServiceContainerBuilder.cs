@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Extensions.DependencyInjection;
 

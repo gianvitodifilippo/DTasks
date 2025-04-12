@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Extensions.DependencyInjection;
 

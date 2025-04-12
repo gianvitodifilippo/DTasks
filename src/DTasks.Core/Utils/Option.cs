@@ -33,20 +33,13 @@ public readonly struct Option<TValue> : IEquatable<Option<TValue>>
 
     public static Option<TValue> None => new(default!, hasValue: false);
 
-    public bool Equals(Option<TValue> other)
-    {
-        return HasValue == other.HasValue && ValuesEqual(_value, other._value);
-    }
+    public bool Equals(Option<TValue> other) =>
+        HasValue == other.HasValue &&
+        ValuesEqual(_value, other._value);
 
-    public override bool Equals(object? obj)
-    {
-        return obj is Option<TValue> option && Equals(option);
-    }
+    public override bool Equals(object? obj) => obj is Option<TValue> option && Equals(option);
 
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(HasValue, _value);
-    }
+    public override int GetHashCode() => HashCode.Combine(HasValue, _value);
 
     private static bool ValuesEqual(TValue left, TValue right)
     {
@@ -59,15 +52,9 @@ public readonly struct Option<TValue> : IEquatable<Option<TValue>>
         return left.Equals(right);
     }
 
-    public static bool operator ==(Option<TValue> left, Option<TValue> right)
-    {
-        return left.Equals(right);
-    }
+    public static bool operator ==(Option<TValue> left, Option<TValue> right) => left.Equals(right);
 
-    public static bool operator !=(Option<TValue> left, Option<TValue> right)
-    {
-        return !(left == right);
-    }
+    public static bool operator !=(Option<TValue> left, Option<TValue> right) => !(left == right);
 
     public static Option<TValue> Some(TValue value) => new(value);
 

@@ -1,4 +1,5 @@
 ﻿using DTasks.Extensions.DependencyInjection.Mapping;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Extensions.DependencyInjection.Marshaling;
 

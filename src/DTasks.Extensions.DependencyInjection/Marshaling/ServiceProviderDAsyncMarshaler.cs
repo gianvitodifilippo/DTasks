@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Frozen;
 using System.Diagnostics;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Extensions.DependencyInjection.Marshaling;
 

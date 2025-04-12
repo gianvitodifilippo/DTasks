@@ -57,7 +57,7 @@ public sealed partial class DAsyncFlow
     private readonly ConcurrentDictionary<DCancellationTokenSource, DistributedCancellationInfo> _cancellationInfos;
     private readonly ConcurrentDictionary<DCancellationId, DCancellationTokenSource> _cancellations;
 
-    private DAsyncFlow()
+    internal DAsyncFlow()
     {
         _state = FlowState.Pending;
         _builder = AsyncTaskMethodBuilder.Create();
@@ -129,7 +129,7 @@ public sealed partial class DAsyncFlow
 
         _runnable = runnable;
         _cancellationToken = cancellationToken;
-        _parentId = DAsyncId.RootId;
+        _parentId = DAsyncId.NewFlowId();
         _id = DAsyncId.New();
         Initialize(host);
 
@@ -188,22 +188,22 @@ public sealed partial class DAsyncFlow
 
     private void AwaitOnSucceed()
     {
-        Await(_host.OnSucceedAsync(_cancellationToken), FlowState.Returning);
+        Await(_host.OnSucceedAsync(this, _cancellationToken), FlowState.Returning);
     }
 
     private void AwaitOnSucceed<TResult>(TResult result)
     {
-        Await(_host.OnSucceedAsync(result, _cancellationToken), FlowState.Returning);
+        Await(_host.OnSucceedAsync(this, result, _cancellationToken), FlowState.Returning);
     }
 
     private void AwaitOnFail(Exception exception)
     {
-        Await(_host.OnFailAsync(exception, _cancellationToken), FlowState.Returning);
+        Await(_host.OnFailAsync(this, exception, _cancellationToken), FlowState.Returning);
     }
 
     private void AwaitOnCancel(OperationCanceledException exception)
     {
-        Await(_host.OnCancelAsync(exception, _cancellationToken), FlowState.Returning);
+        Await(_host.OnCancelAsync(this, exception, _cancellationToken), FlowState.Returning);
     }
 
     private void Return()
@@ -219,23 +219,21 @@ public sealed partial class DAsyncFlow
         return result;
     }
 
-    public static DAsyncFlow Create(ExecutionMode executionMode)
+    public static DAsyncFlow Create()
     {
-        ThrowHelper.ThrowIfNull(executionMode);
-
         DAsyncFlow flow = RentFromCache();
         
 #if DEBUG
         GC.ReRegisterForFinalize(flow);
+        flow._stackTrace = Environment.StackTrace;
 #endif
         
         return flow;
     }
     
-    public static ValueTask StartAsync(ExecutionMode executionMode, IDAsyncHost host, IDAsyncRunnable runnable,
+    public static ValueTask StartFlowAsync(IDAsyncHost host, IDAsyncRunnable runnable,
         CancellationToken cancellationToken = default)
     {
-        ThrowHelper.ThrowIfNull(executionMode);
         ThrowHelper.ThrowIfNull(host);
         ThrowHelper.ThrowIfNull(runnable);
         
@@ -245,10 +243,9 @@ public sealed partial class DAsyncFlow
         return flow.StartCoreAsync(host, runnable, cancellationToken);
     }
     
-    public static ValueTask ResumeAsync(ExecutionMode executionMode, IDAsyncHost host, DAsyncId id,
+    public static ValueTask ResumeFlowAsync(IDAsyncHost host, DAsyncId id,
         CancellationToken cancellationToken = default)
     {
-        ThrowHelper.ThrowIfNull(executionMode);
         ThrowHelper.ThrowIfNull(host);
         
         DAsyncFlow flow = RentFromCache();
@@ -257,10 +254,9 @@ public sealed partial class DAsyncFlow
         return flow.ResumeCoreAsync(host, id, cancellationToken);
     }
     
-    public static ValueTask ResumeAsync<TResult>(ExecutionMode executionMode, IDAsyncHost host, DAsyncId id, TResult result,
+    public static ValueTask ResumeFlowAsync<TResult>(IDAsyncHost host, DAsyncId id, TResult result,
         CancellationToken cancellationToken = default)
     {
-        ThrowHelper.ThrowIfNull(executionMode);
         ThrowHelper.ThrowIfNull(host);
         
         DAsyncFlow flow = RentFromCache();
@@ -269,10 +265,9 @@ public sealed partial class DAsyncFlow
         return flow.ResumeCoreAsync(host, id, result, cancellationToken);
     }
     
-    public static ValueTask ResumeAsync(ExecutionMode executionMode, IDAsyncHost host, DAsyncId id, Exception exception,
+    public static ValueTask ResumeFlowAsync(IDAsyncHost host, DAsyncId id, Exception exception,
         CancellationToken cancellationToken = default)
     {
-        ThrowHelper.ThrowIfNull(executionMode);
         ThrowHelper.ThrowIfNull(host);
         
         DAsyncFlow flow = RentFromCache();

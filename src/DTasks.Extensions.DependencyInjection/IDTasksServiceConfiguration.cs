@@ -1,4 +1,6 @@
-﻿namespace DTasks.Extensions.DependencyInjection;
+﻿using DTasks.Infrastructure.Marshaling;
+
+namespace DTasks.Extensions.DependencyInjection;
 
 public interface IDTasksServiceConfiguration
 {

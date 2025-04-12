@@ -1,5 +1,4 @@
-using System.ComponentModel;
-using DTasks.Execution;
+﻿using System.ComponentModel;
 using DTasks.Infrastructure.Execution;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
@@ -21,15 +20,15 @@ public interface IDAsyncHost
     
     // TODO: Add distributed lock provider
     
-    Task OnStartAsync(IDAsyncResultBuilder resultBuilder, CancellationToken cancellationToken);
+    Task OnStartAsync(IDAsyncFlowStartContext context, CancellationToken cancellationToken);
     
     Task OnSuspendAsync(CancellationToken cancellationToken);
 
-    Task OnSucceedAsync(CancellationToken cancellationToken);
+    Task OnSucceedAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken);
 
-    Task OnSucceedAsync<TResult>(TResult result, CancellationToken cancellationToken);
+    Task OnSucceedAsync<TResult>(IDAsyncFlowCompletionContext context, TResult result, CancellationToken cancellationToken);
 
-    Task OnFailAsync(Exception exception, CancellationToken cancellationToken);
+    Task OnFailAsync(IDAsyncFlowCompletionContext context, Exception exception, CancellationToken cancellationToken);
 
-    Task OnCancelAsync(OperationCanceledException exception, CancellationToken cancellationToken);
+    Task OnCancelAsync(IDAsyncFlowCompletionContext context, OperationCanceledException exception, CancellationToken cancellationToken);
 }

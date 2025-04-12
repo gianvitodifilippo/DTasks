@@ -3,6 +3,7 @@ using DTasks.Inspection;
 using DTasks.Inspection.Dynamic;
 using System.Buffers;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using DTasks.Infrastructure.Marshaling;
 
@@ -28,7 +29,34 @@ public sealed class JsonDAsyncSerializer : IDAsyncSerializer
         };
     }
 
-    public void SerializeStateMachine<TStateMachine>(IBufferWriter<byte> buffer, DAsyncId parentId, ref TStateMachine stateMachine, ISuspensionContext suspensionContext)
+    public void Serialize<TValue>(IBufferWriter<byte> buffer, TValue value)
+    {
+        using Utf8JsonWriter writer = new(buffer, new JsonWriterOptions
+        {
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            IndentCharacter = _jsonOptions.IndentCharacter,
+            Indented = _jsonOptions.WriteIndented,
+            IndentSize = _jsonOptions.IndentSize,
+            MaxDepth = _jsonOptions.MaxDepth,
+            NewLine = _jsonOptions.NewLine,
+            SkipValidation =
+#if DEBUG
+                true
+#else
+                false
+#endif
+        });
+        
+        JsonSerializer.Serialize(writer, value, _jsonOptions);
+    }
+
+    public TValue Deserialize<TValue>(ReadOnlySpan<byte> bytes)
+    {
+        Utf8JsonReader reader = new(bytes);
+        return JsonSerializer.Deserialize<TValue>(ref reader, _jsonOptions)!;
+    }
+
+    public void SerializeStateMachine<TStateMachine>(IBufferWriter<byte> buffer, ISuspensionContext context, ref TStateMachine stateMachine)
         where TStateMachine : notnull
     {
         _referenceResolver.InitForWriting();
@@ -37,7 +65,7 @@ public sealed class JsonDAsyncSerializer : IDAsyncSerializer
         IStateMachineSuspender<TStateMachine> suspender = (IStateMachineSuspender<TStateMachine>)_inspector.GetSuspender(typeof(TStateMachine));
         TypeId typeId = _typeResolver.GetTypeId(typeof(TStateMachine));
 
-        stateMachineWriter.SerializeStateMachine(ref stateMachine, typeId, parentId, suspender, suspensionContext);
+        stateMachineWriter.SerializeStateMachine(ref stateMachine, typeId, context, suspender);
         _referenceResolver.Clear();
     }
 

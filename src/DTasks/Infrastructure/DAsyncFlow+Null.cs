@@ -33,16 +33,16 @@ public sealed partial class DAsyncFlow
 
         IDAsyncSuspensionHandler IDAsyncHost.SuspensionHandler => Fail<IDAsyncSuspensionHandler>();
 
-        Task IDAsyncHost.OnStartAsync(IDAsyncResultBuilder resultBuilder, CancellationToken cancellationToken) => Fail<Task>();
+        Task IDAsyncHost.OnStartAsync(IDAsyncFlowStartContext context, CancellationToken cancellationToken) => Fail<Task>();
 
         Task IDAsyncHost.OnSuspendAsync(CancellationToken cancellationToken) => Fail<Task>();
 
-        Task IDAsyncHost.OnSucceedAsync(CancellationToken cancellationToken) => Fail<Task>();
+        Task IDAsyncHost.OnSucceedAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken) => Fail<Task>();
 
-        Task IDAsyncHost.OnSucceedAsync<TResult>(TResult result, CancellationToken cancellationToken) => Fail<Task>();
+        Task IDAsyncHost.OnSucceedAsync<TResult>(IDAsyncFlowCompletionContext context, TResult result, CancellationToken cancellationToken) => Fail<Task>();
 
-        Task IDAsyncHost.OnFailAsync(Exception exception, CancellationToken cancellationToken) => Fail<Task>();
+        Task IDAsyncHost.OnFailAsync(IDAsyncFlowCompletionContext context, Exception exception, CancellationToken cancellationToken) => Fail<Task>();
 
-        Task IDAsyncHost.OnCancelAsync(OperationCanceledException exception, CancellationToken cancellationToken) => Fail<Task>();
+        Task IDAsyncHost.OnCancelAsync(IDAsyncFlowCompletionContext context, OperationCanceledException exception, CancellationToken cancellationToken) => Fail<Task>();
     }
 }

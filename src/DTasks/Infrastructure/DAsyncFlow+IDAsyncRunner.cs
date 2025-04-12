@@ -39,7 +39,7 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         _childId = _id;
         _id = id;
 
-        if (id.IsRoot)
+        if (id.IsFlowId)
         {
             AwaitOnSucceed();
         }
@@ -60,7 +60,7 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         _childId = _id;
         _id = id;
 
-        if (id.IsRoot)
+        if (id.IsFlowId)
         {
             AwaitOnSucceed(result);
         }
@@ -81,7 +81,7 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         _childId = _id;
         _id = id;
 
-        if (id.IsRoot)
+        if (id.IsFlowId)
         {
             if (exception is OperationCanceledException oce)
             {

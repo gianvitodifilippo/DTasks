@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json;
 
@@ -28,13 +29,13 @@ internal readonly ref struct JsonStateMachineWriter(
 #endif
     });
 
-    public void SerializeStateMachine<TStateMachine>(ref TStateMachine stateMachine, TypeId typeId, DAsyncId parentId, IStateMachineSuspender<TStateMachine> suspender, ISuspensionContext suspensionContext)
+    public void SerializeStateMachine<TStateMachine>(ref TStateMachine stateMachine, TypeId typeId, ISuspensionContext context, IStateMachineSuspender<TStateMachine> suspender)
         where TStateMachine : notnull
     {
         _writer.WriteStartObject();
         _writer.WriteTypeId("$typeId", typeId);
-        _writer.WriteDAsyncId("$parentId", parentId);
-        suspender.Suspend(ref stateMachine, suspensionContext, in this);
+        _writer.WriteDAsyncId("$parentId", context.ParentId);
+        suspender.Suspend(ref stateMachine, context, in this);
         _writer.WriteEndObject();
         _writer.Flush();
     }

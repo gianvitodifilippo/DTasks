@@ -2,13 +2,22 @@ using System.Diagnostics;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow : IDAsyncResultBuilder
+public sealed partial class DAsyncFlow : IDAsyncFlowStartContext
 {
     private static readonly object s_resultSentinel = new();
 
-    void IDAsyncResultBuilder.SetResult() => SetResultOrException(s_resultSentinel);
+    void IDAsyncFlowStartContext.SetResult() => SetResultOrException(s_resultSentinel);
 
-    void IDAsyncResultBuilder.SetException(Exception exception) => SetResultOrException(exception);
+    void IDAsyncFlowStartContext.SetException(Exception exception) => SetResultOrException(exception);
+
+    DAsyncId IDAsyncFlowStartContext.FlowId
+    {
+        get
+        {
+            Debug.Assert(_parentId.IsFlowId);
+            return _parentId;
+        }
+    }
 
     private void SetResultOrException(object resultOrException)
     {

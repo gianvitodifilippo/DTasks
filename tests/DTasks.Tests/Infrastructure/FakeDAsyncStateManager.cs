@@ -2,6 +2,8 @@
 using DTasks.Inspection.Dynamic;
 using System.Diagnostics;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
+using DTasks.Utils;
 using Xunit.Sdk;
 
 namespace DTasks.Infrastructure;
@@ -125,10 +127,11 @@ internal struct FakeUnmarshalingAction<TField>(MarshaledValue marshaledValue) : 
 }
 #endif
 
-internal sealed class FakeDAsyncStack(IDAsyncMarshaler marshaler, IDAsyncTypeResolver typeResolver) : IDAsyncStack
+internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, IDAsyncTypeResolver typeResolver) : IDAsyncStateManager, IDAsyncStack, IDAsyncHeap
 {
     private readonly DynamicStateMachineInspector _inspector = DynamicStateMachineInspector.Create(typeof(IFakeStateMachineSuspender<>), typeof(IFakeStateMachineResumer), typeResolver);
     private readonly Dictionary<DAsyncId, DehydratedRunnable> _runnables = [];
+    private readonly Dictionary<object, object?> _heap = [];
     private Action<DAsyncId>? _onDehydrate;
 
     public void OnDehydrate(Action<DAsyncId> onDehydrate)
@@ -138,27 +141,36 @@ internal sealed class FakeDAsyncStack(IDAsyncMarshaler marshaler, IDAsyncTypeRes
 
     public int Count => _runnables.Count;
 
-    public ValueTask DehydrateAsync<TStateMachine>(DAsyncId parentId, DAsyncId id, ref TStateMachine stateMachine, ISuspensionContext suspensionContext, CancellationToken cancellationToken = default)
-        where TStateMachine : notnull
-    {
-        if (id == default)
-            throw FailException.ForFailure($"'{nameof(id)}' cannot be default.");
+    IDAsyncStack IDAsyncStateManager.Stack => this;
 
-        if (id == DAsyncId.RootId)
-            throw FailException.ForFailure($"'{nameof(id)}' cannot be {nameof(DAsyncId.RootId)}.");
+    IDAsyncHeap IDAsyncStateManager.Heap => this;
+
+    public ValueTask DehydrateAsync<TStateMachine>(ISuspensionContext context, ref TStateMachine stateMachine,
+        CancellationToken cancellationToken = default) where TStateMachine : notnull
+    {
+        DAsyncId id = context.Id;
+        DAsyncId parentId = context.ParentId;
+        
+        if (id.IsDefault)
+            throw FailException.ForFailure($"Id was defaulted.");
+
+        if (id.IsFlowId)
+            throw FailException.ForFailure($"Id was a flow id.");
 
         Debug.WriteLine($"Dehydrating runnable {id} ({stateMachine}) with parent {parentId}.");
         _onDehydrate?.Invoke(id);
 
         DehydratedRunnable<TStateMachine> runnable = new(_inspector, marshaler, parentId);
-        runnable.Suspend(ref stateMachine, suspensionContext);
+        runnable.Suspend(ref stateMachine, context);
 
         _runnables[id] = runnable;
         return default;
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync(DAsyncId id, CancellationToken cancellationToken = default)
+    public ValueTask<DAsyncLink> HydrateAsync(IResumptionContext context, CancellationToken cancellationToken = default)
     {
+        DAsyncId id = context.Id;
+        
         DehydratedRunnable runnable = _runnables[id];
         _runnables.Remove(id);
 
@@ -167,8 +179,11 @@ internal sealed class FakeDAsyncStack(IDAsyncMarshaler marshaler, IDAsyncTypeRes
         return new(link);
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync<TResult>(DAsyncId id, TResult result, CancellationToken cancellationToken = default)
+    public ValueTask<DAsyncLink> HydrateAsync<TResult>(IResumptionContext context, TResult result,
+        CancellationToken cancellationToken = default)
     {
+        DAsyncId id = context.Id;
+
         DehydratedRunnable runnable = _runnables[id];
         _runnables.Remove(id);
 
@@ -177,7 +192,7 @@ internal sealed class FakeDAsyncStack(IDAsyncMarshaler marshaler, IDAsyncTypeRes
         return new(link);
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync(DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
+    public ValueTask<DAsyncLink> HydrateAsync(IResumptionContext context, Exception exception, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
@@ -193,6 +208,29 @@ internal sealed class FakeDAsyncStack(IDAsyncMarshaler marshaler, IDAsyncTypeRes
     public ValueTask FlushAsync(CancellationToken cancellationToken = default)
     {
         return default;
+    }
+
+    public Task SaveAsync<TKey, TValue>(TKey key, TValue value, CancellationToken cancellationToken = default)
+        where TKey : notnull
+    {
+        _heap[key] = value;
+        return Task.CompletedTask;
+    }
+
+    public Task<Option<TValue>> LoadAsync<TKey, TValue>(TKey key, CancellationToken cancellationToken = default)
+        where TKey : notnull
+    {
+        if (!_heap.TryGetValue(key, out object? value))
+            return Task.FromResult(Option<TValue>.None);
+
+        return Task.FromResult(Option<TValue>.Some((TValue)value!));
+    }
+
+    public Task DeleteAsync<TKey>(TKey key, CancellationToken cancellationToken = default)
+        where TKey : notnull
+    {
+        _heap.Remove(key);
+        return Task.CompletedTask;
     }
 
     private abstract class DehydratedRunnable

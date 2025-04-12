@@ -171,14 +171,14 @@ Provides integration of DTasks with ASP.NET Core, enabling workflow orchestratio
 - Exception and cancellation handling.
 - Marshaling revision.
 - Integration with Azure Functions.
-- Support for `DTask.Run`.
 - Generic types and method support.
 
 ## Future plans (beta & first release)
 
+- Support for replay execution.
+- Support for `DTask.Run`.
 - State versioning investigation.
 - Definition of distributed locking API.
-- Revision of infrastructure (hosting) API.
 - Efficient state machine inspection strategy.
 - Integration with SignalR.
 - Performance enhancement.

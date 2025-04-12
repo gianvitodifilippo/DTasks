@@ -1,6 +1,7 @@
 ﻿using DTasks.CompilerServices;
 using System.Linq.Expressions;
 using System.Reflection;
+using DTasks.Infrastructure.Marshaling;
 using static DTasks.Inspection.Dynamic.InspectionFixtures;
 
 namespace DTasks.Inspection.Dynamic;
@@ -65,21 +66,21 @@ public partial class DynamicStateMachineInspectorTests
     private static Expression<Predicate<MethodInfo>> BuilderCreateMethod()
     {
         return method =>
-            method.Name == nameof(AsyncDTaskMethodBuilder<>.Create) &&
+            method.Name == nameof(AsyncDTaskMethodBuilder<int>.Create) &&
             method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>);
     }
 
     private static Expression<Predicate<MethodInfo>> BuilderStartMethod()
     {
         return method =>
-            method.Name == nameof(AsyncDTaskMethodBuilder<>.Start) &&
+            method.Name == nameof(AsyncDTaskMethodBuilder<int>.Start) &&
             method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>);
     }
 
     private static Expression<Predicate<MethodInfo>> BuilderTaskGetter()
     {
         return method =>
-            method.Name == $"get_{nameof(AsyncDTaskMethodBuilder<>.Task)}" &&
+            method.Name == $"get_{nameof(AsyncDTaskMethodBuilder<int>.Task)}" &&
             method.DeclaringType == typeof(AsyncDTaskMethodBuilder<int>);
     }
 

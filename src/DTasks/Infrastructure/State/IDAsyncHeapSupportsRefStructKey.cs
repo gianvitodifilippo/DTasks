@@ -11,7 +11,7 @@ public interface IDAsyncHeapSupportsRefStructKey
 {
     bool SupportsKeyType(Type keyType);
 
-    Task SaveAsync<TKey, TValue>(TKey key, TypedInstance<TValue> value, CancellationToken cancellationToken = default)
+    Task SaveAsync<TKey, TValue>(TKey key, TValue value, CancellationToken cancellationToken = default)
         where TKey : notnull, allows ref struct;
     
     Task<Option<TValue>> LoadAsync<TKey, TValue>(TKey key, CancellationToken cancellationToken = default)

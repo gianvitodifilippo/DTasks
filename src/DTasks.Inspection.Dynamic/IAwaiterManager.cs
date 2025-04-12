@@ -1,4 +1,6 @@
-﻿namespace DTasks.Inspection.Dynamic;
+﻿using DTasks.Infrastructure.Marshaling;
+
+namespace DTasks.Inspection.Dynamic;
 
 internal interface IAwaiterManager
 {

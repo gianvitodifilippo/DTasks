@@ -12,8 +12,9 @@ namespace DTasks;
 public readonly struct DAsyncId : IEquatable<DAsyncId>
 {
     private const int ByteCount = 3 * sizeof(uint);
-
-    internal static readonly DAsyncId RootId = new(uint.MaxValue, uint.MaxValue, uint.MaxValue);
+    private const byte ReservedBitsMask = 0b_00001111;
+    private const byte ReservedBitsInvertedMask = ~ReservedBitsMask & byte.MaxValue;
+    private const byte FlowIdMask = 0b_00000001;
 
 #if DEBUG_TESTS
     private static int s_idCount = 0;
@@ -41,7 +42,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     internal bool IsDefault => this == default;
 
-    internal bool IsRoot => this == RootId;
+    internal bool IsFlowId => (_c & FlowIdMask) == FlowIdMask;
 
     public byte[] ToByteArray()
     {
@@ -75,11 +76,8 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     public override string ToString()
     {
-        if (this == default)
+        if (IsDefault)
             return "<default>";
-
-        if (this == RootId)
-            return "<root>";
 
         ref byte head = ref Unsafe.As<DAsyncId, byte>(ref Unsafe.AsRef(in this));
         ReadOnlySpan<byte> bytes = MemoryMarshal.CreateReadOnlySpan(ref head, ByteCount);
@@ -94,16 +92,40 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
     internal static DAsyncId New()
     {
         Span<byte> bytes = stackalloc byte[ByteCount];
-        DAsyncId id;
+        
+        Create(bytes);
+        return new(bytes);
+    }
 
+    internal static DAsyncId NewFlowId()
+    {
+        Span<byte> bytes = stackalloc byte[ByteCount];
+        
+        Create(bytes);
+        bytes[ByteCount - 1] |= FlowIdMask;
+        return new(bytes);
+    }
+
+    private static void Create(Span<byte> bytes)
+    {
         do
         {
             Randomize(bytes);
-            id = new DAsyncId(bytes);
         }
-        while (id == default || id == RootId);
+        while (IsDefault(bytes));
 
-        return id;
+        bytes[ByteCount - 1] &= ReservedBitsInvertedMask;
+
+        static bool IsDefault(Span<byte> bytes)
+        {
+            foreach (byte b in bytes)
+            {
+                if (b != 0)
+                    return false;
+            }
+
+            return true;
+        }
     }
 
     private static void Randomize(Span<byte> bytes)
