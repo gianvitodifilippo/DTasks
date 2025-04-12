@@ -1,9 +1,8 @@
 ﻿using DTasks.Generated.Emit;
 using DTasks.Inspection.Dynamic.Descriptors;
-using DTasks.Marshaling;
 using System.Reflection;
 using System.Reflection.Emit;
-using Xunit.Sdk;
+using DTasks.Infrastructure.Marshaling;
 using static DTasks.Inspection.Dynamic.InspectionFixtures;
 
 namespace DTasks.Inspection.Dynamic;
@@ -12,7 +11,7 @@ public partial class DynamicStateMachineInspectorTests
 {
     private static readonly string s_classAwaiterTypeId = nameof(ClassAwaiter);
 
-    private readonly ITypeResolver _typeResolver;
+    private readonly IDAsyncTypeResolver _typeResolver;
     private readonly ISuspenderDescriptor _suspenderDescriptor;
     private readonly IResumerDescriptor _resumerDescriptor;
     private readonly IReaderDescriptor _readerDescriptor;
@@ -22,7 +21,7 @@ public partial class DynamicStateMachineInspectorTests
 
     public DynamicStateMachineInspectorTests()
     {
-        _typeResolver = Substitute.For<ITypeResolver>();
+        _typeResolver = Substitute.For<IDAsyncTypeResolver>();
 
         _typeResolver
             .GetTypeId(typeof(ClassAwaiter))

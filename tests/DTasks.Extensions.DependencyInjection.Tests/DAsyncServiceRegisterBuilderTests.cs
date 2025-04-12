@@ -1,17 +1,17 @@
-﻿using DTasks.Marshaling;
+﻿using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Extensions.DependencyInjection;
 
 public class DAsyncServiceRegisterBuilderTests
 {
-    private readonly ITypeResolverBuilder _typeResolverBuilder;
-    private readonly ITypeResolver _typeResolver;
+    private readonly IDAsyncTypeResolverBuilder _typeResolverBuilder;
+    private readonly IDAsyncTypeResolver _typeResolver;
     private readonly DAsyncServiceRegisterBuilder _sut;
 
     public DAsyncServiceRegisterBuilderTests()
     {
-        _typeResolverBuilder = Substitute.For<ITypeResolverBuilder>();
-        _typeResolver = Substitute.For<ITypeResolver>();
+        _typeResolverBuilder = Substitute.For<IDAsyncTypeResolverBuilder>();
+        _typeResolver = Substitute.For<IDAsyncTypeResolver>();
         _sut = new DAsyncServiceRegisterBuilder(_typeResolverBuilder);
     }
 

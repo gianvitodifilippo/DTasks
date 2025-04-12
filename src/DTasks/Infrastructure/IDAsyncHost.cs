@@ -1,27 +1,34 @@
-﻿using DTasks.Execution;
-using DTasks.Marshaling;
+﻿using System.ComponentModel;
+using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 
 namespace DTasks.Infrastructure;
 
-internal interface IDAsyncHost
+[EditorBrowsable(EditorBrowsableState.Never)]
+public interface IDAsyncHost
 {
-    ITypeResolver TypeResolver { get; }
+    IDAsyncStateManager StateManager { get; }
 
-    IDistributedCancellationProvider CancellationProvider { get; }
+    IDAsyncMarshaler Marshaler { get; }
+    
+    IDAsyncTypeResolver TypeResolver { get; }
+    
+    IDAsyncCancellationProvider CancellationProvider { get; }
+    
+    IDAsyncSuspensionHandler SuspensionHandler { get; }
+    
+    // TODO: Add distributed lock provider
+    
+    Task OnStartAsync(IDAsyncFlowStartContext context, CancellationToken cancellationToken);
+    
+    Task OnSuspendAsync(CancellationToken cancellationToken);
 
-    IDAsyncMarshaler CreateMarshaler();
+    Task OnSucceedAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken);
 
-    IDAsyncStateManager CreateStateManager(IDAsyncMarshaler marshaler);
+    Task OnSucceedAsync<TResult>(IDAsyncFlowCompletionContext context, TResult result, CancellationToken cancellationToken);
 
-    Task OnSucceedAsync(CancellationToken cancellationToken = default);
+    Task OnFailAsync(IDAsyncFlowCompletionContext context, Exception exception, CancellationToken cancellationToken);
 
-    Task OnSucceedAsync<TResult>(TResult result, CancellationToken cancellationToken = default);
-
-    Task OnFailAsync(Exception exception, CancellationToken cancellationToken = default);
-
-    Task OnCancelAsync(OperationCanceledException exception, CancellationToken cancellationToken = default);
-
-    Task OnYieldAsync(DAsyncId id, CancellationToken cancellationToken = default);
-
-    Task OnDelayAsync(DAsyncId id, TimeSpan delay, CancellationToken cancellationToken = default);
+    Task OnCancelAsync(IDAsyncFlowCompletionContext context, OperationCanceledException exception, CancellationToken cancellationToken);
 }

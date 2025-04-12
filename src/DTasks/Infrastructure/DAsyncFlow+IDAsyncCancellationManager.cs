@@ -1,9 +1,10 @@
 ﻿using System.Diagnostics;
 using DTasks.Execution;
+using DTasks.Infrastructure.Execution;
 
 namespace DTasks.Infrastructure;
 
-internal partial class DAsyncFlow : IDAsyncCancellationManager
+public sealed partial class DAsyncFlow : IDAsyncCancellationManager
 {
     Task IDAsyncCancellationManager.CreateAsync(DCancellationTokenSource source, DAsyncCancellationHandle handle, CancellationToken cancellationToken)
     {
@@ -15,20 +16,20 @@ internal partial class DAsyncFlow : IDAsyncCancellationManager
     {
         DateTimeOffset expirationTime = DateTimeOffset.Now + delay;
         DCancellationId id = Register(source, handle);
-        return _cancellationProvider.CancelAsync(id, expirationTime, cancellationToken);
+        return _host.CancellationProvider.CancelAsync(id, expirationTime, cancellationToken);
     }
 
     Task IDAsyncCancellationManager.CancelAsync(DCancellationTokenSource source, CancellationToken cancellationToken)
     {
         DistributedCancellationInfo info = _cancellationInfos[source];
-        return _cancellationProvider.CancelAsync(info.Id, cancellationToken);
+        return _host.CancellationProvider.CancelAsync(info.Id, cancellationToken);
     }
 
     Task IDAsyncCancellationManager.CancelAfterAsync(DCancellationTokenSource source, TimeSpan delay, CancellationToken cancellationToken)
     {
         DateTimeOffset expirationTime = DateTimeOffset.Now + delay;
         DistributedCancellationInfo info = _cancellationInfos[source];
-        return _cancellationProvider.CancelAsync(info.Id, expirationTime, cancellationToken);
+        return _host.CancellationProvider.CancelAsync(info.Id, expirationTime, cancellationToken);
     }
 
     private DCancellationId Register(DCancellationTokenSource source, DAsyncCancellationHandle handle)

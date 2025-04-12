@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace DTasks.Infrastructure;
 
-internal partial class DAsyncFlow
+public sealed partial class DAsyncFlow
 {
     private void RunIndirection(FlowContinuation continuation)
     {

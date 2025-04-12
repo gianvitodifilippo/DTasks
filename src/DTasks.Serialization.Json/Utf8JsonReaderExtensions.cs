@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 
 namespace DTasks.Serialization.Json;
 
@@ -30,5 +31,13 @@ internal static class Utf8JsonReaderExtensions
 
         if (!reader.ValueTextEquals(expectedName))
             throw new JsonException($"Expected property '{expectedName}'.");
+    }
+
+    public static void ExpectPropertyName(this ref readonly Utf8JsonReader reader, ReadOnlySpan<byte> expectedName)
+    {
+        reader.ExpectToken(JsonTokenType.PropertyName);
+
+        if (!reader.ValueTextEquals(expectedName))
+            throw new JsonException($"Expected property '{Encoding.UTF8.GetString(expectedName)}'.");
     }
 }

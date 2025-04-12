@@ -2,7 +2,7 @@
 
 namespace DTasks.Infrastructure;
 
-internal partial class DAsyncFlow : IDAsyncMethodBuilder
+public sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 {
     void IDAsyncMethodBuilder.AwaitOnCompleted<TAwaiter>(ref TAwaiter awaiter)
     {

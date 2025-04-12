@@ -1,11 +1,12 @@
-﻿using DTasks.Marshaling;
-using DTasks.Utils;
+﻿using DTasks.Utils;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using DTasks.Execution;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Infrastructure;
 
-internal partial class DAsyncFlow : IDAsyncRunnerInternal
+public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 {
     private static readonly object s_branchSuspensionSentinel = new();
 
@@ -38,7 +39,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         _childId = _id;
         _id = id;
 
-        if (id.IsRoot)
+        if (id.IsFlowId)
         {
             AwaitOnSucceed();
         }
@@ -59,7 +60,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         _childId = _id;
         _id = id;
 
-        if (id.IsRoot)
+        if (id.IsFlowId)
         {
             AwaitOnSucceed(result);
         }
@@ -80,7 +81,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         _childId = _id;
         _id = id;
 
-        if (id.IsRoot)
+        if (id.IsFlowId)
         {
             if (exception is OperationCanceledException oce)
             {
@@ -112,7 +113,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         }
 
         _suspendingAwaiterOrType = null;
-        Await(_host.OnYieldAsync(_id, _cancellationToken), FlowState.Returning);
+        Await(_host.SuspensionHandler.OnYieldAsync(_id, _cancellationToken), FlowState.Suspending);
     }
 
     private void Delay(TimeSpan delay)
@@ -125,7 +126,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         }
 
         _suspendingAwaiterOrType = null;
-        Await(_host.OnDelayAsync(_id, delay, _cancellationToken), FlowState.Returning);
+        Await(_host.SuspensionHandler.OnDelayAsync(_id, delay, _cancellationToken), FlowState.Suspending);
     }
 
     private void Callback(ISuspensionCallback callback)
@@ -138,7 +139,7 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
         }
 
         _suspendingAwaiterOrType = null;
-        Await(callback.InvokeAsync(_id, _cancellationToken), FlowState.Returning);
+        Await(callback.InvokeAsync(_id, _cancellationToken), FlowState.Suspending);
     }
 
     private void WhenAll(IEnumerable<IDAsyncRunnable> branches, IDAsyncResultBuilder resultBuilder)
@@ -170,13 +171,9 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
 
             childFlow._state = FlowState.Running;
             childFlow._parent = this;
-            childFlow._host = _host;
-            childFlow._marshaler = _marshaler;
-            childFlow._stateManager = _stateManager;
             childFlow._parentId = _id;
             childFlow._id = DAsyncId.New();
-            childFlow._typeResolver = _typeResolver;
-            childFlow._cancellationProvider = _cancellationProvider;
+            childFlow.Initialize(this);
 
             try
             {
@@ -252,14 +249,10 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
 
             childFlow._state = FlowState.Running;
             childFlow._parent = this;
-            childFlow._host = _host;
-            childFlow._marshaler = _marshaler;
-            childFlow._stateManager = _stateManager;
             childFlow._parentId = _id;
             childFlow._id = DAsyncId.New();
             childFlow._branchIndex = _branchCount;
-            childFlow._typeResolver = _typeResolver;
-            childFlow._cancellationProvider = _cancellationProvider;
+            childFlow.Initialize(this);
 
             try
             {
@@ -346,14 +339,10 @@ internal partial class DAsyncFlow : IDAsyncRunnerInternal
 
             childFlow._state = FlowState.Running;
             childFlow._parent = this;
-            childFlow._host = _host;
-            childFlow._marshaler = _marshaler;
-            childFlow._stateManager = _stateManager;
             childFlow._parentId = _id;
             childFlow._id = DAsyncId.New();
-            childFlow._typeResolver = _typeResolver;
-            childFlow._cancellationProvider = _cancellationProvider;
-
+            childFlow.Initialize(this);
+            
             try
             {
                 runnable.Run(childFlow);

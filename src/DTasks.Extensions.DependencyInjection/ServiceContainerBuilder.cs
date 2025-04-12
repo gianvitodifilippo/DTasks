@@ -1,12 +1,12 @@
 ﻿using DTasks.Extensions.DependencyInjection.Mapping;
 using DTasks.Extensions.DependencyInjection.Marshaling;
 using DTasks.Extensions.DependencyInjection.Utils;
-using DTasks.Marshaling;
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Extensions.DependencyInjection;
 
@@ -16,7 +16,7 @@ using ServiceFactory = Func<IServiceProvider, object>;
 
 internal sealed class ServiceContainerBuilder(
     IServiceCollection services,
-    ITypeResolverBuilder typeResolverBuilder,
+    IDAsyncTypeResolverBuilder typeResolverBuilder,
     IDAsyncServiceRegisterBuilder registerBuilder) : IServiceContainerBuilder
 {
     private readonly MethodInfo _mapSingletonMethod = typeof(IServiceMapper).GetRequiredMethod(
@@ -104,12 +104,12 @@ internal sealed class ServiceContainerBuilder(
 
     public void AddDTaskServices()
     {
-        ITypeResolver typeResolver = typeResolverBuilder.Build();
+        IDAsyncTypeResolver typeResolver = typeResolverBuilder.Build();
         IDAsyncServiceRegister register = registerBuilder.Build(typeResolver);
 
         DAsyncServiceValidator validator = _validationErrors.Count == 0
             ? () => { }
-        : () => throw new AggregateException("Some d-async services are not able to be constructed.", _validationErrors);
+            : () => throw new AggregateException("Some d-async services are not able to be constructed.", _validationErrors);
 
         services
             .AddSingleton(typeResolver)

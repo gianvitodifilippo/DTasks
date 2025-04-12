@@ -1,6 +1,8 @@
+using System.ComponentModel;
 
 namespace DTasks.Infrastructure;
 
+[EditorBrowsable(EditorBrowsableState.Never)]
 public static class DAsyncRunnerExtensions
 {
     private static readonly IgnoreResultBuilder _ignoreResultBuilder = new();

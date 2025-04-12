@@ -1,4 +1,4 @@
-﻿using DTasks.Marshaling;
+﻿using DTasks.Infrastructure.Marshaling;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Extensions.DependencyInjection.Marshaling;
@@ -10,13 +10,13 @@ public class ServiceProviderDAsyncMarshalerTests
 
     private readonly IKeyedServiceProvider _provider;
     private readonly IDAsyncServiceRegister _register;
-    private readonly ITypeResolver _typeResolver;
+    private readonly IDAsyncTypeResolver _typeResolver;
 
     public ServiceProviderDAsyncMarshalerTests()
     {
         _provider = Substitute.For<IKeyedServiceProvider>();
         _register = Substitute.For<IDAsyncServiceRegister>();
-        _typeResolver = Substitute.For<ITypeResolver>();
+        _typeResolver = Substitute.For<IDAsyncTypeResolver>();
 
         _typeResolver.GetTypeId(typeof(ServiceToken)).Returns(s_tokenTypeId);
         _typeResolver.GetTypeId(typeof(Service)).Returns(s_serviceTypeId);

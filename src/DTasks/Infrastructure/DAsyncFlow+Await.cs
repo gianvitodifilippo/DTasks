@@ -1,6 +1,8 @@
-﻿namespace DTasks.Infrastructure;
+﻿using DTasks.Infrastructure.Marshaling;
 
-internal partial class DAsyncFlow
+namespace DTasks.Infrastructure;
+
+public sealed partial class DAsyncFlow
 {
     private void Await(Task task, FlowState state)
     {

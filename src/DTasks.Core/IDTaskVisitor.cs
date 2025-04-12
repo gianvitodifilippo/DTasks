@@ -1,6 +1,6 @@
 ﻿namespace DTasks;
 
-internal interface IDTaskVisitor<TReturn>
+internal interface IDTaskVisitor<out TReturn>
 {
     TReturn Visit(DTask task);
 

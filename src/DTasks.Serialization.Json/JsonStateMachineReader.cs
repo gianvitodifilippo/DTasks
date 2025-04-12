@@ -1,8 +1,8 @@
 ﻿using DTasks.Infrastructure;
 using DTasks.Inspection;
-using DTasks.Marshaling;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DTasks.Infrastructure.Marshaling;
 
 #if NET9_0_OR_GREATER
 using System.Runtime.CompilerServices;
@@ -16,11 +16,11 @@ internal ref struct JsonStateMachineReader(
     ReferenceResolver referenceResolver,
     IDAsyncMarshaler marshaler)
 {
-    public delegate IDAsyncRunnable ResumeAction<T>(IStateMachineResumer resumer, T arg, ref JsonStateMachineReader reader);
+    public delegate IDAsyncRunnable ResumeAction<in T>(IStateMachineResumer resumer, T arg, ref JsonStateMachineReader reader);
 
     private Utf8JsonReader _reader = new(bytes);
 
-    public DAsyncLink DeserializeStateMachine<T>(IStateMachineInspector inspector, ITypeResolver typeResolver, T arg, ResumeAction<T> resume)
+    public DAsyncLink DeserializeStateMachine<T>(IStateMachineInspector inspector, IDAsyncTypeResolver typeResolver, T arg, ResumeAction<T> resume)
     {
         _reader.MoveNext();
         _reader.ExpectToken(JsonTokenType.StartObject);
@@ -160,13 +160,11 @@ internal ref struct JsonStateMachineReader(
         NullTokenUnmarshalingAction<TField> action = new(ref value);
         return marshaler.TryUnmarshal<TField, NullTokenUnmarshalingAction<TField>>(typeId, ref action);
 #else
-        if (marshaler.TryUnmarshal<TField>(default, out UnmarshalResult result))
-        {
-            value = result.Converter.Convert<object?, TField>(null);
-            return true;
-        }
+        if (!marshaler.TryUnmarshal<TField>(default, out UnmarshalResult result))
+            return false;
 
-        return false;
+        value = result.Converter.Convert<object?, TField>(null);
+        return true;
 #endif
     }
 

@@ -171,7 +171,7 @@ public abstract class DTask : IDAsyncRunnable
             ExceptionDispatchInfo.Throw(_task.ExceptionInternal);
         }
 
-        public void Continue(IDAsyncRunner runner)
+        void IDAsyncAwaiter.Continue(IDAsyncRunner runner)
         {
             _task.Run(runner);
         }
@@ -250,7 +250,7 @@ public abstract class DTask<TResult> : DTask
             throw new UnreachableException();
         }
 
-        public void Continue(IDAsyncRunner runner)
+        void IDAsyncAwaiter.Continue(IDAsyncRunner runner)
         {
             _task.Run(runner);
         }

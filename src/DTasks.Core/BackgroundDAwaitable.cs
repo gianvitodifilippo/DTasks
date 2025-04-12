@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace DTasks;
 
-public readonly struct BackgroundDAwaitable(IDAsyncRunnable runnable)
+public readonly ref struct BackgroundDAwaitable(IDAsyncRunnable runnable)
 {
     private readonly BackgroundDTask<DTask> _backgroundTask = new(runnable);
 
@@ -30,7 +30,7 @@ public readonly struct BackgroundDAwaitable(IDAsyncRunnable runnable)
 
         public void OnCompleted(Action continuation) => _backgroundTask.GetAwaiter().OnCompleted(continuation);
 
-        public void Continue(IDAsyncRunner runner) => runner.Background(_backgroundTask.Runnable, _backgroundTask);
+        void IDAsyncAwaiter.Continue(IDAsyncRunner runner) => runner.Background(_backgroundTask.Runnable, _backgroundTask);
     }
 }
 
@@ -59,7 +59,7 @@ public readonly struct BackgroundDAwaitable<TResult>(IDAsyncRunnable runnable)
 
         public void OnCompleted(Action continuation) => _backgroundTask.GetAwaiter().OnCompleted(continuation);
 
-        public void Continue(IDAsyncRunner runner) => runner.Background(_backgroundTask.Runnable, _backgroundTask);
+        void IDAsyncAwaiter.Continue(IDAsyncRunner runner) => runner.Background(_backgroundTask.Runnable, _backgroundTask);
     }
 }
 

@@ -1,26 +1,29 @@
 using Approvals;
-using Approvals.Generated;
 using DTasks;
-using DTasks.AspNetCore;
-using DTasks.Infrastructure;
-using DTasks.Marshaling;
 using DTasks.Serialization;
 using DTasks.Serialization.Json;
 using DTasks.Serialization.StackExchangeRedis;
 using Microsoft.AspNetCore.Mvc;
 using StackExchange.Redis;
-using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DTasks.AspNetCore;
+using DTasks.AspNetCore.Infrastructure;
+using DTasks.Extensions.Hosting;
+using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
+using DTasks.AspNetCore.Infrastructure.Http;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseDTasks(configuration => configuration
+builder.Host.UseDTasks(dTasks => dTasks
     .ConfigureDTasks(configuration => configuration
         .ConfigureTypeResolver(typeResolver =>
         {
             typeResolver.RegisterDAsyncType<AsyncEndpoints>();
-            typeResolver.RegisterDAsyncType<DAsyncRunner>();
+            AspNetCoreDAsyncHost.RegisterTypeIds(typeResolver);
         })));
 
 #region In library
@@ -29,24 +32,26 @@ builder.Services
     .AddSingleton(sp => ConnectionMultiplexer.Connect("localhost:6379"))
     .AddSingleton(sp => sp.GetRequiredService<ConnectionMultiplexer>().GetDatabase());
 builder.Services
-    .AddSingleton(sp => new Func<IDAsyncMarshaler, IDAsyncSerializer>(marshaler => JsonDAsyncSerializer.Create(sp.GetRequiredService<ITypeResolver>(), marshaler, sp.GetRequiredService<JsonSerializerOptions>())))
+    .AddSingleton<IDAsyncSerializer>(sp => JsonDAsyncSerializer.Create(sp.GetRequiredService<IDAsyncTypeResolver>(), sp.GetRequiredService<JsonSerializerOptions>()))
     .AddSingleton<IDAsyncStorage, RedisDAsyncStorage>()
-    .AddSingleton(new JsonSerializerOptions()
+    .AddSingleton(sp => new JsonSerializerOptions()
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         WriteIndented = true,
         Converters =
         {
             new TypeIdJsonConverter(),
-            new DAsyncIdJsonConverter()
+            new DAsyncIdJsonConverter(),
+            new TypedInstanceJsonConverter<object>(sp.GetRequiredService<IDAsyncTypeResolver>()),
+            new TypedInstanceJsonConverter<IDAsyncContinuationMemento>(sp.GetRequiredService<IDAsyncTypeResolver>()),
         }
     })
     .AddHttpClient()
-    .AddScoped<AspNetCoreDAsyncHost>()
-    .AddSingleton<RedisWorkQueue>()
-    .AddHostedService(sp => sp.GetRequiredService<RedisWorkQueue>())
-    .AddSingleton<IWorkQueue>(sp => sp.GetRequiredService<RedisWorkQueue>())
-    .AddScoped<DAsyncRunner>();
+    .AddSingleton<RedisDAsyncSuspensionHandler>()
+    .AddHostedService(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
+    .AddSingleton<IDAsyncSuspensionHandler>(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
+    .AddSingleton<IDAsyncStateManager, BinaryDAsyncStateManager>()
+    .AddSingleton<IDAsyncContinuationFactory, DAsyncContinuationFactory>();
 #endregion
 
 builder.Services
@@ -57,50 +62,22 @@ var app = builder.Build();
 
 #region Generated
 app.MapPost("/approvals", async (
-    [FromServices] DAsyncRunner runner,
-    [FromServices] AspNetCoreDAsyncHost host,
-    [FromServices] IDatabase redis,
-    [FromHeader(Name = "Async-CallbackType")] string callbackType,
-    [FromHeader(Name = "Async-CallbackUrl")] string? callbackAddress,
+    HttpContext httpContext,
+    [FromServices] AsyncEndpoints endpoints,
     [FromBody] NewApprovalRequest request,
     CancellationToken cancellationToken) =>
 {
-    string operationId = Guid.NewGuid().ToString();
-    DTask<IResult> task;
+    AspNetCoreDAsyncHost host = AspNetCoreDAsyncHost.CreateHttpHost(httpContext, "GetApprovalsStatus");
+    DTask<IResult> task = endpoints.NewApproval(request);
 
-    if (callbackType is "webhook")
-    {
-        if (callbackAddress is null)
-            return Results.BadRequest();
-
-        task = runner.NewApproval_Webhook(operationId, new Uri(callbackAddress), request);
-    }
-    else
-    {
-        task = runner.NewApproval(operationId, request);
-    }
-
-    host.IsSyncContext = true;
     await host.StartAsync(task, cancellationToken);
-
-    if (host.Result is IResult result)
-        return result;
-
-    await redis.StringSetAsync(operationId, $$"""
-    {
-      "type": "object",
-      "status": "pending"
-    }
-    """);
-
-    object value = new { operationId };
-    return Results.AcceptedAtRoute("GetApprovalsStatus", value, value);
 });
 
 app.MapGet("/approvals/{operationId}", async (
     [FromServices] IDatabase redis,
     string operationId) =>
 {
+    operationId = WebUtility.UrlDecode(operationId);
     string? value = await redis.StringGetAsync(operationId);
     if (value is null)
         return Results.NotFound();
@@ -108,7 +85,7 @@ app.MapGet("/approvals/{operationId}", async (
     JsonElement obj = JsonSerializer.Deserialize<JsonElement>(value);
     string status = obj.GetProperty("status").GetString()!;
 
-    if (status is "complete")
+    if (status is "succeeded")
         return Results.Ok(new
         {
             status,
@@ -119,15 +96,16 @@ app.MapGet("/approvals/{operationId}", async (
 }).WithName("GetApprovalsStatus");
 
 app.MapGet("/approvals/{id}/{result}", async (
+    HttpContext httpContext,
     string id,
     ApprovalResult result,
-    [FromServices] AspNetCoreDAsyncHost host,
     CancellationToken cancellationToken) =>
 {
-    if (!DAsyncId.TryParse(WebUtility.UrlDecode(id), out DAsyncId dasyncId))
+    if (!DAsyncId.TryParse(id, out DAsyncId dAsyncId))
         return Results.NotFound();
 
-    await host.ResumeAsync(dasyncId, result, cancellationToken);
+    AspNetCoreDAsyncHost host = AspNetCoreDAsyncHost.CreateHttpHost(httpContext, "GetApprovalsStatus");
+    await host.ResumeAsync(dAsyncId, result, cancellationToken);
     return Results.Ok();
 });
 #endregion

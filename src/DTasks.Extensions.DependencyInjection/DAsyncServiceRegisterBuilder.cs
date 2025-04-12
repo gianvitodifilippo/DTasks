@@ -1,10 +1,10 @@
-﻿using DTasks.Marshaling;
-using System.Collections.Frozen;
+﻿using System.Collections.Frozen;
 using System.Diagnostics;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Extensions.DependencyInjection;
 
-internal sealed class DAsyncServiceRegisterBuilder(ITypeResolverBuilder typeResolverBuilder) : IDAsyncServiceRegisterBuilder
+internal sealed class DAsyncServiceRegisterBuilder(IDAsyncTypeResolverBuilder typeResolverBuilder) : IDAsyncServiceRegisterBuilder
 {
     private readonly HashSet<Type> _types = [];
 
@@ -18,7 +18,7 @@ internal sealed class DAsyncServiceRegisterBuilder(ITypeResolverBuilder typeReso
         return typeId;
     }
 
-    public IDAsyncServiceRegister Build(ITypeResolver typeResolver)
+    public IDAsyncServiceRegister Build(IDAsyncTypeResolver typeResolver)
     {
         return new DAsyncServiceRegister(_types.ToFrozenSet(), typeResolver);
     }

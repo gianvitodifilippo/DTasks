@@ -1,4 +1,5 @@
 ﻿using DTasks.Infrastructure;
+using DTasks.Utils;
 using StackExchange.Redis;
 
 namespace DTasks.Serialization.StackExchangeRedis;
@@ -25,10 +26,11 @@ public class RedisDAsyncStorageTests
         _database.StringGetAsync(Arg.Any<RedisKey>(), Arg.Any<CommandFlags>()).Returns(expectedBytes);
 
         // Act
-        ReadOnlyMemory<byte> bytes = await _sut.LoadAsync(id);
+        Option<ReadOnlyMemory<byte>> bytes = await _sut.LoadAsync(id);
 
         // Assert
-        bytes.Should().Be(expectedBytes);
+        bytes.HasValue.Should().BeTrue();
+        bytes.Value.Should().Be(expectedBytes);
     }
 
     [Fact]

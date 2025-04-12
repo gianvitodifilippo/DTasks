@@ -1,12 +1,12 @@
 ﻿using DTasks.Inspection;
-using DTasks.Marshaling;
 using DTasks.Utils;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Infrastructure;
 
-internal partial class DAsyncFlow
+public sealed partial class DAsyncFlow
 {
     private sealed class HandleRunnableWrapper(DAsyncFlow flow, IDAsyncRunnable runnable, DAsyncId id) : IDAsyncRunnable, IDAsyncStateMachine
     {
@@ -147,7 +147,7 @@ internal partial class DAsyncFlow
                 throw new ArgumentException("A d-async runnable was resumed on a different flow than the one that started it.");
 
             IDAsyncStateMachine? stateMachine = flow._stateMachine;
-            object? resultBuilder = flow.Consume(ref flow._resultBuilder);
+            object? resultBuilder = Consume(ref flow._resultBuilder);
 
             Assert.NotNull(stateMachine);
             Assert.Is<IDAsyncResultBuilder<TResult>>(resultBuilder);

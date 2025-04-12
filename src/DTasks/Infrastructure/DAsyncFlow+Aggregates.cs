@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace DTasks.Infrastructure;
 
-internal partial class DAsyncFlow
+public sealed partial class DAsyncFlow
 {
     private void SetBranchResult()
     {
@@ -54,7 +54,7 @@ internal partial class DAsyncFlow
 
     private void SetBranchException(Exception exception)
     {
-        _aggregateExceptions ??= new(1);
+        _aggregateExceptions ??= new List<Exception>(1);
         _aggregateExceptions.Add(exception);
 
         switch (_aggregateType)
@@ -174,7 +174,7 @@ internal partial class DAsyncFlow
             WhenAnyStateMachine stateMachine = default;
             //stateMachine.BranchCount = branchCount;
             flow._suspendingAwaiterOrType = typeof(WhenAnyAwaiter);
-            flow._continuation = Continuations.Return;
+            flow._continuation = Continuations.Suspend;
             flow.Dehydrate(flow._parentId, flow._id, ref stateMachine);
         }
     }

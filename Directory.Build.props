@@ -3,7 +3,7 @@
     <PropertyGroup>
         <Authors>Gianvito Difilippo</Authors>
 
-        <LangVersion>preview</LangVersion>
+        <LangVersion>latest</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <WarningsAsErrors>Nullable</WarningsAsErrors>

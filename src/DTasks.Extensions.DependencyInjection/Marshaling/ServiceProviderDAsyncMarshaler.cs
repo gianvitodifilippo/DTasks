@@ -1,7 +1,7 @@
-﻿using DTasks.Marshaling;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Frozen;
 using System.Diagnostics;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Extensions.DependencyInjection.Marshaling;
 
@@ -14,13 +14,13 @@ internal class ServiceProviderDAsyncMarshaler : IDAsyncMarshaler, ITokenConverte
 
     private readonly IServiceProvider _provider;
     private readonly IDAsyncServiceRegister _register;
-    private readonly ITypeResolver _typeResolver;
+    private readonly IDAsyncTypeResolver _typeResolver;
     private readonly Dictionary<object, ServiceToken> _tokens;
 
     protected ServiceProviderDAsyncMarshaler(
         IServiceProvider provider,
         IDAsyncServiceRegister register,
-        ITypeResolver typeResolver)
+        IDAsyncTypeResolver typeResolver)
     {
         _provider = provider;
         _register = register;

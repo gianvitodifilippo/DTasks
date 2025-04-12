@@ -1,7 +1,9 @@
 ﻿using DTasks.Inspection;
 using DTasks.Inspection.Dynamic;
-using DTasks.Marshaling;
 using System.Diagnostics;
+using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
+using DTasks.Utils;
 using Xunit.Sdk;
 
 namespace DTasks.Infrastructure;
@@ -17,6 +19,8 @@ internal interface IFakeStateMachineResumer
     IDAsyncRunnable Resume(FakeStateMachineReader reader);
 
     IDAsyncRunnable Resume<TResult>(FakeStateMachineReader reader, TResult result);
+
+    // IDAsyncRunnable Resume(FakeStateMachineReader reader, Exception exception);
 }
 
 internal abstract class MarshaledValue(TypeId typeId)
@@ -125,10 +129,11 @@ internal struct FakeUnmarshalingAction<TField>(MarshaledValue marshaledValue) : 
 }
 #endif
 
-internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeResolver typeResolver) : IDAsyncStateManager
+internal sealed class FakeDAsyncStateManager(IDAsyncTypeResolver typeResolver) : IDAsyncStateManager, IDAsyncStack, IDAsyncHeap
 {
     private readonly DynamicStateMachineInspector _inspector = DynamicStateMachineInspector.Create(typeof(IFakeStateMachineSuspender<>), typeof(IFakeStateMachineResumer), typeResolver);
     private readonly Dictionary<DAsyncId, DehydratedRunnable> _runnables = [];
+    private readonly Dictionary<object, object?> _heap = [];
     private Action<DAsyncId>? _onDehydrate;
 
     public void OnDehydrate(Action<DAsyncId> onDehydrate)
@@ -138,48 +143,58 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeRe
 
     public int Count => _runnables.Count;
 
-    public ValueTask DehydrateAsync<TStateMachine>(DAsyncId parentId, DAsyncId id, ref TStateMachine stateMachine, ISuspensionContext suspensionContext, CancellationToken cancellationToken = default)
-        where TStateMachine : notnull
-    {
-        if (id == default)
-            throw FailException.ForFailure($"'{nameof(id)}' cannot be default.");
+    IDAsyncStack IDAsyncStateManager.Stack => this;
 
-        if (id == DAsyncId.RootId)
-            throw FailException.ForFailure($"'{nameof(id)}' cannot be {nameof(DAsyncId.RootId)}.");
+    IDAsyncHeap IDAsyncStateManager.Heap => this;
+
+    public ValueTask DehydrateAsync<TStateMachine>(ISuspensionContext context, DAsyncId parentId, DAsyncId id, ref TStateMachine stateMachine,
+        CancellationToken cancellationToken = default) where TStateMachine : notnull
+    {
+        if (id.IsDefault)
+            throw FailException.ForFailure($"Id was defaulted.");
+
+        if (id.IsFlowId)
+            throw FailException.ForFailure($"Id was a flow id.");
 
         Debug.WriteLine($"Dehydrating runnable {id} ({stateMachine}) with parent {parentId}.");
         _onDehydrate?.Invoke(id);
 
-        DehydratedRunnable<TStateMachine> runnable = new(_inspector, marshaler, parentId);
-        runnable.Suspend(ref stateMachine, suspensionContext);
+        DehydratedRunnable<TStateMachine> runnable = new(_inspector, parentId);
+        runnable.Suspend(context, ref stateMachine);
 
-        _runnables[id] = runnable;
+        _runnables.Add(id, runnable);
         return default;
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync(DAsyncId id, CancellationToken cancellationToken = default)
+    public ValueTask<DAsyncLink> HydrateAsync(IResumptionContext context, DAsyncId id, CancellationToken cancellationToken = default)
     {
         DehydratedRunnable runnable = _runnables[id];
         _runnables.Remove(id);
 
-        DAsyncLink link = runnable.Resume();
+        DAsyncLink link = runnable.Resume(context);
         Debug.WriteLine($"Hydrated task {id} with parent {link.ParentId}.");
         return new(link);
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync<TResult>(DAsyncId id, TResult result, CancellationToken cancellationToken = default)
+    public ValueTask<DAsyncLink> HydrateAsync<TResult>(IResumptionContext context, DAsyncId id, TResult result,
+        CancellationToken cancellationToken = default)
     {
         DehydratedRunnable runnable = _runnables[id];
         _runnables.Remove(id);
 
-        DAsyncLink link = runnable.Resume(result);
+        DAsyncLink link = runnable.Resume(context, result);
         Debug.WriteLine($"Hydrated task {id} with parent {link.ParentId}.");
         return new(link);
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync(DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
+    public ValueTask<DAsyncLink> HydrateAsync(IResumptionContext context, DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        DehydratedRunnable runnable = _runnables[id];
+        _runnables.Remove(id);
+
+        DAsyncLink link = runnable.Resume(context, exception);
+        Debug.WriteLine($"Hydrated task {id} with parent {link.ParentId}.");
+        return new(link);
     }
 
     public ValueTask<DAsyncId> DeleteAsync(DAsyncId id, CancellationToken cancellationToken = default)
@@ -195,33 +210,58 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeRe
         return default;
     }
 
+    public Task SaveAsync<TKey, TValue>(TKey key, TValue value, CancellationToken cancellationToken = default)
+        where TKey : notnull
+    {
+        _heap[key] = value;
+        return Task.CompletedTask;
+    }
+
+    public Task<Option<TValue>> LoadAsync<TKey, TValue>(TKey key, CancellationToken cancellationToken = default)
+        where TKey : notnull
+    {
+        if (!_heap.TryGetValue(key, out object? value))
+            return Task.FromResult(Option<TValue>.None);
+
+        return Task.FromResult(Option<TValue>.Some((TValue)value!));
+    }
+
+    public Task DeleteAsync<TKey>(TKey key, CancellationToken cancellationToken = default)
+        where TKey : notnull
+    {
+        _heap.Remove(key);
+        return Task.CompletedTask;
+    }
+
     private abstract class DehydratedRunnable
     {
         public abstract DAsyncId ParentId { get; }
 
-        public abstract DAsyncLink Resume();
+        public abstract DAsyncLink Resume(IResumptionContext context);
 
-        public abstract DAsyncLink Resume<TResult>(TResult result);
+        public abstract DAsyncLink Resume<TResult>(IResumptionContext context, TResult result);
+
+        public abstract DAsyncLink Resume(IResumptionContext context, Exception exception);
     }
 
-    private sealed class DehydratedRunnable<TStateMachine>(IStateMachineInspector inspector, IDAsyncMarshaler marshaler, DAsyncId parentId) : DehydratedRunnable
+    private sealed class DehydratedRunnable<TStateMachine>(IStateMachineInspector inspector, DAsyncId parentId) : DehydratedRunnable
         where TStateMachine : notnull
     {
         private readonly Dictionary<string, object?> _values = [];
 
         public override DAsyncId ParentId => parentId;
 
-        public void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext)
+        public void Suspend(ISuspensionContext context, ref TStateMachine stateMachine)
         {
-            FakeStateMachineWriter writer = new(_values, marshaler);
+            FakeStateMachineWriter writer = new(_values, context.Marshaler);
 
             var converter = (IFakeStateMachineSuspender<TStateMachine>)inspector.GetSuspender(typeof(TStateMachine));
-            converter.Suspend(ref stateMachine, suspensionContext, writer);
+            converter.Suspend(ref stateMachine, context, writer);
         }
 
-        public override DAsyncLink Resume()
+        public override DAsyncLink Resume(IResumptionContext context)
         {
-            FakeStateMachineReader reader = new(_values, marshaler);
+            FakeStateMachineReader reader = new(_values, context.Marshaler);
 
             var converter = (IFakeStateMachineResumer)inspector.GetResumer(typeof(TStateMachine));
             IDAsyncRunnable runnable = converter.Resume(reader);
@@ -229,14 +269,19 @@ internal sealed class FakeDAsyncStateManager(IDAsyncMarshaler marshaler, ITypeRe
             return new DAsyncLink(parentId, runnable);
         }
 
-        public override DAsyncLink Resume<TResult>(TResult result)
+        public override DAsyncLink Resume<TResult>(IResumptionContext context, TResult result)
         {
-            FakeStateMachineReader reader = new(_values, marshaler);
+            FakeStateMachineReader reader = new(_values, context.Marshaler);
 
             var converter = (IFakeStateMachineResumer)inspector.GetResumer(typeof(TStateMachine));
             IDAsyncRunnable runnable = converter.Resume(reader, result);
 
             return new DAsyncLink(parentId, runnable);
+        }
+
+        public override DAsyncLink Resume(IResumptionContext context, Exception exception)
+        {
+            throw new NotImplementedException();
         }
     }
 }

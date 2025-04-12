@@ -1,4 +1,4 @@
-﻿using DTasks.Marshaling;
+﻿using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Inspection.Dynamic;
 

@@ -1,4 +1,6 @@
-﻿namespace DTasks.Infrastructure;
+﻿using DTasks.Execution;
+
+namespace DTasks.Infrastructure;
 
 internal interface IDAsyncRunnerInternal : IDAsyncRunner
 {

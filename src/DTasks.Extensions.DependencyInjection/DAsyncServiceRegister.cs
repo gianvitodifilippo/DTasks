@@ -1,10 +1,10 @@
-﻿using DTasks.Marshaling;
-using System.Collections.Frozen;
+﻿using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Extensions.DependencyInjection;
 
-internal sealed class DAsyncServiceRegister(FrozenSet<Type> types, ITypeResolver typeResolver) : IDAsyncServiceRegister
+internal sealed class DAsyncServiceRegister(FrozenSet<Type> types, IDAsyncTypeResolver typeResolver) : IDAsyncServiceRegister
 {
     public bool IsDAsyncService(Type serviceType) => types.Contains(serviceType);
 

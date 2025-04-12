@@ -1,102 +1,54 @@
-﻿using DTasks.Execution;
-using DTasks.Marshaling;
-using DTasks.Utils;
+﻿using System.ComponentModel;
+using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 
 namespace DTasks.Infrastructure;
 
+[EditorBrowsable(EditorBrowsableState.Never)]
 public abstract class DAsyncHost : IDAsyncHost
 {
-    // TODO: Pool flows
+    protected abstract IDAsyncStateManager StateManager { get; }
+    
+    protected virtual IDAsyncMarshaler Marshaler => DefaultDAsyncMarshaler.Instance;
 
-    protected abstract ITypeResolver TypeResolver { get; }
+    protected virtual IDAsyncTypeResolver TypeResolver => DAsyncTypeResolver.Default;
 
-    protected virtual IDistributedCancellationProvider CancellationProvider => DefaultDistributedCancellationProvider.Instance;
+    protected virtual IDAsyncCancellationProvider CancellationProvider => DefaultDAsyncCancellationProvider.Instance;
 
-    protected abstract IDAsyncStateManager CreateStateManager(IDAsyncMarshaler marshaler);
+    protected virtual IDAsyncSuspensionHandler SuspensionHandler => DefaultDAsyncSuspensionHandler.Instance;
 
-    protected virtual IDAsyncMarshaler CreateMarshaler()
-    {
-        return NullDAsyncMarshaler.Instance;
-    }
+    protected virtual Task OnStartAsync(IDAsyncFlowStartContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public ValueTask StartAsync(IDAsyncRunnable runnable, CancellationToken cancellationToken = default)
-    {
-        ThrowHelper.ThrowIfNull(runnable);
+    protected virtual Task OnSuspendAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-        DAsyncFlow flow = new();
-        return flow.StartAsync(this, runnable, cancellationToken);
-    }
+    protected virtual Task OnSucceedAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public ValueTask ResumeAsync(DAsyncId id, CancellationToken cancellationToken = default)
-    {
-        DAsyncFlow flow = new();
-        return flow.ResumeAsync(this, id, cancellationToken);
-    }
+    protected virtual Task OnSucceedAsync<TResult>(IDAsyncFlowCompletionContext context, TResult result, CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public ValueTask ResumeAsync<TResult>(DAsyncId id, TResult result, CancellationToken cancellationToken = default)
-    {
-        DAsyncFlow flow = new();
-        return flow.ResumeAsync(this, id, result, cancellationToken);
-    }
+    protected virtual Task OnFailAsync(IDAsyncFlowCompletionContext context, Exception exception, CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public ValueTask ResumeAsync(DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
-    {
-        DAsyncFlow flow = new();
-        return flow.ResumeAsync(this, id, exception, cancellationToken);
-    }
+    protected virtual Task OnCancelAsync(IDAsyncFlowCompletionContext context, OperationCanceledException exception, CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public Task CancelAsync(DCancellationId id, CancellationToken cancellationToken = default)
-    {
-        return CancellationProvider.CancelAsync(id, cancellationToken);
-    }
+    IDAsyncStateManager IDAsyncHost.StateManager => StateManager;
 
-    protected virtual Task OnSucceedAsync(CancellationToken cancellationToken = default)
-    {
-        return Task.CompletedTask;
-    }
+    IDAsyncMarshaler IDAsyncHost.Marshaler => Marshaler;
 
-    protected virtual Task OnSucceedAsync<TResult>(TResult result, CancellationToken cancellationToken = default)
-    {
-        return Task.CompletedTask;
-    }
+    IDAsyncTypeResolver IDAsyncHost.TypeResolver => TypeResolver;
 
-    protected virtual Task OnFailAsync(Exception exception, CancellationToken cancellationToken = default)
-    {
-        return Task.CompletedTask;
-    }
+    IDAsyncCancellationProvider IDAsyncHost.CancellationProvider => CancellationProvider;
 
-    protected virtual Task OnCancelAsync(OperationCanceledException exception, CancellationToken cancellationToken = default)
-    {
-        return Task.CompletedTask;
-    }
+    IDAsyncSuspensionHandler IDAsyncHost.SuspensionHandler => SuspensionHandler;
+    
+    Task IDAsyncHost.OnStartAsync(IDAsyncFlowStartContext context, CancellationToken cancellationToken) => OnStartAsync(context, cancellationToken);
 
-    protected virtual Task OnYieldAsync(DAsyncId id, CancellationToken cancellationToken = default)
-    {
-        throw new NotSupportedException("The current d-async host does not support yielding.");
-    }
+    Task IDAsyncHost.OnSuspendAsync(CancellationToken cancellationToken) => OnSuspendAsync(cancellationToken);
 
-    protected virtual Task OnDelayAsync(DAsyncId id, TimeSpan delay, CancellationToken cancellationToken = default)
-    {
-        throw new NotSupportedException("The current d-async host does not support delaying.");
-    }
+    Task IDAsyncHost.OnSucceedAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken) => OnSucceedAsync(context, cancellationToken);
 
-    ITypeResolver IDAsyncHost.TypeResolver => TypeResolver;
+    Task IDAsyncHost.OnSucceedAsync<TResult>(IDAsyncFlowCompletionContext context, TResult result, CancellationToken cancellationToken) => OnSucceedAsync(context, result, cancellationToken);
 
-    IDistributedCancellationProvider IDAsyncHost.CancellationProvider => CancellationProvider;
+    Task IDAsyncHost.OnFailAsync(IDAsyncFlowCompletionContext context, Exception exception, CancellationToken cancellationToken) => OnFailAsync(context, exception, cancellationToken);
 
-    IDAsyncMarshaler IDAsyncHost.CreateMarshaler() => CreateMarshaler();
-
-    IDAsyncStateManager IDAsyncHost.CreateStateManager(IDAsyncMarshaler marshaler) => CreateStateManager(marshaler);
-
-    Task IDAsyncHost.OnSucceedAsync(CancellationToken cancellationToken) => OnSucceedAsync(cancellationToken);
-
-    Task IDAsyncHost.OnSucceedAsync<TResult>(TResult result, CancellationToken cancellationToken) => OnSucceedAsync(result, cancellationToken);
-
-    Task IDAsyncHost.OnFailAsync(Exception exception, CancellationToken cancellationToken) => OnFailAsync(exception, cancellationToken);
-
-    Task IDAsyncHost.OnCancelAsync(OperationCanceledException exception, CancellationToken cancellationToken) => OnCancelAsync(exception, cancellationToken);
-
-    Task IDAsyncHost.OnYieldAsync(DAsyncId id, CancellationToken cancellationToken) => OnYieldAsync(id, cancellationToken);
-
-    Task IDAsyncHost.OnDelayAsync(DAsyncId id, TimeSpan delay, CancellationToken cancellationToken) => OnDelayAsync(id, delay, cancellationToken);
+    Task IDAsyncHost.OnCancelAsync(IDAsyncFlowCompletionContext context, OperationCanceledException exception, CancellationToken cancellationToken) => OnCancelAsync(context, exception, cancellationToken);
 }
