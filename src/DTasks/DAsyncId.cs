@@ -207,9 +207,12 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
         {
             if (IsDefault)
                 return "<default>";
-
+#if DEBUG_TESTS
             string id = ToString()[^4..];
             return IsFlowId ? $"root:{id}" : id;
+#else
+            return ToString();
+#endif
         }
     }
 }

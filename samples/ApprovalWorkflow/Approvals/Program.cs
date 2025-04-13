@@ -19,7 +19,7 @@ using System.Net;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseDTasks(dTasks => dTasks
-    .ConfigureDTasks(configuration => configuration
+    .Configure(configuration => configuration
         .ConfigureTypeResolver(typeResolver =>
         {
             typeResolver.RegisterDAsyncType<AsyncEndpoints>();
