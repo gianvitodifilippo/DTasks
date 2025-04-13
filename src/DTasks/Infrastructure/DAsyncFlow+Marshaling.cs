@@ -30,6 +30,14 @@ public sealed partial class DAsyncFlow
 
     public static void RegisterGenericTypeIds(IDAsyncTypeResolverBuilder builder, Type resultType)
     {
-        builder.RegisterDAsyncMethod(s_whenAllDAsyncGenericMethod.MakeGenericMethod(resultType));
+        builder.RegisterDAsyncMethod(s_whenAllDAsyncGenericMethod.MakeGenericMethod(resultType)); // TODO: This won't work with NativeAOT
+    }
+
+    public static void RegisterSurrogatableTypes(IDAsyncMarshaller marshaller)
+    {
+        marshaller.RegisterSurrogatableType(typeof(object));
+        marshaller.RegisterSurrogatableType(typeof(DTask));
+        marshaller.RegisterSurrogatableType(typeof(DTask<>)); // TODO: This won't work with NativeAOT
+        marshaller.RegisterSurrogatableType(typeof(HandleRunnable));
     }
 }

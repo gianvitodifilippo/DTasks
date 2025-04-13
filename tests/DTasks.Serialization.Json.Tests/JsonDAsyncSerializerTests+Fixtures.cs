@@ -173,7 +173,6 @@ public partial class JsonDAsyncSerializerTests
         References References,
         Services Services,
         ParentIds ParentIds,
-        Surrogates Surrogates,
         StateMachines StateMachines,
         Jsons Jsons)
     {
@@ -236,12 +235,12 @@ public partial class JsonDAsyncSerializerTests
                 {
                   "$typeId": "{{StateMachine1.TypeId}}",
                   "$parentId": "{{parentId1}}",
-                  "%__this": {
-                    "$id": "1",
+                  "__this": {
+                    "@dtasks.tid": null,
                     "surrogate": "{{surrogate1}}"
                   },
                   "local1": {
-                    "$id": "2",
+                    "$id": "1",
                     "Value1": "{{string1}}",
                     "Value2": {{int1}}
                   },
@@ -253,31 +252,31 @@ public partial class JsonDAsyncSerializerTests
                 {
                   "$typeId": "{{StateMachine2.TypeId}}",
                   "$parentId": "{{parentId2}}",
-                  "%__this": {
-                    "$id": "1",
+                  "__this": {
+                    "@dtasks.tid": null,
                     "surrogate": "{{surrogate2}}"
                   },
                   "local1": {
-                    "$id": "2",
+                    "$id": "1",
                     "Value1": "{{string1}}",
                     "Value2": {{int1}}
                   },
                   "local2": {
-                    "$id": "3",
+                    "$id": "2",
                     "Reference": {
-                      "$ref": "2"
+                      "$ref": "1"
                     },
                     "Value1": "{{string2}}",
                     "PolymorphicReference": {
-                      "$id": "4",
+                      "$id": "3",
                       "$type": "{{PolymorphicType2.TypeDiscriminator}}",
                       "Value": {{int2}}
                     }
                   },
                   "local3": {
-                    "$id": "5",
+                    "$id": "4",
                     "PolymorphicReference": {
-                      "$ref": "4"
+                      "$ref": "3"
                     }
                   },
                   "local4": {{int1}}
@@ -289,7 +288,6 @@ public partial class JsonDAsyncSerializerTests
                 new References(polymorphicReference, reference1, reference2, reference3),
                 new Services(service1, service2),
                 new ParentIds(parentId1, parentId2),
-                new Surrogates(surrogate1, surrogate2),
                 new StateMachines(stateMachine1, stateMachine2),
                 new Jsons(stateMachine1Json, stateMachine2Json));
         }
@@ -312,10 +310,6 @@ public partial class JsonDAsyncSerializerTests
     internal sealed record ParentIds(
         DAsyncId ParentId1,
         DAsyncId ParentId2);
-
-    internal sealed record Surrogates(
-        object Surrogate1,
-        object Surrogate2);
 
     internal sealed record Values(
         string String1,

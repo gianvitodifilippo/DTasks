@@ -25,6 +25,19 @@ internal static class Utf8JsonReaderExtensions
             throw new JsonException($"Expected token type '{expectedType}', got '{actualType}' instead.");
     }
 
+    public static void ExpectToken(this ref readonly Utf8JsonReader reader, params ReadOnlySpan<JsonTokenType> expectedTypes)
+    {
+        JsonTokenType actualType = reader.TokenType;
+
+        foreach (JsonTokenType expectedType in expectedTypes)
+        {
+            if (actualType == expectedType)
+                return;
+        }
+
+        throw new JsonException($"Unexpected token type '{actualType}'.");
+    }
+
     public static void ExpectPropertyName(this ref readonly Utf8JsonReader reader, string expectedName)
     {
         reader.ExpectToken(JsonTokenType.PropertyName);

@@ -11,7 +11,7 @@ public static class DAsyncSurrogatorExtensions
         return surrogator.TrySurrogate(in value, ref wrapper);
     }
 
-    public static bool TrySurrogate<T>(this IDAsyncSurrogator surrogator, TypeId typeId, IRestorationAction action)
+    public static bool TryRestore<T>(this IDAsyncSurrogator surrogator, TypeId typeId, IRestorationAction action)
     {
         RestorationActionWrapper wrapper = new(action);
         return surrogator.TryRestore<T, RestorationActionWrapper>(typeId, ref wrapper);

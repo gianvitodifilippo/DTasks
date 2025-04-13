@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Serialization.Json.Converters;
 
 namespace DTasks.Serialization.Json;
 
@@ -26,11 +27,17 @@ public partial class JsonDAsyncSerializerTests
         _inspector = Substitute.For<IStateMachineInspector>();
         _typeResolver = Substitute.For<IDAsyncTypeResolver>();
         _surrogator = new MockDAsyncSurrogator(_fixture);
+        JsonSerializerOptions globalOptions = new();
         _jsonOptions = new()
         {
             WriteIndented = true,
             TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            Converters =
+            {
+                new SurrogatableConverter<Service1>(globalOptions),
+                new SurrogatableConverter<Service2>(globalOptions)
+            }
         };
         _sut = new(_inspector, _typeResolver, _jsonOptions);
 

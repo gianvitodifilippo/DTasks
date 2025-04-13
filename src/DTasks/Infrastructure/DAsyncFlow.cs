@@ -55,7 +55,7 @@ public sealed partial class DAsyncFlow
     private readonly DTaskSurrogateConverter _taskSurrogateConverter;
     private readonly Dictionary<DTask, DTaskSurrogate> _surrogates;
     private readonly Dictionary<DAsyncId, DTask> _tasks;
-    private readonly ConcurrentDictionary<DCancellationTokenSource, DistributedCancellationInfo> _cancellationInfos;
+    private readonly ConcurrentDictionary<DCancellationTokenSource, CancellationInfo> _cancellationInfos;
     private readonly ConcurrentDictionary<DCancellationId, DCancellationTokenSource> _cancellations;
 
     private DAsyncFlow()

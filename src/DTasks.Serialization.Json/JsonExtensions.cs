@@ -1,9 +1,8 @@
-﻿using DTasks.Infrastructure;
+﻿using DTasks.Infrastructure.Marshaling;
 using System.Buffers;
 using System.Buffers.Text;
 using System.Diagnostics;
 using System.Text.Json;
-using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json;
 
@@ -25,8 +24,11 @@ internal static class JsonExtensions
 
     public static TypeId ReadTypeId(this ref Utf8JsonReader reader)
     {
-        reader.ExpectToken(JsonTokenType.String);
-        string typeIdValue = reader.GetString()!;
+        reader.ExpectToken(JsonTokenType.String, JsonTokenType.Null);
+        string? typeIdValue = reader.GetString();
+
+        if (typeIdValue is null)
+            return default;
 
         return new TypeId(typeIdValue);
     }

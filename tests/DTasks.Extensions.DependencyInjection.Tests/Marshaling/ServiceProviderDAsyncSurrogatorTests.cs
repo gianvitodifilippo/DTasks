@@ -130,7 +130,7 @@ public class ServiceProviderDAsyncSurrogatorTests
         RootServiceProviderDAsyncSurrogator sut = new(_provider, _register, _typeResolver);
 
         // Act
-        bool result = sut.TrySurrogate<Service>(default, action);
+        bool result = sut.TryRestore<Service>(default, action);
 
         // Assert
         result.Should().BeFalse();
@@ -146,7 +146,7 @@ public class ServiceProviderDAsyncSurrogatorTests
         RootServiceProviderDAsyncSurrogator sut = new(_provider, _register, _typeResolver);
 
         // Act
-        bool result = sut.TrySurrogate<Service>(s_surrogateTypeId, action);
+        bool result = sut.TryRestore<Service>(s_surrogateTypeId, action);
 
         // Assert
         result.Should().BeTrue();
@@ -165,7 +165,7 @@ public class ServiceProviderDAsyncSurrogatorTests
         RootServiceProviderDAsyncSurrogator sut = new(_provider, _register, _typeResolver);
 
         // Act
-        bool result = sut.TrySurrogate<Service>(s_surrogateTypeId, action);
+        bool result = sut.TryRestore<Service>(s_surrogateTypeId, action);
 
         // Assert
         result.Should().BeTrue();

@@ -3,7 +3,7 @@
 namespace DTasks.Infrastructure.Marshaling;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface IRestorationAction
+public interface IRestorationAction // allows to use a struct as a converter
 {
     void RestoreAs<TConverter>(Type surrogateType, scoped ref TConverter converter)
         where TConverter : struct, ISurrogateConverter;

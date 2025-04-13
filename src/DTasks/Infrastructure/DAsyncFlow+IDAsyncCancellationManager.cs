@@ -21,14 +21,14 @@ public sealed partial class DAsyncFlow : IDAsyncCancellationManager
 
     Task IDAsyncCancellationManager.CancelAsync(DCancellationTokenSource source, CancellationToken cancellationToken)
     {
-        DistributedCancellationInfo info = _cancellationInfos[source];
+        CancellationInfo info = _cancellationInfos[source];
         return _host.CancellationProvider.CancelAsync(info.Id, cancellationToken);
     }
 
     Task IDAsyncCancellationManager.CancelAfterAsync(DCancellationTokenSource source, TimeSpan delay, CancellationToken cancellationToken)
     {
         DateTimeOffset expirationTime = DateTimeOffset.Now + delay;
-        DistributedCancellationInfo info = _cancellationInfos[source];
+        CancellationInfo info = _cancellationInfos[source];
         return _host.CancellationProvider.CancelAsync(info.Id, expirationTime, cancellationToken);
     }
 
@@ -41,12 +41,12 @@ public sealed partial class DAsyncFlow : IDAsyncCancellationManager
         }
         while (!_cancellations.TryAdd(id, source));
 
-        DistributedCancellationInfo info = new(id, handle);
+        CancellationInfo info = new(id, handle);
         bool added = _cancellationInfos.TryAdd(source, info);
         Debug.Assert(added, "Attempted to register a cancellation source multiple times.");
 
         return id;
     }
 
-    private readonly record struct DistributedCancellationInfo(DCancellationId Id, DAsyncCancellationHandle Handle);
+    private readonly record struct CancellationInfo(DCancellationId Id, DAsyncCancellationHandle Handle);
 }
