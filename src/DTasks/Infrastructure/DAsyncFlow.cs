@@ -8,6 +8,7 @@ using System.Threading.Tasks.Sources;
 using DTasks.Infrastructure.Execution;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Utils;
+using DTasks.Infrastructure.State;
 
 namespace DTasks.Infrastructure;
 
@@ -51,8 +52,8 @@ public sealed partial class DAsyncFlow
     private DAsyncFlow? _parent;
     private int _branchIndex = -1;
 
-    private readonly DTaskTokenConverter _taskTokenConverter;
-    private readonly Dictionary<DTask, DTaskToken> _tokens;
+    private readonly DTaskSurrogateConverter _taskSurrogateConverter;
+    private readonly Dictionary<DTask, DTaskSurrogate> _surrogates;
     private readonly Dictionary<DAsyncId, DTask> _tasks;
     private readonly ConcurrentDictionary<DCancellationTokenSource, DistributedCancellationInfo> _cancellationInfos;
     private readonly ConcurrentDictionary<DCancellationId, DCancellationTokenSource> _cancellations;
@@ -62,8 +63,8 @@ public sealed partial class DAsyncFlow
         _state = FlowState.Idling;
         _builder = AsyncTaskMethodBuilder.Create();
         _host = s_nullHost;
-        _taskTokenConverter = new DTaskTokenConverter(this);
-        _tokens = [];
+        _taskSurrogateConverter = new DTaskSurrogateConverter(this);
+        _surrogates = [];
         _tasks = [];
         _cancellationInfos = [];
         _cancellations = [];

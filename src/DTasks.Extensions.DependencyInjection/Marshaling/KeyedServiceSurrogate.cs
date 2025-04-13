@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace DTasks.Extensions.DependencyInjection.Marshaling;
 
-internal class KeyedServiceToken<TKey> : ServiceToken, IKeyedServiceToken
+internal class KeyedServiceSurrogate<TKey> : ServiceSurrogate, IKeyedServiceToken
     where TKey : notnull
 {
     [DisallowNull]

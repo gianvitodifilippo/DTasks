@@ -2,7 +2,7 @@
 using System.Text.Json.Serialization;
 using DTasks.Infrastructure.Marshaling;
 
-namespace DTasks.Serialization.Json;
+namespace DTasks.Serialization.Json.Converters;
 
 public sealed class TypeIdJsonConverter : JsonConverter<TypeId>
 {

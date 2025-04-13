@@ -11,7 +11,7 @@ internal readonly ref struct JsonStateMachineWriter(
     IBufferWriter<byte> buffer,
     JsonSerializerOptions jsonOptions,
     ReferenceResolver referenceResolver,
-    IDAsyncMarshaler marshaler)
+    IDAsyncSurrogator surrogator)
 {
     private readonly Utf8JsonWriter _writer = new(buffer, new JsonWriterOptions
     {
@@ -46,8 +46,8 @@ internal readonly ref struct JsonStateMachineWriter(
         {
             if (value is not null)
             {
-                ReferenceMarshalingAction marshalingAction = new(_writer, jsonOptions, referenceResolver, value, name);
-                if (marshaler.TryMarshal(in value, ref marshalingAction))
+                ReferenceSurrogationAction surrogationAction = new(_writer, jsonOptions, referenceResolver, value, name);
+                if (surrogator.TrySurrogate(in value, ref surrogationAction))
                     return;
             }
             else
@@ -61,8 +61,8 @@ internal readonly ref struct JsonStateMachineWriter(
         }
         else
         {
-            ValueMarshalingAction marshalingAction = new(_writer, jsonOptions, name);
-            if (marshaler.TryMarshal(in value, ref marshalingAction))
+            ValueSurrogationAction surrogationAction = new(_writer, jsonOptions, name);
+            if (surrogator.TrySurrogate(in value, ref surrogationAction))
                 return;
         }
 
@@ -153,9 +153,9 @@ internal readonly ref struct JsonStateMachineWriter(
         _writer.WriteString(name, value);
     }
 
-    private static void WriteMarshaledPropertyName(Utf8JsonWriter writer, string name)
+    private static void WriteSurrogatedPropertyName(Utf8JsonWriter writer, string name)
     {
-        ReadOnlySpan<char> namePrefix = StateMachineJsonConstants.MarshaledValuePrefix;
+        ReadOnlySpan<char> namePrefix = StateMachineJsonConstants.SurrogatedValuePrefix;
         if (name.AsSpan().StartsWith(namePrefix))
             throw new NotSupportedException($"Prefix '{namePrefix.ToString()}' is reserved."); // TODO: Instead of throwing, escape the name
 
@@ -175,39 +175,39 @@ internal readonly ref struct JsonStateMachineWriter(
         writer.WriteTypeId("typeId", typeId);
     }
 
-    private static void WriteToken<TToken>(Utf8JsonWriter writer, TToken token, JsonSerializerOptions jsonOptions)
+    private static void WriteSurrogate<TSurrogate>(Utf8JsonWriter writer, TSurrogate surrogate, JsonSerializerOptions jsonOptions)
     {
-        if (token is null)
+        if (surrogate is null)
             return;
 
-        writer.WritePropertyName("token");
-        JsonSerializer.Serialize(writer, token, jsonOptions);
+        writer.WritePropertyName("surrogate");
+        JsonSerializer.Serialize(writer, surrogate, jsonOptions);
     }
 
-    private readonly struct ValueMarshalingAction(
+    private readonly struct ValueSurrogationAction(
         Utf8JsonWriter writer,
         JsonSerializerOptions jsonOptions,
-        string name) : IMarshalingAction
+        string name) : ISurrogationAction
     {
-        public void MarshalAs<TToken>(TypeId typeId, TToken token)
+        public void SurrogateAs<TSurrogate>(TypeId typeId, TSurrogate surrogate)
         {
-            WriteMarshaledPropertyName(writer, name);
+            WriteSurrogatedPropertyName(writer, name);
 
             writer.WriteStartObject();
             WriteTypeId(writer, typeId, jsonOptions);
-            WriteToken(writer, token, jsonOptions);
+            WriteSurrogate(writer, surrogate, jsonOptions);
             writer.WriteEndObject();
         }
     }
 
-    private readonly struct ReferenceMarshalingAction(
+    private readonly struct ReferenceSurrogationAction(
         Utf8JsonWriter writer,
         JsonSerializerOptions jsonOptions,
         ReferenceResolver referenceResolver,
         object reference,
-        string name) : IMarshalingAction
+        string name) : ISurrogationAction
     {
-        public void MarshalAs<TToken>(TypeId typeId, TToken token)
+        public void SurrogateAs<TSurrogate>(TypeId typeId, TSurrogate surrogate)
         {
             string referenceId = referenceResolver.GetReference(reference, out bool alreadyExists);
             if (alreadyExists)
@@ -219,12 +219,12 @@ internal readonly ref struct JsonStateMachineWriter(
                 return;
             }
 
-            WriteMarshaledPropertyName(writer, name);
+            WriteSurrogatedPropertyName(writer, name);
 
             writer.WriteStartObject();
             writer.WriteString("$id", referenceId);
             WriteTypeId(writer, typeId, jsonOptions);
-            WriteToken(writer, token, jsonOptions);
+            WriteSurrogate(writer, surrogate, jsonOptions);
             writer.WriteEndObject();
         }
     }

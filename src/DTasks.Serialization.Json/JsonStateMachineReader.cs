@@ -3,7 +3,7 @@ using DTasks.Inspection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DTasks.Infrastructure.Marshaling;
-
+using DTasks.Infrastructure.State;
 #if NET9_0_OR_GREATER
 using System.Runtime.CompilerServices;
 #endif
@@ -14,7 +14,7 @@ internal ref struct JsonStateMachineReader(
     ReadOnlySpan<byte> bytes,
     JsonSerializerOptions jsonOptions,
     ReferenceResolver referenceResolver,
-    IDAsyncMarshaler marshaler)
+    IDAsyncSurrogator surrogator)
 {
     public delegate IDAsyncRunnable ResumeAction<in T>(IStateMachineResumer resumer, T arg, ref JsonStateMachineReader reader);
 
@@ -54,8 +54,8 @@ internal ref struct JsonStateMachineReader(
         if (_reader.TokenType is not JsonTokenType.PropertyName)
             return false;
 
-        if (_reader.ValueSpan.StartsWith(StateMachineJsonConstants.MarshaledValuePrefixUtf8))
-            return ReadMarshaledValue(name, ref value);
+        if (_reader.ValueSpan.StartsWith(StateMachineJsonConstants.SurrogatedValuePrefixUtf8))
+            return ReadSurrogatedValue(name, ref value);
 
         if (!_reader.ValueTextEquals(name))
             return false;
@@ -67,9 +67,9 @@ internal ref struct JsonStateMachineReader(
         return true;
     }
 
-    private bool ReadMarshaledValue<TField>(string name, ref TField? value)
+    private bool ReadSurrogatedValue<TField>(string name, ref TField? value)
     {
-        ReadOnlySpan<char> namePrefix = StateMachineJsonConstants.MarshaledValuePrefix;
+        ReadOnlySpan<char> namePrefix = StateMachineJsonConstants.SurrogatedValuePrefix;
         int prefixLength = namePrefix.Length;
         Span<char> finalName = stackalloc char[prefixLength + name.Length];
         namePrefix.CopyTo(finalName);
@@ -95,7 +95,7 @@ internal ref struct JsonStateMachineReader(
         if (_reader.ValueTextEquals("$id"))
         {
             if (typeof(TField).IsValueType)
-                throw new JsonException($"Unexpected property name '{_reader.GetString()}' while deserializing a d-async token.");
+                throw new JsonException($"Unexpected property name '{_reader.GetString()}' while deserializing a d-async surrogate.");
 
             _reader.MoveNext();
             _reader.ExpectToken(JsonTokenType.String);
@@ -118,14 +118,14 @@ internal ref struct JsonStateMachineReader(
             _reader.ExpectToken(JsonTokenType.PropertyName);
         }
 
-        if (!_reader.ValueTextEquals("token"))
-            throw new JsonException($"Unexpected property name '{_reader.GetString()}' while deserializing a d-async token.");
+        if (!_reader.ValueTextEquals("surrogate"))
+            throw new JsonException($"Unexpected property name '{_reader.GetString()}' while deserializing a d-async surrogate.");
 
         _reader.MoveNext();
 
 #if NET9_0_OR_GREATER
-        UnmarshalingAction<TField> action = new(ref _reader, jsonOptions, ref value);
-        if (marshaler.TryUnmarshal<TField, UnmarshalingAction<TField>>(typeId, ref action))
+        RestorationAction<TField> action = new(ref _reader, jsonOptions, ref value);
+        if (surrogator.TryRestore<TField, RestorationAction<TField>>(typeId, ref action))
         {
             _reader.MoveNext();
             TryAddReference(referenceId, value);
@@ -135,12 +135,12 @@ internal ref struct JsonStateMachineReader(
         _reader.MoveNext();
         return false;
 #else
-        if (marshaler.TryUnmarshal<TField>(typeId, out UnmarshalResult result))
+        if (surrogator.TryRestore<TField>(typeId, out RestorationResult result))
         {
-            object? token = JsonSerializer.Deserialize(ref _reader, result.TokenType, jsonOptions);
+            object? surrogate = JsonSerializer.Deserialize(ref _reader, result.SurrogateType, jsonOptions);
             _reader.MoveNext();
 
-            value = result.Converter.Convert<object?, TField>(token);
+            value = result.Converter.Convert<object?, TField>(surrogate);
             TryAddReference(referenceId, value);
 
             _reader.MoveNext();
@@ -157,10 +157,10 @@ internal ref struct JsonStateMachineReader(
         _reader.MoveNext();
 
 #if NET9_0_OR_GREATER
-        NullTokenUnmarshalingAction<TField> action = new(ref value);
-        return marshaler.TryUnmarshal<TField, NullTokenUnmarshalingAction<TField>>(typeId, ref action);
+        NullSurrogateRestorationAction<TField> action = new(ref value);
+        return surrogator.TryRestore<TField, NullSurrogateRestorationAction<TField>>(typeId, ref action);
 #else
-        if (!marshaler.TryUnmarshal<TField>(default, out UnmarshalResult result))
+        if (!surrogator.TryRestore<TField>(default, out RestorationResult result))
             return false;
 
         value = result.Converter.Convert<object?, TField>(null);
@@ -189,56 +189,56 @@ internal ref struct JsonStateMachineReader(
             return;
 
         if (value is null)
-            throw new InvalidOperationException("A d-async token was unexpectedly unmarshaled as a null reference.");
+            throw new InvalidOperationException("A d-async surrogate was unexpectedly restored as a null reference.");
 
         referenceResolver.AddReference(referenceId, value);
     }
 
 #if NET9_0_OR_GREATER
 
-    private ref struct NullTokenUnmarshalingAction<TField>(ref TField? value) : IUnmarshalingAction
+    private ref struct NullSurrogateRestorationAction<TField>(ref TField? value) : IRestorationAction
     {
         private ref TField? _value = ref value;
 
-        public void UnmarshalAs<TConverter>(Type tokenType, ref TConverter converter)
-            where TConverter : struct, ITokenConverter
+        public void RestoreAs<TConverter>(Type surrogateType, ref TConverter converter)
+            where TConverter : struct, ISurrogateConverter
         {
             _value = converter.Convert<object?, TField>(null);
         }
 
-        public void UnmarshalAs(Type tokenType, ITokenConverter converter)
+        public void RestoreAs(Type surrogateType, ISurrogateConverter converter)
         {
             _value = converter.Convert<object?, TField>(null);
         }
     }
 
-    private ref struct UnmarshalingAction<TField>(
+    private ref struct RestorationAction<TField>(
         ref Utf8JsonReader reader,
         JsonSerializerOptions jsonOptions,
-        ref TField? value) : IUnmarshalingAction
+        ref TField? value) : IRestorationAction
     {
         private ref ReinterpretMeAsUtf8JsonReader _reader = ref Unsafe.As<Utf8JsonReader, ReinterpretMeAsUtf8JsonReader>(ref reader);
         private ref TField? _value = ref value;
 
-        public void UnmarshalAs<TConverter>(Type tokenType, scoped ref TConverter converter)
-            where TConverter : struct, ITokenConverter
+        public void RestoreAs<TConverter>(Type surrogateType, scoped ref TConverter converter)
+            where TConverter : struct, ISurrogateConverter
         {
-            object? token = ReadToken(tokenType);
-            _value = converter.Convert<object?, TField>(token);
+            object? surrogate = ReadSurrogate(surrogateType);
+            _value = converter.Convert<object?, TField>(surrogate);
         }
 
-        public void UnmarshalAs(Type tokenType, ITokenConverter converter)
+        public void RestoreAs(Type surrogateType, ISurrogateConverter converter)
         {
-            object? token = ReadToken(tokenType);
-            _value = converter.Convert<object?, TField>(token);
+            object? surrogate = ReadSurrogate(surrogateType);
+            _value = converter.Convert<object?, TField>(surrogate);
         }
 
-        private object? ReadToken(Type tokenType)
+        private object? ReadSurrogate(Type surrogateType)
         {
             ref Utf8JsonReader reader = ref Unsafe.As<ReinterpretMeAsUtf8JsonReader, Utf8JsonReader>(ref _reader);
-            object? token = JsonSerializer.Deserialize(ref reader, tokenType, jsonOptions);
+            object? surrogate = JsonSerializer.Deserialize(ref reader, surrogateType, jsonOptions);
             reader.MoveNext();
-            return token;
+            return surrogate;
         }
 
         // The compiler won't let us store a reference to the Utf8JsonReader, since it is a ref struct.

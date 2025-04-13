@@ -19,9 +19,9 @@ internal sealed class DTasksServiceConfiguration(IServiceCollection services) : 
     {
         IDAsyncTypeResolverBuilder typeResolverBuilder = _typeResolverBuilder ?? DAsyncTypeResolverBuilder.CreateDefault();
         _configureTypeResolver?.Invoke(typeResolverBuilder);
-        typeResolverBuilder.Register(typeof(ServiceToken));
-        typeResolverBuilder.Register(typeof(KeyedServiceToken<string>));
-        typeResolverBuilder.Register(typeof(KeyedServiceToken<int>));
+        typeResolverBuilder.Register(typeof(ServiceSurrogate));
+        typeResolverBuilder.Register(typeof(KeyedServiceSurrogate<string>));
+        typeResolverBuilder.Register(typeof(KeyedServiceSurrogate<int>));
 
         return new ServiceContainerBuilder(services, typeResolverBuilder, new DAsyncServiceRegisterBuilder(typeResolverBuilder));
     }

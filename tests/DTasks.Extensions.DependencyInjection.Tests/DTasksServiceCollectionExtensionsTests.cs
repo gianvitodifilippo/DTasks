@@ -22,8 +22,8 @@ public partial class DTasksServiceCollectionExtensionsTests
         _services.AddDTasks();
 
         // Assert
-        _services.Should().ContainSingle(Singleton<IRootDAsyncMarshaler>());
-        _services.Should().ContainSingle(Scoped<IDAsyncMarshaler>());
+        _services.Should().ContainSingle(Singleton<IRootDAsyncSurrogator>());
+        _services.Should().ContainSingle(Scoped<IDAsyncSurrogator>());
         _services.Should().ContainSingle(Singleton<DAsyncServiceValidator>());
     }
 
@@ -36,8 +36,8 @@ public partial class DTasksServiceCollectionExtensionsTests
         _services.AddDTasks(config => { });
 
         // Assert
-        _services.Should().ContainSingle(Singleton<IRootDAsyncMarshaler>());
-        _services.Should().ContainSingle(Scoped<IDAsyncMarshaler>());
+        _services.Should().ContainSingle(Singleton<IRootDAsyncSurrogator>());
+        _services.Should().ContainSingle(Scoped<IDAsyncSurrogator>());
         _services.Should().ContainSingle(Singleton<DAsyncServiceValidator>());
     }
 

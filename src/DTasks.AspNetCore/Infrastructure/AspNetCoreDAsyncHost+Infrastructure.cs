@@ -9,13 +9,13 @@ namespace DTasks.AspNetCore.Infrastructure;
 
 public abstract partial class AspNetCoreDAsyncHost : DAsyncHost
 {
-    private IDAsyncMarshaler? _marshaler;
+    private IDAsyncSurrogator? _surrogator;
     private IDAsyncStateManager? _stateManager;
     private IDAsyncTypeResolver? _typeResolver;
     // private IDAsyncCancellationProvider? _cancellationProvider;
     private IDAsyncSuspensionHandler? _suspensionHandler;
 
-    protected override IDAsyncMarshaler Marshaler => GetService(ref _marshaler);
+    protected override IDAsyncSurrogator Surrogator => GetService(ref _surrogator);
 
     protected override IDAsyncStateManager StateManager => GetService(ref _stateManager);
 

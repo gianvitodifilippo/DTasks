@@ -45,21 +45,21 @@ internal sealed class AggregateDAsyncContinuation : IDAsyncContinuation
         }
     }
 
-    public static TypedInstance<object> CreateMemento(TypedInstance<object>[] mementos) => new Memento(mementos);
+    public static TypedInstance<object> CreateSurrogate(TypedInstance<object>[] surrogates) => new Surrogate(surrogates);
 
-    private sealed class Memento(TypedInstance<object>[] mementos) : IDAsyncContinuationMemento
+    private sealed class Surrogate(TypedInstance<object>[] surrogates) : IDAsyncContinuationSurrogate
     {
         // TODO: Remove public property and make type inspectable
-        public TypedInstance<object>[] Mementos { get; } = mementos;
+        public TypedInstance<object>[] Surrogates { get; } = surrogates;
 
         public IDAsyncContinuation Restore(IServiceProvider services)
         {
-            IDAsyncContinuation[] callbacks = new IDAsyncContinuation[Mementos.Length];
+            IDAsyncContinuation[] callbacks = new IDAsyncContinuation[Surrogates.Length];
 
-            for (int i = 0; i < Mementos.Length; i++)
+            for (int i = 0; i < Surrogates.Length; i++)
             {
-                var memento = (IDAsyncContinuationMemento)Mementos[i].Value;
-                callbacks[i] = memento.Restore(services);
+                var surrogate = (IDAsyncContinuationSurrogate)Surrogates[i].Value;
+                callbacks[i] = surrogate.Restore(services);
             }
             
             return new AggregateDAsyncContinuation(callbacks);

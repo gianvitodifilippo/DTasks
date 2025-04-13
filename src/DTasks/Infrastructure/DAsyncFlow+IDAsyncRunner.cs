@@ -161,12 +161,12 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         Debug.Assert(_branchCount == 0);
 
         _aggregateType = AggregateType.WhenAll;
-        DAsyncFlow childFlow = new();
+        DAsyncFlow childFlow = Create();
 
         foreach (IDAsyncRunnable branch in branches)
         {
-            IDAsyncRunnable runnable = branch is DTask task && _tokens.TryGetValue(task, out DTaskToken? token)
-                ? new HandleRunnableWrapper(childFlow, branch, token.Id)
+            IDAsyncRunnable runnable = branch is DTask task && _surrogates.TryGetValue(task, out DTaskSurrogate? surrogate)
+                ? new HandleRunnableWrapper(childFlow, branch, surrogate.Id)
                 : branch;
 
             childFlow._state = FlowState.Running;
@@ -239,12 +239,12 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
         _aggregateType = AggregateType.WhenAllResult;
         _whenAllBranchResults = new Dictionary<int, TResult>();
-        DAsyncFlow childFlow = new();
+        DAsyncFlow childFlow = Create();
 
         foreach (IDAsyncRunnable branch in branches)
         {
-            IDAsyncRunnable runnable = branch is DTask task && _tokens.TryGetValue(task, out DTaskToken? token)
-                ? new HandleRunnableWrapper(childFlow, branch, token.Id)
+            IDAsyncRunnable runnable = branch is DTask task && _surrogates.TryGetValue(task, out DTaskSurrogate? surrogate)
+                ? new HandleRunnableWrapper(childFlow, branch, surrogate.Id)
                 : branch;
 
             childFlow._state = FlowState.Running;
@@ -329,12 +329,12 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         Debug.Assert(_branchCount == 0);
 
         _aggregateType = AggregateType.WhenAny;
-        DAsyncFlow childFlow = new();
+        DAsyncFlow childFlow = Create();
 
         foreach (IDAsyncRunnable branch in branches)
         {
-            IDAsyncRunnable runnable = branch is DTask task && _tokens.TryGetValue(task, out DTaskToken? token)
-                ? new HandleRunnableWrapper(childFlow, branch, token.Id)
+            IDAsyncRunnable runnable = branch is DTask task && _surrogates.TryGetValue(task, out DTaskSurrogate? surrogate)
+                ? new HandleRunnableWrapper(childFlow, branch, surrogate.Id)
                 : branch;
 
             childFlow._state = FlowState.Running;

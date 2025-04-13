@@ -4,5 +4,5 @@ namespace DTasks.Extensions.DependencyInjection.Mapping;
 
 internal interface IChildServiceMapper
 {
-    void MapService(object service, ServiceToken token);
+    void MapService(object service, ServiceSurrogate surrogate);
 }

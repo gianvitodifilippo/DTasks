@@ -2,6 +2,6 @@
 
 internal static class StateMachineJsonConstants
 {
-    public static ReadOnlySpan<char> MarshaledValuePrefix => "%";
-    public static ReadOnlySpan<byte> MarshaledValuePrefixUtf8 => "%"u8;
+    public static ReadOnlySpan<char> SurrogatedValuePrefix => "%";
+    public static ReadOnlySpan<byte> SurrogatedValuePrefixUtf8 => "%"u8;
 }

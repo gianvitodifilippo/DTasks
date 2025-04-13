@@ -16,7 +16,7 @@ public partial class JsonDAsyncSerializerTests
     private readonly JsonDTaskConverterFixture _fixture;
     private readonly IStateMachineInspector _inspector;
     private readonly IDAsyncTypeResolver _typeResolver;
-    private readonly IDAsyncMarshaler _marshaler;
+    private readonly IDAsyncSurrogator _surrogator;
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly JsonDAsyncSerializer _sut;
 
@@ -25,7 +25,7 @@ public partial class JsonDAsyncSerializerTests
         _fixture = JsonDTaskConverterFixture.Create();
         _inspector = Substitute.For<IStateMachineInspector>();
         _typeResolver = Substitute.For<IDAsyncTypeResolver>();
-        _marshaler = new MockDAsyncMarshaler(_fixture);
+        _surrogator = new MockDAsyncSurrogator(_fixture);
         _jsonOptions = new()
         {
             WriteIndented = true,
@@ -68,7 +68,7 @@ public partial class JsonDAsyncSerializerTests
             .GetSuspender(typeof(StateMachine2))
             .Returns(suspender2);
 
-        context.Marshaler.Returns(_marshaler);
+        context.Surrogator.Returns(_surrogator);
 
         // Act
         _sut.SerializeStateMachine(buffer1, context, parentId1, ref stateMachine1);
@@ -95,7 +95,7 @@ public partial class JsonDAsyncSerializerTests
         ref StateMachine1 stateMachine1 = ref resumer1.StateMachine;
         ref StateMachine2 stateMachine2 = ref resumer2.StateMachine;
 
-        context.Marshaler.Returns(_marshaler);
+        context.Surrogator.Returns(_surrogator);
 
         _inspector
             .GetResumer(typeof(StateMachine1))

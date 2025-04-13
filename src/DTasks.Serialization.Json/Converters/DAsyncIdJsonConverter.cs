@@ -1,9 +1,8 @@
-﻿using DTasks.Infrastructure;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace DTasks.Serialization.Json;
+namespace DTasks.Serialization.Json.Converters;
 
 public sealed class DAsyncIdJsonConverter : JsonConverter<DAsyncId>
 {

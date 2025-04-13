@@ -10,7 +10,7 @@ public abstract class DAsyncHost : IDAsyncHost
 {
     protected abstract IDAsyncStateManager StateManager { get; }
     
-    protected virtual IDAsyncMarshaler Marshaler => DefaultDAsyncMarshaler.Instance;
+    protected virtual IDAsyncSurrogator Surrogator => DefaultDAsyncSurrogator.Instance;
 
     protected virtual IDAsyncTypeResolver TypeResolver => DAsyncTypeResolver.Default;
 
@@ -32,7 +32,7 @@ public abstract class DAsyncHost : IDAsyncHost
 
     IDAsyncStateManager IDAsyncHost.StateManager => StateManager;
 
-    IDAsyncMarshaler IDAsyncHost.Marshaler => Marshaler;
+    IDAsyncSurrogator IDAsyncHost.Surrogator => Surrogator;
 
     IDAsyncTypeResolver IDAsyncHost.TypeResolver => TypeResolver;
 

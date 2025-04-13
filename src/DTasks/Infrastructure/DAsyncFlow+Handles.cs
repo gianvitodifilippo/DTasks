@@ -59,12 +59,12 @@ public sealed partial class DAsyncFlow
         }
 
         public virtual void Write<T, TAction>(scoped ref TAction action)
-            where TAction : IMarshalingAction
+            where TAction : ISurrogationAction
 #if NET9_0_OR_GREATER
             , allows ref struct
 #endif
         {
-            action.MarshalAs(default, null as object);
+            action.SurrogateAs(default, null as object);
         }
     }
 
@@ -89,7 +89,7 @@ public sealed partial class DAsyncFlow
 
         public override void Write<T, TAction>(scoped ref TAction action)
         {
-            action.MarshalAs(default, result);
+            action.SurrogateAs(default, result);
         }
     }
 

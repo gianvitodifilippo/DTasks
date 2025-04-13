@@ -8,25 +8,25 @@ public sealed class DAsyncContinuationFactory : IDAsyncContinuationFactory
 {
     // TODO: Add a builder interface to make configurable
     
-    public bool TryCreateMemento(CallbackType callbackType, IHeaderDictionary headers, out TypedInstance<object> memento)
+    public bool TryCreateSurrogate(CallbackType callbackType, IHeaderDictionary headers, out TypedInstance<object> surrogate)
     {
         // TODO: We should validate the specific headers and return an error message if invalid
         
         if (callbackType == CallbackType.Webhook)
         {
             string callbackUrl = headers["Async-CallbackUrl"]!;
-            memento = WebhookDAsyncContinuation.CreateMemento(new Uri(callbackUrl));
+            surrogate = WebhookDAsyncContinuation.CreateSurrogate(new Uri(callbackUrl));
             return true;
         }
 
         if (callbackType == CallbackType.WebSockets)
         {
             string connectionId = headers["Async-ConnectionId"]!;
-            memento = WebSocketsDAsyncContinuation.CreateMemento(connectionId);
+            surrogate = WebSocketsDAsyncContinuation.CreateSurrogate(connectionId);
             return true;
         }
 
-        memento = default;
+        surrogate = default;
         return false;
     }
 }

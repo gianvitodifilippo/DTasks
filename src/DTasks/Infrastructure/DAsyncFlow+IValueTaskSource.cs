@@ -58,7 +58,7 @@ public sealed partial class DAsyncFlow : IValueTaskSource
         _stateMachine = null;
         _parent = null;
 
-        _tokens.Clear();
+        _surrogates.Clear();
         _tasks.Clear();
         _cancellationInfos.Clear();
         _cancellations.Clear();

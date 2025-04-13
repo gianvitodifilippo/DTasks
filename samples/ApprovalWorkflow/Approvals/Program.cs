@@ -15,6 +15,15 @@ using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
 using DTasks.AspNetCore.Infrastructure.Http;
 using System.Net;
+using DTasks.Serialization.Json.Converters;
+
+JsonSerializerOptions options = new()
+{
+    Converters = { new MyConverterFactory() }
+};
+
+MyClass c = new();
+string json = JsonSerializer.Serialize(c, options);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,7 +41,7 @@ builder.Services
     .AddSingleton(sp => ConnectionMultiplexer.Connect("localhost:6379"))
     .AddSingleton(sp => sp.GetRequiredService<ConnectionMultiplexer>().GetDatabase());
 builder.Services
-    .AddSingleton<IDAsyncSerializer>(sp => JsonDAsyncSerializer.Create(sp.GetRequiredService<IDAsyncTypeResolver>(), sp.GetRequiredService<JsonSerializerOptions>()))
+    .AddScoped<IDAsyncSerializer>(sp => JsonDAsyncSerializer.Create(sp.GetRequiredService<IDAsyncTypeResolver>(), sp.GetRequiredService<JsonSerializerOptions>()))
     .AddSingleton<IDAsyncStorage, RedisDAsyncStorage>()
     .AddSingleton(sp => new JsonSerializerOptions()
     {
@@ -50,7 +59,7 @@ builder.Services
     .AddSingleton<RedisDAsyncSuspensionHandler>()
     .AddHostedService(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
     .AddSingleton<IDAsyncSuspensionHandler>(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
-    .AddSingleton<IDAsyncStateManager, BinaryDAsyncStateManager>()
+    .AddScoped<IDAsyncStateManager, BinaryDAsyncStateManager>()
     .AddSingleton<IDAsyncContinuationFactory, DAsyncContinuationFactory>();
 #endregion
 

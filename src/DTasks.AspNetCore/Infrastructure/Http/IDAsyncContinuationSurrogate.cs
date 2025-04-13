@@ -1,6 +1,6 @@
 namespace DTasks.AspNetCore.Infrastructure.Http;
 
-public interface IDAsyncContinuationMemento
+public interface IDAsyncContinuationSurrogate
 {
     IDAsyncContinuation Restore(IServiceProvider services);
 }

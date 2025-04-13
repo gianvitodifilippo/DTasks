@@ -15,8 +15,8 @@ public abstract partial class AspNetCoreDAsyncHost
     private delegate Task StatusMonitorAction<in T>(IDatabase redis, DAsyncId flowId, T value, CancellationToken cancellationToken);
 
     private bool _isOnStart;
-    private TypedInstance<object> _continuationMemento;
-    private TypedInstance<object>[]? _continuationMementoArray;
+    private TypedInstance<object> _continuationSurrogate;
+    private TypedInstance<object>[]? _continuationSurrogateArray;
 
     private protected AspNetCoreDAsyncHost()
     {
@@ -71,16 +71,16 @@ public abstract partial class AspNetCoreDAsyncHost
         }
         """);
 
-        if (_continuationMemento != default)
+        if (_continuationSurrogate != default)
         {
             string callbackKey = GetContinuationKey(FlowId);
-            await StateManager.Heap.SaveAsync(callbackKey, _continuationMemento, cancellationToken);
+            await StateManager.Heap.SaveAsync(callbackKey, _continuationSurrogate, cancellationToken);
         }
-        else if (_continuationMementoArray is not null)
+        else if (_continuationSurrogateArray is not null)
         {
             string continuationKey = GetContinuationKey(FlowId);
-            TypedInstance<object> continuationMemento = AggregateDAsyncContinuation.CreateMemento(_continuationMementoArray);
-            await StateManager.Heap.SaveAsync(continuationKey, continuationMemento, cancellationToken);
+            TypedInstance<object> continuationSurrogate = AggregateDAsyncContinuation.CreateSurrogate(_continuationSurrogateArray);
+            await StateManager.Heap.SaveAsync(continuationKey, continuationSurrogate, cancellationToken);
         }
 
         await SuspendOnStartAsync(cancellationToken);
@@ -138,14 +138,14 @@ public abstract partial class AspNetCoreDAsyncHost
         return CancelOnResumeAsync(context, cancellationToken);
     }
 
-    protected void SetContinuation(TypedInstance<object> memento)
+    protected void SetContinuation(TypedInstance<object> surrogate)
     {
-        _continuationMemento = memento;
+        _continuationSurrogate = surrogate;
     }
 
-    protected void SetContinuation(TypedInstance<object>[] mementoArray)
+    protected void SetContinuation(TypedInstance<object>[] surrogateArray)
     {
-        _continuationMementoArray = mementoArray;
+        _continuationSurrogateArray = surrogateArray;
     }
 
     protected virtual Task SuspendOnStartAsync(CancellationToken cancellationToken)
@@ -231,7 +231,7 @@ public abstract partial class AspNetCoreDAsyncHost
         await statusMonitorAction(redis, flowId, value, cancellationToken);
 
         string continuationKey = GetContinuationKey(flowId);
-        Option<TypedInstance<IDAsyncContinuationMemento>> loadResult = await StateManager.Heap.LoadAsync<string, TypedInstance<IDAsyncContinuationMemento>>(continuationKey, cancellationToken);
+        Option<TypedInstance<IDAsyncContinuationSurrogate>> loadResult = await StateManager.Heap.LoadAsync<string, TypedInstance<IDAsyncContinuationSurrogate>>(continuationKey, cancellationToken);
         
         // TODO: Check before and decide what to do should it be empty
         IDAsyncContinuation continuation = loadResult.Value.Value.Restore(Services);
@@ -242,8 +242,8 @@ public abstract partial class AspNetCoreDAsyncHost
     {
         _isOnStart = false;
         FlowId = default;
-        _continuationMemento = default;
-        _continuationMementoArray = null;
+        _continuationSurrogate = default;
+        _continuationSurrogateArray = null;
     }
 
     private static string GetContinuationKey(DAsyncId flowId)
@@ -262,8 +262,8 @@ public abstract partial class AspNetCoreDAsyncHost
 
     public static void RegisterTypeIds(IDAsyncTypeResolverBuilder typeResolverBuilder) // TODO: Remove
     {
-        typeResolverBuilder.Register(typeof(WebhookDAsyncContinuation.Memento));
-        typeResolverBuilder.Register(typeof(WebSocketsDAsyncContinuation.Memento));
+        typeResolverBuilder.Register(typeof(WebhookDAsyncContinuation.Surrogate));
+        typeResolverBuilder.Register(typeof(WebSocketsDAsyncContinuation.Surrogate));
     }
 
     private readonly struct VoidResult;

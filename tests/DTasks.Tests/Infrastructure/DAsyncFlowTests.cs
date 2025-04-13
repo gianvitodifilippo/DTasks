@@ -25,7 +25,7 @@ public class DAsyncFlowTests
         _sut = DAsyncFlow.Create();
         _stateManager = new(typeResolver);
 
-        _host.Marshaler.Returns(new FakeDAsyncMarshaler());
+        _host.Surrogator.Returns(new FakeDAsyncSurrogator());
         _host.StateManager.Returns(_stateManager);
     }
 
@@ -706,11 +706,12 @@ public class DAsyncFlowTests
         const int result3 = 3;
         static async DTask<int[]> M1()
         {
-            int[] results = await DTask.WhenAll(
+            DTask<int>[] tasks = [
                 M2(result1),
                 DTask.FromResult(result3),
                 M2(result2)
-            );
+            ];
+            int[] results = await DTask.WhenAll(tasks);
             return results;
         }
 

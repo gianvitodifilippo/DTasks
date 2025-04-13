@@ -23,8 +23,7 @@ public sealed partial class DAsyncFlow
         else
         {
             ref DAsyncFlow? slot = ref PerCoreCacheSlot;
-            if (slot is null ||
-                (flow = Interlocked.Exchange<DAsyncFlow?>(ref slot, null)) is null)
+            if (slot is null || (flow = Interlocked.Exchange(ref slot, null)) is null)
             {
                 flow = new DAsyncFlow();
             }
@@ -62,14 +61,12 @@ public sealed partial class DAsyncFlow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get
         {
-            Debug.Assert(s_perCoreCache.Length == Environment.ProcessorCount,
-                $"{s_perCoreCache.Length} != {Environment.ProcessorCount}");
+            Debug.Assert(s_perCoreCache.Length == Environment.ProcessorCount, $"{s_perCoreCache.Length} != {Environment.ProcessorCount}");
             int i = (int)((uint)Thread.GetCurrentProcessorId() % (uint)Environment.ProcessorCount);
 
 #if DEBUG
             object? transientValue = s_perCoreCache[i].Object;
-            Debug.Assert(transientValue is null or DAsyncFlow,
-                $"Expected null or {nameof(DAsyncFlow)}, got '{transientValue}'");
+            Debug.Assert(transientValue is null or DAsyncFlow, $"Expected null or {nameof(DAsyncFlow)}, got '{transientValue}'");
 #endif
             return ref Unsafe.As<object?, DAsyncFlow?>(ref s_perCoreCache[i].Object);
         }

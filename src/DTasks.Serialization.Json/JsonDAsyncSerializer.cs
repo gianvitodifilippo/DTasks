@@ -1,11 +1,11 @@
-﻿using DTasks.Infrastructure;
-using DTasks.Inspection;
+﻿using DTasks.Inspection;
 using DTasks.Inspection.Dynamic;
 using System.Buffers;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 
 namespace DTasks.Serialization.Json;
 
@@ -59,7 +59,7 @@ public sealed class JsonDAsyncSerializer : IDAsyncSerializer
     {
         _referenceResolver.InitForWriting();
 
-        JsonStateMachineWriter stateMachineWriter = new(buffer, _jsonOptions, _referenceResolver, context.Marshaler);
+        JsonStateMachineWriter stateMachineWriter = new(buffer, _jsonOptions, _referenceResolver, context.Surrogator);
         IStateMachineSuspender<TStateMachine> suspender = (IStateMachineSuspender<TStateMachine>)_inspector.GetSuspender(typeof(TStateMachine));
         TypeId typeId = _typeResolver.GetTypeId(typeof(TStateMachine));
 
@@ -71,7 +71,7 @@ public sealed class JsonDAsyncSerializer : IDAsyncSerializer
     {
         _referenceResolver.InitForReading();
 
-        JsonStateMachineReader stateMachineReader = new(bytes, _jsonOptions, _referenceResolver, context.Marshaler);
+        JsonStateMachineReader stateMachineReader = new(bytes, _jsonOptions, _referenceResolver, context.Surrogator);
         DAsyncLink link = stateMachineReader.DeserializeStateMachine(_inspector, _typeResolver, null, static delegate (IStateMachineResumer resumer, object? result, ref JsonStateMachineReader reader)
         {
             return resumer.Resume(ref reader);
@@ -86,7 +86,7 @@ public sealed class JsonDAsyncSerializer : IDAsyncSerializer
         string json = Encoding.UTF8.GetString(bytes);
         _referenceResolver.InitForReading();
 
-        JsonStateMachineReader stateMachineReader = new(bytes, _jsonOptions, _referenceResolver, context.Marshaler);
+        JsonStateMachineReader stateMachineReader = new(bytes, _jsonOptions, _referenceResolver, context.Surrogator);
         DAsyncLink link = stateMachineReader.DeserializeStateMachine(_inspector, _typeResolver, result, static delegate (IStateMachineResumer resumer, TResult result, ref JsonStateMachineReader reader)
         {
             return resumer.Resume(ref reader, result);

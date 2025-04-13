@@ -2,4 +2,4 @@
 
 namespace DTasks.Extensions.DependencyInjection.Marshaling;
 
-public interface IRootDAsyncMarshaler : IDAsyncMarshaler;
+public interface IRootDAsyncSurrogator : IDAsyncSurrogator;

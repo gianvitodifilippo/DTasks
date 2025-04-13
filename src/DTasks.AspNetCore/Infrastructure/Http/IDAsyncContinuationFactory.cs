@@ -6,5 +6,5 @@ namespace DTasks.AspNetCore.Infrastructure.Http;
 
 public interface IDAsyncContinuationFactory
 {
-    bool TryCreateMemento(CallbackType callbackType, IHeaderDictionary headers, out TypedInstance<object> memento);
+    bool TryCreateSurrogate(CallbackType callbackType, IHeaderDictionary headers, out TypedInstance<object> surrogate);
 }

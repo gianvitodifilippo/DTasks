@@ -1,6 +1,7 @@
 ﻿using DTasks.Infrastructure;
 using System.Buffers;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 
 namespace DTasks.Serialization;
 

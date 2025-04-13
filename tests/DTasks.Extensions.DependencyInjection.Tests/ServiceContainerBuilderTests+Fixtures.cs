@@ -11,15 +11,15 @@ namespace DTasks.Extensions.DependencyInjection;
 
 public partial class ServiceContainerBuilderTests
 {
-    private static Expression<Predicate<ServiceToken>> ServiceToken(TypeId typeId)
+    private static Expression<Predicate<ServiceSurrogate>> ServiceSurrogate(TypeId typeId)
     {
-        return token => token.TypeId == typeId;
+        return surrogate => surrogate.TypeId == typeId;
     }
 
-    private static Expression<Predicate<KeyedServiceToken<TKey>>> KeyedServiceToken<TKey>(TypeId typeId, TKey key)
+    private static Expression<Predicate<KeyedServiceSurrogate<TKey>>> KeyedServiceSurrogate<TKey>(TypeId typeId, TKey key)
         where TKey : notnull
     {
-        return token => token.TypeId == typeId && key.Equals(token.Key);
+        return surrogate => surrogate.TypeId == typeId && key.Equals(surrogate.Key);
     }
 
     private static ScopedServiceProvider BuildScopedServiceProvider(IServiceCollection services)
