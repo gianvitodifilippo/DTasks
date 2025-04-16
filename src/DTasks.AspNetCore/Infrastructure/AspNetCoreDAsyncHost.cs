@@ -236,6 +236,8 @@ public abstract partial class AspNetCoreDAsyncHost
         // TODO: Check before and decide what to do should it be empty
         IDAsyncContinuation continuation = loadResult.Value.Value.Restore(Services);
         await continuationAction(continuation, flowId, value, cancellationToken);
+        
+        _flowServicesScope.Dispose();
     }
 
     private void Reset()
