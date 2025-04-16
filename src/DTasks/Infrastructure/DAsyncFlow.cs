@@ -1,13 +1,14 @@
 ﻿using DTasks.Execution;
+using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
+using DTasks.Utils;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Sources;
-using DTasks.Infrastructure.Execution;
-using DTasks.Infrastructure.Marshaling;
-using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
@@ -51,10 +52,10 @@ public sealed partial class DAsyncFlow
     private DAsyncFlow? _parent;
     private int _branchIndex = -1;
 
-    private readonly DTaskTokenConverter _taskTokenConverter;
-    private readonly Dictionary<DTask, DTaskToken> _tokens;
+    private readonly DTaskSurrogateConverter _taskSurrogateConverter;
+    private readonly Dictionary<DTask, DTaskSurrogate> _surrogates;
     private readonly Dictionary<DAsyncId, DTask> _tasks;
-    private readonly ConcurrentDictionary<DCancellationTokenSource, DistributedCancellationInfo> _cancellationInfos;
+    private readonly ConcurrentDictionary<DCancellationTokenSource, CancellationInfo> _cancellationInfos;
     private readonly ConcurrentDictionary<DCancellationId, DCancellationTokenSource> _cancellations;
 
     private DAsyncFlow()
@@ -62,8 +63,8 @@ public sealed partial class DAsyncFlow
         _state = FlowState.Idling;
         _builder = AsyncTaskMethodBuilder.Create();
         _host = s_nullHost;
-        _taskTokenConverter = new DTaskTokenConverter(this);
-        _tokens = [];
+        _taskSurrogateConverter = new DTaskSurrogateConverter(this);
+        _surrogates = [];
         _tasks = [];
         _cancellationInfos = [];
         _cancellations = [];
@@ -176,41 +177,6 @@ public sealed partial class DAsyncFlow
         return new ValueTask(this, _valueTaskSource.Version);
     }
 
-    private void AwaitOnStart()
-    {
-        Await(_host.OnStartAsync(this, _cancellationToken), FlowState.Starting);
-    }
-
-    private void AwaitOnSuspend()
-    {
-        Await(_host.OnSuspendAsync(_cancellationToken), FlowState.Returning);
-    }
-
-    private void AwaitOnSucceed()
-    {
-        Await(_host.OnSucceedAsync(this, _cancellationToken), FlowState.Returning);
-    }
-
-    private void AwaitOnSucceed<TResult>(TResult result)
-    {
-        Await(_host.OnSucceedAsync(this, result, _cancellationToken), FlowState.Returning);
-    }
-
-    private void AwaitOnFail(Exception exception)
-    {
-        Await(_host.OnFailAsync(this, exception, _cancellationToken), FlowState.Returning);
-    }
-
-    private void AwaitOnCancel(OperationCanceledException exception)
-    {
-        Await(_host.OnCancelAsync(this, exception, _cancellationToken), FlowState.Returning);
-    }
-
-    private void Return()
-    {
-        Await(Task.CompletedTask, FlowState.Returning);
-    }
-
     [DebuggerStepThrough]
     private static T Consume<T>([MaybeNull] ref T value)
     {
@@ -221,7 +187,7 @@ public sealed partial class DAsyncFlow
 
     public static DAsyncFlow Create()
     {
-        DAsyncFlow flow = RentFromCache();
+        DAsyncFlow flow = RentFromCache(returnToCache: false);
         
 #if DEBUG
         GC.ReRegisterForFinalize(flow);
@@ -236,8 +202,7 @@ public sealed partial class DAsyncFlow
         ThrowHelper.ThrowIfNull(host);
         ThrowHelper.ThrowIfNull(runnable);
         
-        DAsyncFlow flow = RentFromCache();
-        flow._returnToCache = true;
+        DAsyncFlow flow = RentFromCache(returnToCache: true);
         
         return flow.StartCoreAsync(host, runnable, cancellationToken);
     }
@@ -246,29 +211,60 @@ public sealed partial class DAsyncFlow
     {
         ThrowHelper.ThrowIfNull(host);
         
-        DAsyncFlow flow = RentFromCache();
-        flow._returnToCache = true;
-        
+        DAsyncFlow flow = RentFromCache(returnToCache: true);
         return flow.ResumeCoreAsync(host, id, cancellationToken);
     }
     
     public static ValueTask ResumeFlowAsync<TResult>(IDAsyncHost host, DAsyncId id, TResult result, CancellationToken cancellationToken = default)
     {
         ThrowHelper.ThrowIfNull(host);
-        
-        DAsyncFlow flow = RentFromCache();
-        flow._returnToCache = true;
-        
+
+        DAsyncFlow flow = RentFromCache(returnToCache: true);
         return flow.ResumeCoreAsync(host, id, result, cancellationToken);
     }
     
     public static ValueTask ResumeFlowAsync(IDAsyncHost host, DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
     {
         ThrowHelper.ThrowIfNull(host);
-        
-        DAsyncFlow flow = RentFromCache();
-        flow._returnToCache = true;
-        
+
+        DAsyncFlow flow = RentFromCache(returnToCache: true);
+        return flow.ResumeCoreAsync(host, id, exception, cancellationToken);
+    }
+
+    public static ValueTask StartFlowAsync(IDAsyncHostFactory hostFactory, IDAsyncRunnable runnable, CancellationToken cancellationToken = default)
+    {
+        ThrowHelper.ThrowIfNull(hostFactory);
+        ThrowHelper.ThrowIfNull(runnable);
+
+        DAsyncFlow flow = RentFromCache(returnToCache: true);
+        IDAsyncHost host = hostFactory.CreateHost(flow);
+        return flow.StartCoreAsync(host, runnable, cancellationToken);
+    }
+
+    public static ValueTask ResumeFlowAsync(IDAsyncHostFactory hostFactory, DAsyncId id, CancellationToken cancellationToken = default)
+    {
+        ThrowHelper.ThrowIfNull(hostFactory);
+
+        DAsyncFlow flow = RentFromCache(returnToCache: true);
+        IDAsyncHost host = hostFactory.CreateHost(flow);
+        return flow.ResumeCoreAsync(host, id, cancellationToken);
+    }
+
+    public static ValueTask ResumeFlowAsync<TResult>(IDAsyncHostFactory hostFactory, DAsyncId id, TResult result, CancellationToken cancellationToken = default)
+    {
+        ThrowHelper.ThrowIfNull(hostFactory);
+
+        DAsyncFlow flow = RentFromCache(returnToCache: true);
+        IDAsyncHost host = hostFactory.CreateHost(flow);
+        return flow.ResumeCoreAsync(host, id, result, cancellationToken);
+    }
+
+    public static ValueTask ResumeFlowAsync(IDAsyncHostFactory hostFactory, DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
+    {
+        ThrowHelper.ThrowIfNull(hostFactory);
+
+        DAsyncFlow flow = RentFromCache(returnToCache: true);
+        IDAsyncHost host = hostFactory.CreateHost(flow);
         return flow.ResumeCoreAsync(host, id, exception, cancellationToken);
     }
 }

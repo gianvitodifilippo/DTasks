@@ -40,15 +40,15 @@ public partial class ServiceContainerBuilderTests
             .Returns(_register);
 
         _mapper
-            .MapSingleton(Arg.Any<IServiceProvider>(), Arg.Any<object>(), Arg.Any<ServiceToken>())
+            .MapSingleton(Arg.Any<IServiceProvider>(), Arg.Any<object>(), Arg.Any<ServiceSurrogate>())
             .Returns(call => call[1]);
 
         _mapper
-            .MapScoped(Arg.Any<IServiceProvider>(), Arg.Any<object>(), Arg.Any<ServiceToken>())
+            .MapScoped(Arg.Any<IServiceProvider>(), Arg.Any<object>(), Arg.Any<ServiceSurrogate>())
             .Returns(call => call[1]);
 
         _mapper
-            .MapTransient(Arg.Any<IServiceProvider>(), Arg.Any<object>(), Arg.Any<ServiceToken>())
+            .MapTransient(Arg.Any<IServiceProvider>(), Arg.Any<object>(), Arg.Any<ServiceSurrogate>())
             .Returns(call => call[1]);
     }
 
@@ -71,7 +71,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetService(serviceType);
         service.Should().BeOfType(implementationType);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(_typeId)));
+        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceSurrogate(_typeId)));
     }
 
     [Theory]
@@ -93,7 +93,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetService(serviceType);
         service.Should().BeSameAs(implementationInstance);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(_typeId)));
+        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceSurrogate(_typeId)));
     }
 
     [Theory]
@@ -115,7 +115,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetService(serviceType);
         service.Should().BeSameAs(implementationInstance);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(_typeId)));
+        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceSurrogate(_typeId)));
     }
 
     [Theory]
@@ -137,7 +137,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetService(serviceType);
         service.Should().BeOfType(implementationType);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(_typeId)));
+        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceSurrogate(_typeId)));
     }
 
     [Theory]
@@ -159,7 +159,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetService(serviceType);
         service.Should().BeSameAs(implementationInstance);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(_typeId)));
+        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceSurrogate(_typeId)));
     }
 
     [Theory]
@@ -181,7 +181,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetService(serviceType);
         service.Should().BeOfType(implementationType);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(_typeId)));
+        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceSurrogate(_typeId)));
     }
 
     [Theory]
@@ -203,7 +203,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetService(serviceType);
         service.Should().BeSameAs(implementationInstance);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceToken(_typeId)));
+        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service!, Arg.Is(ServiceSurrogate(_typeId)));
     }
 
     [Theory]
@@ -225,7 +225,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeOfType(implementationType);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(_typeId, _serviceKey)));
+        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceSurrogate(_typeId, _serviceKey)));
     }
 
     [Theory]
@@ -247,7 +247,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeSameAs(implementationInstance);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(_typeId, _serviceKey)));
+        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceSurrogate(_typeId, _serviceKey)));
     }
 
     [Theory]
@@ -269,7 +269,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeSameAs(implementationInstance);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(_typeId, _serviceKey)));
+        _mapper.Received(1).MapSingleton(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceSurrogate(_typeId, _serviceKey)));
     }
 
     [Theory]
@@ -291,7 +291,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeOfType(implementationType);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(_typeId, _serviceKey)));
+        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceSurrogate(_typeId, _serviceKey)));
     }
 
     [Theory]
@@ -313,7 +313,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeSameAs(implementationInstance);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(_typeId, _serviceKey)));
+        _mapper.Received(1).MapScoped(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceSurrogate(_typeId, _serviceKey)));
     }
 
     [Theory]
@@ -335,7 +335,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeOfType(implementationType);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(_typeId, _serviceKey)));
+        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceSurrogate(_typeId, _serviceKey)));
     }
 
     [Theory]
@@ -357,7 +357,7 @@ public partial class ServiceContainerBuilderTests
         object? service = provider.GetKeyedService(serviceType, _serviceKey);
         service.Should().BeSameAs(implementationInstance);
         AssertValidatorDoesNotThrow(provider);
-        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceToken(_typeId, _serviceKey)));
+        _mapper.Received(1).MapTransient(Arg.Any<IServiceProvider>(), service!, Arg.Is(KeyedServiceSurrogate(_typeId, _serviceKey)));
     }
 
     [Fact]

@@ -88,7 +88,7 @@ internal sealed class DTasksHostBuilderConfiguration(HostBuilderContext context,
         return this;
     }
 
-    public IDTasksHostBuilderConfiguration ConfigureDTasks(Action<IDTasksServiceConfiguration> configure)
+    public IDTasksHostBuilderConfiguration Configure(Action<IDTasksServiceConfiguration> configure)
     {
         ThrowHelper.ThrowIfNull(configure);
 

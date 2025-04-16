@@ -20,17 +20,17 @@ public class ServiceMapperTests
         var provider = Substitute.For<IServiceProvider>();
         var mapper = Substitute.For<IRootServiceMapper>();
         var service = new object();
-        var token = Substitute.For<ServiceToken>();
+        var surrogate = Substitute.For<ServiceSurrogate>();
 
         provider
             .GetService(typeof(IRootServiceMapper))
             .Returns(mapper);
 
         // Act
-        _sut.MapSingleton(provider, service, token);
+        _sut.MapSingleton(provider, service, surrogate);
 
         // Assert
-        mapper.Received(1).MapService(service, token);
+        mapper.Received(1).MapService(service, surrogate);
     }
 
     [Fact]
@@ -40,17 +40,17 @@ public class ServiceMapperTests
         var provider = Substitute.For<IServiceProvider>();
         var mapper = Substitute.For<IChildServiceMapper>();
         var service = new object();
-        var token = Substitute.For<ServiceToken>();
+        var surrogate = Substitute.For<ServiceSurrogate>();
 
         provider
             .GetService(typeof(IChildServiceMapper))
             .Returns(mapper);
 
         // Act
-        _sut.MapScoped(provider, service, token);
+        _sut.MapScoped(provider, service, surrogate);
 
         // Assert
-        mapper.Received(1).MapService(service, token);
+        mapper.Received(1).MapService(service, surrogate);
     }
 
     [Fact]
@@ -60,17 +60,17 @@ public class ServiceMapperTests
         var provider = _rootProvider;
         var mapper = Substitute.For<IRootServiceMapper>();
         var service = new object();
-        var token = Substitute.For<ServiceToken>();
+        var surrogate = Substitute.For<ServiceSurrogate>();
 
         provider
             .GetService(typeof(IRootServiceMapper))
             .Returns(mapper);
 
         // Act
-        _sut.MapTransient(provider, service, token);
+        _sut.MapTransient(provider, service, surrogate);
 
         // Assert
-        mapper.Received(1).MapService(service, token);
+        mapper.Received(1).MapService(service, surrogate);
     }
 
     [Fact]
@@ -80,16 +80,16 @@ public class ServiceMapperTests
         var provider = Substitute.For<IServiceProvider>();
         var mapper = Substitute.For<IChildServiceMapper>();
         var service = new object();
-        var token = Substitute.For<ServiceToken>();
+        var surrogate = Substitute.For<ServiceSurrogate>();
 
         provider
             .GetService(typeof(IChildServiceMapper))
             .Returns(mapper);
 
         // Act
-        _sut.MapTransient(provider, service, token);
+        _sut.MapTransient(provider, service, surrogate);
 
         // Assert
-        mapper.Received(1).MapService(service, token);
+        mapper.Received(1).MapService(service, surrogate);
     }
 }

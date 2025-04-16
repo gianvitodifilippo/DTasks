@@ -5,24 +5,24 @@ namespace DTasks.Extensions.DependencyInjection.Mapping;
 
 internal sealed class ServiceMapper(IServiceProvider rootProvider) : IServiceMapper
 {
-    public object MapSingleton(IServiceProvider provider, object service, ServiceToken token)
+    public object MapSingleton(IServiceProvider provider, object service, ServiceSurrogate surrogate)
     {
         IRootServiceMapper mapper = provider.GetRequiredService<IRootServiceMapper>();
-        mapper.MapService(service, token);
+        mapper.MapService(service, surrogate);
         return service;
     }
 
-    public object MapScoped(IServiceProvider provider, object service, ServiceToken token)
+    public object MapScoped(IServiceProvider provider, object service, ServiceSurrogate surrogate)
     {
         IChildServiceMapper mapper = provider.GetRequiredService<IChildServiceMapper>();
-        mapper.MapService(service, token);
+        mapper.MapService(service, surrogate);
         return service;
     }
 
-    public object MapTransient(IServiceProvider provider, object service, ServiceToken token)
+    public object MapTransient(IServiceProvider provider, object service, ServiceSurrogate surrogate)
     {
         return ReferenceEquals(provider, rootProvider)
-            ? MapSingleton(provider, service, token)
-            : MapScoped(provider, service, token);
+            ? MapSingleton(provider, service, surrogate)
+            : MapScoped(provider, service, surrogate);
     }
 }

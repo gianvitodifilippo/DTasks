@@ -25,7 +25,7 @@ public sealed partial class DAsyncFlow
         
         IDAsyncStateManager IDAsyncHost.StateManager => Fail<IDAsyncStateManager>();
 
-        IDAsyncMarshaler IDAsyncHost.Marshaler => Fail<IDAsyncMarshaler>();
+        IDAsyncSurrogator IDAsyncHost.Surrogator => Fail<IDAsyncSurrogator>();
 
         IDAsyncTypeResolver IDAsyncHost.TypeResolver => Fail<IDAsyncTypeResolver>();
 

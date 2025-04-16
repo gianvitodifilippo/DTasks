@@ -35,12 +35,12 @@ internal sealed class WebhookDAsyncContinuation(IHttpClientFactory httpClientFac
         throw new NotImplementedException();
     }
 
-    public static TypedInstance<object> CreateMemento(Uri callbackAddress)
+    public static TypedInstance<object> CreateSurrogate(Uri callbackAddress)
     {
-        return new Memento(callbackAddress);
+        return new Surrogate(callbackAddress);
     }
 
-    public sealed class Memento(Uri callbackAddress) : IDAsyncContinuationMemento
+    public sealed class Surrogate(Uri callbackAddress) : IDAsyncContinuationSurrogate
     {
         public Uri CallbackAddress { get; } = callbackAddress;
         

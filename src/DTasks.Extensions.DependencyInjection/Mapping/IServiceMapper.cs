@@ -4,9 +4,9 @@ namespace DTasks.Extensions.DependencyInjection.Mapping;
 
 internal interface IServiceMapper
 {
-    object MapScoped(IServiceProvider provider, object service, ServiceToken token);
+    object MapScoped(IServiceProvider provider, object service, ServiceSurrogate surrogate);
 
-    object MapSingleton(IServiceProvider provider, object service, ServiceToken token);
+    object MapSingleton(IServiceProvider provider, object service, ServiceSurrogate surrogate);
 
-    object MapTransient(IServiceProvider provider, object service, ServiceToken token);
+    object MapTransient(IServiceProvider provider, object service, ServiceSurrogate surrogate);
 }

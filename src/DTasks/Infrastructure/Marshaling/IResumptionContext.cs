@@ -7,5 +7,5 @@ public interface IResumptionContext
 {
     DAsyncId Id { get; }
     
-    IDAsyncMarshaler Marshaler { get; }
+    IDAsyncSurrogator Surrogator { get; }
 }

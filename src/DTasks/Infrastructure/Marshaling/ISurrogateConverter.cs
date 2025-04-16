@@ -3,7 +3,7 @@
 namespace DTasks.Infrastructure.Marshaling;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface IMarshalingAction
+public interface ISurrogateConverter
 {
-    void MarshalAs<TToken>(TypeId typeId, TToken token);
+    T Convert<TSurrogate, T>(TSurrogate surrogate);
 }

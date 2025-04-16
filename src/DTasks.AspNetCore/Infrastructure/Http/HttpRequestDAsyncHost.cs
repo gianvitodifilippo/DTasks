@@ -30,17 +30,17 @@ internal sealed class HttpRequestDAsyncHost(HttpContext httpContext, string moni
             if (callbackType is null)
                 return OnNullCallbackHeaderAsync(cancellationToken);
             
-            if (!continuationFactory.TryCreateMemento(callbackType, headers, out TypedInstance<object> continuationMemento))
+            if (!continuationFactory.TryCreateSurrogate(callbackType, headers, out TypedInstance<object> continuationSurrogate))
                 return OnUnsupportedCallbackTypeAsync(callbackType, cancellationToken);
             
-            SetContinuation(continuationMemento);
+            SetContinuation(continuationSurrogate);
             return Task.CompletedTask;
         }
 
         var callbackTypes = (string?[]?)callbackTypeHeaderValues;
         Debug.Assert(callbackTypes is not null, "When a header contains multiple values, we should have an array.");
 
-        TypedInstance<object>[] continuationMementoArray = new TypedInstance<object>[callbackTypes.Length];
+        TypedInstance<object>[] continuationSurrogateArray = new TypedInstance<object>[callbackTypes.Length];
         List<string>? unsupportedCallbackTypes = null;
         for (var i = 0; i < callbackTypes.Length; i++)
         {
@@ -48,7 +48,7 @@ internal sealed class HttpRequestDAsyncHost(HttpContext httpContext, string moni
             if (callbackType is null)
                 return OnNullCallbackHeaderAsync(cancellationToken);
 
-            if (!continuationFactory.TryCreateMemento(callbackType, headers, out continuationMementoArray[i]))
+            if (!continuationFactory.TryCreateSurrogate(callbackType, headers, out continuationSurrogateArray[i]))
             {
                 unsupportedCallbackTypes ??= new List<string>(1);
                 unsupportedCallbackTypes.Add(callbackType);
@@ -58,7 +58,7 @@ internal sealed class HttpRequestDAsyncHost(HttpContext httpContext, string moni
         if (unsupportedCallbackTypes is not null)
             return OnUnsupportedCallbackTypesAsync(unsupportedCallbackTypes, cancellationToken);
         
-        SetContinuation(continuationMementoArray);
+        SetContinuation(continuationSurrogateArray);
         return Task.CompletedTask;
     }
 

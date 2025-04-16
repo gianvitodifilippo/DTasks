@@ -10,7 +10,7 @@ public interface IDAsyncHost
 {
     IDAsyncStateManager StateManager { get; }
 
-    IDAsyncMarshaler Marshaler { get; }
+    IDAsyncSurrogator Surrogator { get; }
     
     IDAsyncTypeResolver TypeResolver { get; }
     

@@ -173,7 +173,6 @@ public partial class JsonDAsyncSerializerTests
         References References,
         Services Services,
         ParentIds ParentIds,
-        Tokens Tokens,
         StateMachines StateMachines,
         Jsons Jsons)
     {
@@ -213,8 +212,8 @@ public partial class JsonDAsyncSerializerTests
             DAsyncId parentId1 = DAsyncId.New();
             DAsyncId parentId2 = DAsyncId.New();
 
-            object token1 = nameof(Service1);
-            object token2 = nameof(Service2);
+            object surrogate1 = nameof(Service1);
+            object surrogate2 = nameof(Service2);
 
             StateMachine1 stateMachine1 = new()
             {
@@ -236,12 +235,12 @@ public partial class JsonDAsyncSerializerTests
                 {
                   "$typeId": "{{StateMachine1.TypeId}}",
                   "$parentId": "{{parentId1}}",
-                  "%__this": {
-                    "$id": "1",
-                    "token": "{{token1}}"
+                  "__this": {
+                    "@dtasks.tid": null,
+                    "surrogate": "{{surrogate1}}"
                   },
                   "local1": {
-                    "$id": "2",
+                    "$id": "1",
                     "Value1": "{{string1}}",
                     "Value2": {{int1}}
                   },
@@ -253,31 +252,31 @@ public partial class JsonDAsyncSerializerTests
                 {
                   "$typeId": "{{StateMachine2.TypeId}}",
                   "$parentId": "{{parentId2}}",
-                  "%__this": {
-                    "$id": "1",
-                    "token": "{{token2}}"
+                  "__this": {
+                    "@dtasks.tid": null,
+                    "surrogate": "{{surrogate2}}"
                   },
                   "local1": {
-                    "$id": "2",
+                    "$id": "1",
                     "Value1": "{{string1}}",
                     "Value2": {{int1}}
                   },
                   "local2": {
-                    "$id": "3",
+                    "$id": "2",
                     "Reference": {
-                      "$ref": "2"
+                      "$ref": "1"
                     },
                     "Value1": "{{string2}}",
                     "PolymorphicReference": {
-                      "$id": "4",
+                      "$id": "3",
                       "$type": "{{PolymorphicType2.TypeDiscriminator}}",
                       "Value": {{int2}}
                     }
                   },
                   "local3": {
-                    "$id": "5",
+                    "$id": "4",
                     "PolymorphicReference": {
-                      "$ref": "4"
+                      "$ref": "3"
                     }
                   },
                   "local4": {{int1}}
@@ -289,7 +288,6 @@ public partial class JsonDAsyncSerializerTests
                 new References(polymorphicReference, reference1, reference2, reference3),
                 new Services(service1, service2),
                 new ParentIds(parentId1, parentId2),
-                new Tokens(token1, token2),
                 new StateMachines(stateMachine1, stateMachine2),
                 new Jsons(stateMachine1Json, stateMachine2Json));
         }
@@ -313,10 +311,6 @@ public partial class JsonDAsyncSerializerTests
         DAsyncId ParentId1,
         DAsyncId ParentId2);
 
-    internal sealed record Tokens(
-        object Token1,
-        object Token2);
-
     internal sealed record Values(
         string String1,
         string String2,
@@ -327,57 +321,57 @@ public partial class JsonDAsyncSerializerTests
         string StateMachine1Json,
         string StateMachine2Json);
 
-    private class MockDAsyncMarshaler(JsonDTaskConverterFixture fixture) : IDAsyncMarshaler, ITokenConverter
+    private class MockDAsyncSurrogator(JsonDTaskConverterFixture fixture) : IDAsyncSurrogator, ISurrogateConverter
     {
-        public bool TryMarshal<T, TAction>(in T value, scoped ref TAction action)
-            where TAction : struct, IMarshalingAction
+        public bool TrySurrogate<T, TAction>(in T value, scoped ref TAction action)
+            where TAction : struct, ISurrogationAction
 #if NET9_0_OR_GREATER
             , allows ref struct
 #endif
         {
             if (ReferenceEquals(value, fixture.Services.Service1))
             {
-                action.MarshalAs(default, nameof(Service1));
+                action.SurrogateAs(default, nameof(Service1));
                 return true;
             }
 
             if (ReferenceEquals(value, fixture.Services.Service2))
             {
-                action.MarshalAs(default, nameof(Service2));
+                action.SurrogateAs(default, nameof(Service2));
                 return true;
             }
 
             return false;
         }
 
-        public bool TryUnmarshal<T, TAction>(TypeId typeId, scoped ref TAction action)
-            where TAction : struct, IUnmarshalingAction
+        public bool TryRestore<T, TAction>(TypeId typeId, scoped ref TAction action)
+            where TAction : struct, IRestorationAction
 #if NET9_0_OR_GREATER
             , allows ref struct
 #endif
         {
             if (typeof(T) == typeof(Service1))
             {
-                action.UnmarshalAs(typeof(string), this);
+                action.RestoreAs(typeof(string), this);
                 return true;
             }
 
             if (typeof(T) == typeof(Service2))
             {
-                action.UnmarshalAs(typeof(string), this);
+                action.RestoreAs(typeof(string), this);
                 return true;
             }
 
             return false;
         }
 
-        public T Convert<TToken, T>(TToken token)
+        public T Convert<TSurrogate, T>(TSurrogate surrogate)
         {
-            return token switch
+            return surrogate switch
             {
                 nameof(Service1) => (T)(object)fixture.Services.Service1,
                 nameof(Service2) => (T)(object)fixture.Services.Service2,
-                _ => throw new ArgumentException("Invalid token", nameof(token))
+                _ => throw new ArgumentException("Invalid surrogate", nameof(surrogate))
             };
         }
     }

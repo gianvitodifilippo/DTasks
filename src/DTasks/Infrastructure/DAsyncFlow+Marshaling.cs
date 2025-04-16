@@ -18,7 +18,7 @@ public sealed partial class DAsyncFlow
         bindingAttr: BindingFlags.Static | BindingFlags.NonPublic,
         parameterTypes: [typeof(Dictionary<,>).MakeGenericType(typeof(int), Type.MakeGenericMethodParameter(0)), typeof(int)]);
 
-    public static void RegisterTypeIds(IDAsyncTypeResolverBuilder builder)
+    internal static void RegisterTypeIds(DAsyncTypeResolverBuilder builder)
     {
         builder.Register(typeof(HostIndirectionStateMachine));
         builder.Register(typeof(HandleStateMachine));
@@ -28,8 +28,16 @@ public sealed partial class DAsyncFlow
         builder.RegisterDAsyncMethod(s_whenAllDAsyncMethod);
     }
 
-    public static void RegisterGenericTypeIds(IDAsyncTypeResolverBuilder builder, Type resultType)
+    internal static void RegisterGenericTypeIds(DAsyncTypeResolverBuilder builder, Type resultType)
     {
-        builder.RegisterDAsyncMethod(s_whenAllDAsyncGenericMethod.MakeGenericMethod(resultType));
+        builder.RegisterDAsyncMethod(s_whenAllDAsyncGenericMethod.MakeGenericMethod(resultType)); // TODO: This won't work with NativeAOT
+    }
+
+    public static void RegisterSurrogatableTypes(IMarshalingConfiguration configuration)
+    {
+        configuration.RegisterSurrogatableType(typeof(object));
+        configuration.RegisterSurrogatableType(typeof(DTask));
+        configuration.RegisterSurrogatableType(typeof(DTask<>)); // TODO: This won't work with NativeAOT
+        configuration.RegisterSurrogatableType(typeof(HandleRunnable));
     }
 }

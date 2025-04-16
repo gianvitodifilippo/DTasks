@@ -6,5 +6,5 @@ public sealed partial class DAsyncFlow : IResumptionContext
 {
     DAsyncId IResumptionContext.Id => _id;
 
-    IDAsyncMarshaler IResumptionContext.Marshaler => this;
+    IDAsyncSurrogator IResumptionContext.Surrogator => this;
 }

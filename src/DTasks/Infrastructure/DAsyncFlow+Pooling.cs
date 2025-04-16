@@ -13,7 +13,7 @@ public sealed partial class DAsyncFlow
     private static readonly PaddedReference[] s_perCoreCache = new PaddedReference[Environment.ProcessorCount];
     [ThreadStatic] private static DAsyncFlow? t_tlsCache;
 
-    private static DAsyncFlow RentFromCache()
+    private static DAsyncFlow RentFromCache(bool returnToCache)
     {
         DAsyncFlow? flow = t_tlsCache;
         if (flow is not null)
@@ -23,8 +23,7 @@ public sealed partial class DAsyncFlow
         else
         {
             ref DAsyncFlow? slot = ref PerCoreCacheSlot;
-            if (slot is null ||
-                (flow = Interlocked.Exchange<DAsyncFlow?>(ref slot, null)) is null)
+            if (slot is null || (flow = Interlocked.Exchange(ref slot, null)) is null)
             {
                 flow = new DAsyncFlow();
             }
@@ -33,6 +32,7 @@ public sealed partial class DAsyncFlow
         Debug.Assert(flow._state is FlowState.Idling);
         
         flow._state = FlowState.Pending;
+        flow._returnToCache = returnToCache;
         return flow;
     }
 
@@ -62,14 +62,12 @@ public sealed partial class DAsyncFlow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get
         {
-            Debug.Assert(s_perCoreCache.Length == Environment.ProcessorCount,
-                $"{s_perCoreCache.Length} != {Environment.ProcessorCount}");
+            Debug.Assert(s_perCoreCache.Length == Environment.ProcessorCount, $"{s_perCoreCache.Length} != {Environment.ProcessorCount}");
             int i = (int)((uint)Thread.GetCurrentProcessorId() % (uint)Environment.ProcessorCount);
 
 #if DEBUG
             object? transientValue = s_perCoreCache[i].Object;
-            Debug.Assert(transientValue is null or DAsyncFlow,
-                $"Expected null or {nameof(DAsyncFlow)}, got '{transientValue}'");
+            Debug.Assert(transientValue is null or DAsyncFlow, $"Expected null or {nameof(DAsyncFlow)}, got '{transientValue}'");
 #endif
             return ref Unsafe.As<object?, DAsyncFlow?>(ref s_perCoreCache[i].Object);
         }

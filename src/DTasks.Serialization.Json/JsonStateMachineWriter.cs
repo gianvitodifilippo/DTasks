@@ -1,17 +1,12 @@
-﻿using DTasks.Infrastructure;
+﻿using DTasks.Infrastructure.Marshaling;
 using System.Buffers;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json;
 
-internal readonly ref struct JsonStateMachineWriter(
-    IBufferWriter<byte> buffer,
-    JsonSerializerOptions jsonOptions,
-    ReferenceResolver referenceResolver,
-    IDAsyncMarshaler marshaler)
+internal readonly ref struct JsonStateMachineWriter(IBufferWriter<byte> buffer, JsonSerializerOptions jsonOptions)
 {
     private readonly Utf8JsonWriter _writer = new(buffer, new JsonWriterOptions
     {
@@ -42,30 +37,6 @@ internal readonly ref struct JsonStateMachineWriter(
 
     public void WriteField<TField>(string name, TField value)
     {
-        if (!typeof(TField).IsValueType)
-        {
-            if (value is not null)
-            {
-                ReferenceMarshalingAction marshalingAction = new(_writer, jsonOptions, referenceResolver, value, name);
-                if (marshaler.TryMarshal(in value, ref marshalingAction))
-                    return;
-            }
-            else
-            {
-                if (jsonOptions.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingNull)
-                    return;
-
-                _writer.WriteNull(name);
-                return;
-            }
-        }
-        else
-        {
-            ValueMarshalingAction marshalingAction = new(_writer, jsonOptions, name);
-            if (marshaler.TryMarshal(in value, ref marshalingAction))
-                return;
-        }
-
         _writer.WritePropertyName(name);
         JsonSerializer.Serialize(_writer, value, jsonOptions);
     }
@@ -151,81 +122,5 @@ internal readonly ref struct JsonStateMachineWriter(
     public void HandleField(string name, Guid value)
     {
         _writer.WriteString(name, value);
-    }
-
-    private static void WriteMarshaledPropertyName(Utf8JsonWriter writer, string name)
-    {
-        ReadOnlySpan<char> namePrefix = StateMachineJsonConstants.MarshaledValuePrefix;
-        if (name.AsSpan().StartsWith(namePrefix))
-            throw new NotSupportedException($"Prefix '{namePrefix.ToString()}' is reserved."); // TODO: Instead of throwing, escape the name
-
-        int prefixLength = namePrefix.Length;
-        Span<char> finalName = stackalloc char[prefixLength + name.Length];
-        namePrefix.CopyTo(finalName);
-        name.AsSpan().CopyTo(finalName[prefixLength..]);
-
-        writer.WritePropertyName(finalName);
-    }
-
-    private static void WriteTypeId(Utf8JsonWriter writer, TypeId typeId, JsonSerializerOptions jsonOptions)
-    {
-        if (typeId == default)
-            return;
-
-        writer.WriteTypeId("typeId", typeId);
-    }
-
-    private static void WriteToken<TToken>(Utf8JsonWriter writer, TToken token, JsonSerializerOptions jsonOptions)
-    {
-        if (token is null)
-            return;
-
-        writer.WritePropertyName("token");
-        JsonSerializer.Serialize(writer, token, jsonOptions);
-    }
-
-    private readonly struct ValueMarshalingAction(
-        Utf8JsonWriter writer,
-        JsonSerializerOptions jsonOptions,
-        string name) : IMarshalingAction
-    {
-        public void MarshalAs<TToken>(TypeId typeId, TToken token)
-        {
-            WriteMarshaledPropertyName(writer, name);
-
-            writer.WriteStartObject();
-            WriteTypeId(writer, typeId, jsonOptions);
-            WriteToken(writer, token, jsonOptions);
-            writer.WriteEndObject();
-        }
-    }
-
-    private readonly struct ReferenceMarshalingAction(
-        Utf8JsonWriter writer,
-        JsonSerializerOptions jsonOptions,
-        ReferenceResolver referenceResolver,
-        object reference,
-        string name) : IMarshalingAction
-    {
-        public void MarshalAs<TToken>(TypeId typeId, TToken token)
-        {
-            string referenceId = referenceResolver.GetReference(reference, out bool alreadyExists);
-            if (alreadyExists)
-            {
-                writer.WritePropertyName(name);
-                writer.WriteStartObject();
-                writer.WriteString("$ref", referenceId);
-                writer.WriteEndObject();
-                return;
-            }
-
-            WriteMarshaledPropertyName(writer, name);
-
-            writer.WriteStartObject();
-            writer.WriteString("$id", referenceId);
-            WriteTypeId(writer, typeId, jsonOptions);
-            WriteToken(writer, token, jsonOptions);
-            writer.WriteEndObject();
-        }
     }
 }

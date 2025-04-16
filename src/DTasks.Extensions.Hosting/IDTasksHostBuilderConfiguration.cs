@@ -12,5 +12,5 @@ public interface IDTasksHostBuilderConfiguration
 
     IDTasksHostBuilderConfiguration UseServiceProviderOptions(Action<HostBuilderContext, ServiceProviderOptions> configureOptions);
 
-    IDTasksHostBuilderConfiguration ConfigureDTasks(Action<IDTasksServiceConfiguration> configure);
+    IDTasksHostBuilderConfiguration Configure(Action<IDTasksServiceConfiguration> configure);
 }

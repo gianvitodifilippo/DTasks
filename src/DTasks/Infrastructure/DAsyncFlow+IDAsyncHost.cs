@@ -8,7 +8,7 @@ public sealed partial class DAsyncFlow : IDAsyncHost
 {
     IDAsyncStateManager IDAsyncHost.StateManager => _host.StateManager;
 
-    IDAsyncMarshaler IDAsyncHost.Marshaler => _host.Marshaler;
+    IDAsyncSurrogator IDAsyncHost.Surrogator => _host.Surrogator;
 
     IDAsyncTypeResolver IDAsyncHost.TypeResolver => _host.TypeResolver;
 

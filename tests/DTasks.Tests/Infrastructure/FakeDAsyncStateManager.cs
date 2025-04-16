@@ -23,54 +23,54 @@ internal interface IFakeStateMachineResumer
     // IDAsyncRunnable Resume(FakeStateMachineReader reader, Exception exception);
 }
 
-internal abstract class MarshaledValue(TypeId typeId)
+internal abstract class SurrogatedValue(TypeId typeId)
 {
     public TypeId TypeId { get; } = typeId;
 
-    public abstract TField Convert<TField>(Type tokenType, ITokenConverter converter);
+    public abstract TField Convert<TField>(Type surrogateType, ISurrogateConverter converter);
 }
 
-internal sealed class MarshaledValue<TToken>(TypeId typeId, TToken token) : MarshaledValue(typeId)
+internal sealed class SurrogatedValue<TSurrogate>(TypeId typeId, TSurrogate surrogate) : SurrogatedValue(typeId)
 {
-    public override TField Convert<TField>(Type tokenType, ITokenConverter converter)
+    public override TField Convert<TField>(Type surrogateType, ISurrogateConverter converter)
     {
-        if (!tokenType.IsInstanceOfType(token))
-            throw FailException.ForFailure($"Expected {token} to be assignable to {tokenType}.");
+        if (!surrogateType.IsInstanceOfType(surrogate))
+            throw FailException.ForFailure($"Expected {surrogate} to be assignable to {surrogateType}.");
 
-        return converter.Convert<TToken, TField>(token);
+        return converter.Convert<TSurrogate, TField>(surrogate);
     }
 }
 
-internal class FakeStateMachineWriter(Dictionary<string, object?> values, IDAsyncMarshaler marshaler)
+internal class FakeStateMachineWriter(Dictionary<string, object?> values, IDAsyncSurrogator surrogator)
 {
     public void WriteField<TField>(string fieldName, TField value)
     {
-        FakeMarshalingAction action = new(fieldName, values);
-        if (marshaler.TryMarshal(in value, ref action))
+        FakeSurrogationAction action = new(fieldName, values);
+        if (surrogator.TrySurrogate(in value, ref action))
             return;
 
         values.Add(fieldName, value);
     }
 }
 
-internal class FakeStateMachineReader(Dictionary<string, object?> values, IDAsyncMarshaler marshaler)
+internal class FakeStateMachineReader(Dictionary<string, object?> values, IDAsyncSurrogator surrogator)
 {
     public bool ReadField<TField>(string fieldName, ref TField value)
     {
         if (!values.Remove(fieldName, out object? untypedValue))
             return false;
 
-        if (untypedValue is MarshaledValue marshaledValue)
+        if (untypedValue is SurrogatedValue surrogatedValue)
         {
-            FakeUnmarshalingAction<TField> action =
+            FakeRestorationAction<TField> action =
 #if NET9_0_OR_GREATER
-            new(marshaledValue, ref value);
+            new(surrogatedValue, ref value);
 #else
-            new(marshaledValue);
+            new(surrogatedValue);
 #endif
 
-            if (!marshaler.TryUnmarshal<TField, FakeUnmarshalingAction<TField>>(marshaledValue.TypeId, ref action))
-                throw FailException.ForFailure("Marshaler should be able to unmarshal its own token.");
+            if (!surrogator.TryRestore<TField, FakeRestorationAction<TField>>(surrogatedValue.TypeId, ref action))
+                throw FailException.ForFailure("Surrogator should be able to restore its own surrogate.");
 
 #if !NET9_0_OR_GREATER
             value = action.Value!;
@@ -87,44 +87,44 @@ internal readonly
 #if NET9_0_OR_GREATER
 ref
 #endif
-struct FakeMarshalingAction(string fieldName, Dictionary<string, object?> values) : IMarshalingAction
+struct FakeSurrogationAction(string fieldName, Dictionary<string, object?> values) : ISurrogationAction
 {
-    public void MarshalAs<TToken>(TypeId typeId, TToken token)
+    public void SurrogateAs<TSurrogate>(TypeId typeId, TSurrogate surrogate)
     {
-        values[fieldName] = new MarshaledValue<TToken>(typeId, token);
+        values[fieldName] = new SurrogatedValue<TSurrogate>(typeId, surrogate);
     }
 }
 
 #if NET9_0_OR_GREATER
-internal readonly ref struct FakeUnmarshalingAction<TField>(MarshaledValue marshaledValue, ref TField value) : IUnmarshalingAction
+internal readonly ref struct FakeRestorationAction<TField>(SurrogatedValue surrogatedValue, ref TField value) : IRestorationAction
 {
     private readonly ref TField _value = ref value;
 
-    public void UnmarshalAs<TConverter>(Type tokenType, scoped ref TConverter converter)
-        where TConverter : struct, ITokenConverter
+    public void RestoreAs<TConverter>(Type surrogateType, scoped ref TConverter converter)
+        where TConverter : struct, ISurrogateConverter
     {
-        UnmarshalAs(tokenType, converter);
+        RestoreAs(surrogateType, converter);
     }
 
-    public void UnmarshalAs(Type tokenType, ITokenConverter converter)
+    public void RestoreAs(Type surrogateType, ISurrogateConverter converter)
     {
-        _value = marshaledValue.Convert<TField>(tokenType, converter);
+        _value = surrogatedValue.Convert<TField>(surrogateType, converter);
     }
 }
 #else
-internal struct FakeUnmarshalingAction<TField>(MarshaledValue marshaledValue) : IUnmarshalingAction
+internal struct FakeRestorationAction<TField>(SurrogatedValue surrogatedValue) : IRestorationAction
 {
     public TField? Value { get; private set; }
 
-    public void UnmarshalAs<TConverter>(Type tokenType, scoped ref TConverter converter)
-        where TConverter : struct, ITokenConverter
+    public void RestoreAs<TConverter>(Type surrogateType, scoped ref TConverter converter)
+        where TConverter : struct, ISurrogateConverter
     {
-        UnmarshalAs(tokenType, converter);
+        RestoreAs(surrogateType, converter);
     }
 
-    public void UnmarshalAs(Type tokenType, ITokenConverter converter)
+    public void RestoreAs(Type surrogateType, ISurrogateConverter converter)
     {
-        Value = marshaledValue.Convert<TField>(tokenType, converter);
+        Value = surrogatedValue.Convert<TField>(surrogateType, converter);
     }
 }
 #endif
@@ -253,7 +253,7 @@ internal sealed class FakeDAsyncStateManager(IDAsyncTypeResolver typeResolver) :
 
         public void Suspend(ISuspensionContext context, ref TStateMachine stateMachine)
         {
-            FakeStateMachineWriter writer = new(_values, context.Marshaler);
+            FakeStateMachineWriter writer = new(_values, context.Surrogator);
 
             var converter = (IFakeStateMachineSuspender<TStateMachine>)inspector.GetSuspender(typeof(TStateMachine));
             converter.Suspend(ref stateMachine, context, writer);
@@ -261,7 +261,7 @@ internal sealed class FakeDAsyncStateManager(IDAsyncTypeResolver typeResolver) :
 
         public override DAsyncLink Resume(IResumptionContext context)
         {
-            FakeStateMachineReader reader = new(_values, context.Marshaler);
+            FakeStateMachineReader reader = new(_values, context.Surrogator);
 
             var converter = (IFakeStateMachineResumer)inspector.GetResumer(typeof(TStateMachine));
             IDAsyncRunnable runnable = converter.Resume(reader);
@@ -271,7 +271,7 @@ internal sealed class FakeDAsyncStateManager(IDAsyncTypeResolver typeResolver) :
 
         public override DAsyncLink Resume<TResult>(IResumptionContext context, TResult result)
         {
-            FakeStateMachineReader reader = new(_values, context.Marshaler);
+            FakeStateMachineReader reader = new(_values, context.Surrogator);
 
             var converter = (IFakeStateMachineResumer)inspector.GetResumer(typeof(TStateMachine));
             IDAsyncRunnable runnable = converter.Resume(reader, result);

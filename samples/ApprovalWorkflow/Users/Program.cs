@@ -8,6 +8,7 @@ var app = builder.Build();
 app.MapPost("/approvals/start", async ([FromServices] ILogger<Program> logger) =>
 {
     using HttpClient http = new HttpClient();
+    http.Timeout = Timeout.InfiniteTimeSpan;
 
     using HttpRequestMessage request = new(HttpMethod.Post, new Uri("http://localhost:5033/approvals"));
     request.Headers.Add("Async-CallbackType", "webhook");

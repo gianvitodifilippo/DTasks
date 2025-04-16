@@ -1,21 +1,14 @@
 ﻿using DTasks.Infrastructure;
 using DTasks.Inspection;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using DTasks.Infrastructure.Marshaling;
-
-#if NET9_0_OR_GREATER
-using System.Runtime.CompilerServices;
-#endif
+using DTasks.Infrastructure.State;
 
 namespace DTasks.Serialization.Json;
 
-internal ref struct JsonStateMachineReader(
-    ReadOnlySpan<byte> bytes,
-    JsonSerializerOptions jsonOptions,
-    ReferenceResolver referenceResolver,
-    IDAsyncMarshaler marshaler)
+internal ref struct JsonStateMachineReader(ReadOnlySpan<byte> bytes, JsonSerializerOptions jsonOptions)
 {
+    private delegate TValue DeserializationAction<out TValue>(ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions);
     public delegate IDAsyncRunnable ResumeAction<in T>(IStateMachineResumer resumer, T arg, ref JsonStateMachineReader reader);
 
     private Utf8JsonReader _reader = new(bytes);
@@ -51,200 +44,90 @@ internal ref struct JsonStateMachineReader(
 
     public bool ReadField<TField>(string name, ref TField? value)
     {
-        if (_reader.TokenType is not JsonTokenType.PropertyName)
+        if (!CheckPropertyNameAndAdvance(name))
             return false;
 
-        if (_reader.ValueSpan.StartsWith(StateMachineJsonConstants.MarshaledValuePrefixUtf8))
-            return ReadMarshaledValue(name, ref value);
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => JsonSerializer.Deserialize<TField>(ref reader, jsonOptions));
+        return true;
+    }
 
-        if (!_reader.ValueTextEquals(name))
+    public bool ReadField(string name, ref int value)
+    {
+        if (!CheckPropertyNameAndAdvance(name))
             return false;
 
-        _reader.MoveNext();
-        value = JsonSerializer.Deserialize<TField>(ref _reader, jsonOptions);
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetInt32());
+        return true;
+    }
+
+    public bool ReadField(string name, ref short value)
+    {
+        if (!CheckPropertyNameAndAdvance(name))
+            return false;
+
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetInt16());
+        return true;
+    }
+
+    public bool ReadField(string name, ref long value)
+    {
+        if (!CheckPropertyNameAndAdvance(name))
+            return false;
+
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetInt64());
+        return true;
+    }
+
+    public bool ReadField(string name, ref uint value)
+    {
+        if (!CheckPropertyNameAndAdvance(name))
+            return false;
+
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetUInt32());
+        return true;
+    }
+
+    public bool ReadField(string name, ref ushort value)
+    {
+        if (!CheckPropertyNameAndAdvance(name))
+            return false;
+
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetUInt16());
+        return true;
+    }
+
+    public bool ReadField(string name, ref ulong value)
+    {
+        if (!CheckPropertyNameAndAdvance(name))
+            return false;
+
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetUInt64());
+        return true;
+    }
+
+    public bool ReadField(string name, ref string? value)
+    {
+        if (!CheckPropertyNameAndAdvance(name))
+            return false;
+
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetString());
+        return true;
+    }
+
+    private bool CheckPropertyNameAndAdvance(string name)
+    {
+        if (_reader.TokenType is not JsonTokenType.PropertyName || !_reader.ValueTextEquals(name))
+            return false;
 
         _reader.MoveNext();
         return true;
     }
 
-    private bool ReadMarshaledValue<TField>(string name, ref TField? value)
+    private TValue GetValueAndAdvance<TValue>(DeserializationAction<TValue> deserialize)
     {
-        ReadOnlySpan<char> namePrefix = StateMachineJsonConstants.MarshaledValuePrefix;
-        int prefixLength = namePrefix.Length;
-        Span<char> finalName = stackalloc char[prefixLength + name.Length];
-        namePrefix.CopyTo(finalName);
-        name.AsSpan().CopyTo(finalName[prefixLength..]);
-
-        if (!_reader.ValueTextEquals(finalName))
-            return false;
-
-        _reader.MoveNext();
-        _reader.ExpectToken(JsonTokenType.StartObject);
-
-        _reader.MoveNext();
-        if (_reader.TokenType == JsonTokenType.EndObject)
-            return ReadNullToken(default, ref value);
-
-        _reader.ExpectToken(JsonTokenType.PropertyName);
-        if (_reader.ValueTextEquals("$ref"))
-            return ReadReference(ref value);
-
-        string? referenceId = null;
-        TypeId typeId = default;
-
-        if (_reader.ValueTextEquals("$id"))
-        {
-            if (typeof(TField).IsValueType)
-                throw new JsonException($"Unexpected property name '{_reader.GetString()}' while deserializing a d-async token.");
-
-            _reader.MoveNext();
-            _reader.ExpectToken(JsonTokenType.String);
-
-            referenceId = _reader.GetString()!;
-
-            _reader.MoveNext();
-            _reader.ExpectToken(JsonTokenType.PropertyName);
-        }
-
-        if (_reader.ValueTextEquals("typeId"))
-        {
-            _reader.MoveNext();
-            typeId = _reader.ReadTypeId();
-
-            _reader.MoveNext();
-            if (_reader.TokenType == JsonTokenType.EndObject)
-                return ReadNullToken(typeId, ref value);
-
-            _reader.ExpectToken(JsonTokenType.PropertyName);
-        }
-
-        if (!_reader.ValueTextEquals("token"))
-            throw new JsonException($"Unexpected property name '{_reader.GetString()}' while deserializing a d-async token.");
-
+        TValue value = deserialize(ref _reader, jsonOptions);
         _reader.MoveNext();
 
-#if NET9_0_OR_GREATER
-        UnmarshalingAction<TField> action = new(ref _reader, jsonOptions, ref value);
-        if (marshaler.TryUnmarshal<TField, UnmarshalingAction<TField>>(typeId, ref action))
-        {
-            _reader.MoveNext();
-            TryAddReference(referenceId, value);
-            return true;
-        }
-
-        _reader.MoveNext();
-        return false;
-#else
-        if (marshaler.TryUnmarshal<TField>(typeId, out UnmarshalResult result))
-        {
-            object? token = JsonSerializer.Deserialize(ref _reader, result.TokenType, jsonOptions);
-            _reader.MoveNext();
-
-            value = result.Converter.Convert<object?, TField>(token);
-            TryAddReference(referenceId, value);
-
-            _reader.MoveNext();
-            return true;
-        }
-
-        _reader.MoveNext();
-        return false;
-#endif
+        return value;
     }
-
-    private bool ReadNullToken<TField>(TypeId typeId, ref TField? value)
-    {
-        _reader.MoveNext();
-
-#if NET9_0_OR_GREATER
-        NullTokenUnmarshalingAction<TField> action = new(ref value);
-        return marshaler.TryUnmarshal<TField, NullTokenUnmarshalingAction<TField>>(typeId, ref action);
-#else
-        if (!marshaler.TryUnmarshal<TField>(default, out UnmarshalResult result))
-            return false;
-
-        value = result.Converter.Convert<object?, TField>(null);
-        return true;
-#endif
-    }
-
-    private bool ReadReference<TField>(ref TField? value)
-    {
-        _reader.MoveNext();
-        _reader.ExpectToken(JsonTokenType.String);
-
-        string referenceId = _reader.GetString()!;
-        value = (TField)referenceResolver.ResolveReference(referenceId);
-
-        _reader.MoveNext();
-        _reader.ExpectToken(JsonTokenType.EndObject);
-
-        _reader.MoveNext();
-        return true;
-    }
-
-    private readonly void TryAddReference(string? referenceId, object? value)
-    {
-        if (referenceId is null)
-            return;
-
-        if (value is null)
-            throw new InvalidOperationException("A d-async token was unexpectedly unmarshaled as a null reference.");
-
-        referenceResolver.AddReference(referenceId, value);
-    }
-
-#if NET9_0_OR_GREATER
-
-    private ref struct NullTokenUnmarshalingAction<TField>(ref TField? value) : IUnmarshalingAction
-    {
-        private ref TField? _value = ref value;
-
-        public void UnmarshalAs<TConverter>(Type tokenType, ref TConverter converter)
-            where TConverter : struct, ITokenConverter
-        {
-            _value = converter.Convert<object?, TField>(null);
-        }
-
-        public void UnmarshalAs(Type tokenType, ITokenConverter converter)
-        {
-            _value = converter.Convert<object?, TField>(null);
-        }
-    }
-
-    private ref struct UnmarshalingAction<TField>(
-        ref Utf8JsonReader reader,
-        JsonSerializerOptions jsonOptions,
-        ref TField? value) : IUnmarshalingAction
-    {
-        private ref ReinterpretMeAsUtf8JsonReader _reader = ref Unsafe.As<Utf8JsonReader, ReinterpretMeAsUtf8JsonReader>(ref reader);
-        private ref TField? _value = ref value;
-
-        public void UnmarshalAs<TConverter>(Type tokenType, scoped ref TConverter converter)
-            where TConverter : struct, ITokenConverter
-        {
-            object? token = ReadToken(tokenType);
-            _value = converter.Convert<object?, TField>(token);
-        }
-
-        public void UnmarshalAs(Type tokenType, ITokenConverter converter)
-        {
-            object? token = ReadToken(tokenType);
-            _value = converter.Convert<object?, TField>(token);
-        }
-
-        private object? ReadToken(Type tokenType)
-        {
-            ref Utf8JsonReader reader = ref Unsafe.As<ReinterpretMeAsUtf8JsonReader, Utf8JsonReader>(ref _reader);
-            object? token = JsonSerializer.Deserialize(ref reader, tokenType, jsonOptions);
-            reader.MoveNext();
-            return token;
-        }
-
-        // The compiler won't let us store a reference to the Utf8JsonReader, since it is a ref struct.
-        // This allows us to bypass that check. At the same time, we must make sure that we don't misuse the reference.
-        private struct ReinterpretMeAsUtf8JsonReader;
-    }
-
-#endif
 }

@@ -1,6 +1,6 @@
 ﻿namespace DTasks.Infrastructure.Marshaling;
 
-internal class DTaskToken
+internal class DTaskSurrogate
 {
     private static readonly Factory s_factory = new();
 
@@ -11,16 +11,17 @@ internal class DTaskToken
     public Exception? Exception { get; set; }
 
     internal virtual void Write<T, TAction>(scoped ref TAction action, IDAsyncTypeResolver typeResolver)
-        where TAction : IMarshalingAction
+        where TAction : ISurrogationAction
 #if NET9_0_OR_GREATER
         , allows ref struct
 #endif
     {
-        TypeId typeId = typeof(DTask).IsAssignableFrom(typeof(T))
+        bool isDTaskAtCompileTime = typeof(DTask).IsAssignableFrom(typeof(T));
+        TypeId typeId = isDTaskAtCompileTime
             ? default
             : typeResolver.GetTypeId(typeof(DTask));
 
-        action.MarshalAs(typeId, this);
+        action.SurrogateAs(typeId, this);
     }
 
     internal virtual DTask ToDTask() => Status switch
@@ -30,51 +31,52 @@ internal class DTaskToken
         _ => new DTaskHandle(Id)
     };
 
-    public static DTaskToken Create(DAsyncId id, DTask task)
+    public static DTaskSurrogate Create(DTask task)
     {
-        DTaskToken token = task.Accept(s_factory);
-        token.Id = id;
-        token.Status = task.Status;
-        return token;
+        DTaskSurrogate surrogate = task.Accept(s_factory);
+        surrogate.Id = DAsyncId.New();
+        surrogate.Status = task.Status;
+        return surrogate;
     }
 
-    private sealed class Factory : IDTaskVisitor<DTaskToken>
+    private sealed class Factory : IDTaskVisitor<DTaskSurrogate>
     {
-        public DTaskToken Visit(DTask task) => task.Status switch
+        public DTaskSurrogate Visit(DTask task) => task.Status switch
         {
             DTaskStatus.Pending or
             DTaskStatus.Running or
             DTaskStatus.Suspended or
-            DTaskStatus.Succeeded => new DTaskToken(),
+            DTaskStatus.Succeeded => new DTaskSurrogate(),
             DTaskStatus.Faulted or
-            DTaskStatus.Canceled => new DTaskToken { Exception = task.Exception },
+            DTaskStatus.Canceled => new DTaskSurrogate { Exception = task.Exception },
             _ => throw new ArgumentException($"Invalid {nameof(DTaskStatus)}: {task.Status}", nameof(task))
         };
 
-        public DTaskToken Visit<TResult>(DTask<TResult> task) => task.Status switch
+        public DTaskSurrogate Visit<TResult>(DTask<TResult> task) => task.Status switch
         {
             DTaskStatus.Pending or
             DTaskStatus.Running or
-            DTaskStatus.Suspended => new DTaskToken<TResult>(),
-            DTaskStatus.Succeeded => new DTaskToken<TResult> { Result = task.Result },
+            DTaskStatus.Suspended => new DTaskSurrogate<TResult>(),
+            DTaskStatus.Succeeded => new DTaskSurrogate<TResult> { Result = task.Result },
             DTaskStatus.Faulted or
-            DTaskStatus.Canceled => new DTaskToken<TResult> { Exception = task.Exception },
+            DTaskStatus.Canceled => new DTaskSurrogate<TResult> { Exception = task.Exception },
             _ => throw new ArgumentException($"Invalid {nameof(DTaskStatus)}: {task.Status}", nameof(task))
         };
     }
 }
 
-internal class DTaskToken<TResult> : DTaskToken
+internal class DTaskSurrogate<TResult> : DTaskSurrogate
 {
     public TResult? Result { get; set; }
 
     internal override void Write<T, TAction>(ref TAction action, IDAsyncTypeResolver typeResolver)
     {
-        TypeId typeId = typeof(DTask<TResult>).IsAssignableFrom(typeof(T))
+        bool isDTaskAtCompileTime = typeof(DTask<TResult>).IsAssignableFrom(typeof(T));
+        TypeId typeId = isDTaskAtCompileTime
             ? default
             : typeResolver.GetTypeId(typeof(DTask<TResult>));
 
-        action.MarshalAs(typeId, this);
+        action.SurrogateAs(typeId, this);
     }
 
     internal override DTask ToDTask() => Status switch

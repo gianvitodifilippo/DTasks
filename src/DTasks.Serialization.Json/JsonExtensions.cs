@@ -1,9 +1,8 @@
-﻿using DTasks.Infrastructure;
+﻿using DTasks.Infrastructure.Marshaling;
 using System.Buffers;
 using System.Buffers.Text;
 using System.Diagnostics;
 using System.Text.Json;
-using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json;
 
@@ -11,7 +10,7 @@ internal static class JsonExtensions
 {
     public static void WriteTypeId(this Utf8JsonWriter writer, string propertyName, TypeId typeId)
     {
-        writer.WriteString(propertyName, typeId.Value);
+        writer.WriteString(propertyName, typeId.ToString());
     }
 
     public static void WriteDAsyncId(this Utf8JsonWriter writer, string propertyName, DAsyncId id)
@@ -25,10 +24,13 @@ internal static class JsonExtensions
 
     public static TypeId ReadTypeId(this ref Utf8JsonReader reader)
     {
-        reader.ExpectToken(JsonTokenType.String);
-        string typeIdValue = reader.GetString()!;
+        reader.ExpectToken(JsonTokenType.String, JsonTokenType.Null);
+        string? typeIdValue = reader.GetString();
 
-        return new TypeId(typeIdValue);
+        if (typeIdValue is null)
+            return default;
+
+        return TypeId.Parse(typeIdValue);
     }
 
     public static DAsyncId ReadDAsyncId(this ref Utf8JsonReader reader)

@@ -36,12 +36,12 @@ internal sealed class WebSocketsDAsyncContinuation(IWebSocketHandler handler, st
         throw new NotImplementedException();
     }
 
-    public static TypedInstance<object> CreateMemento(string connectionId)
+    public static TypedInstance<object> CreateSurrogate(string connectionId)
     {
-        return new Memento(connectionId);
+        return new Surrogate(connectionId);
     }
     
-    public sealed class Memento(string connectionId) : IDAsyncContinuationMemento
+    public sealed class Surrogate(string connectionId) : IDAsyncContinuationSurrogate
     {
         public string ConnectionId { get; } = connectionId;
         

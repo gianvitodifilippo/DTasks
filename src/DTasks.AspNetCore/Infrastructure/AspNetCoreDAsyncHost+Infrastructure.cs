@@ -7,15 +7,16 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.AspNetCore.Infrastructure;
 
-public abstract partial class AspNetCoreDAsyncHost : DAsyncHost
+public abstract partial class AspNetCoreDAsyncHost : DAsyncHost, IDAsyncHostFactory
 {
-    private IDAsyncMarshaler? _marshaler;
+    private IDAsyncSurrogator? _surrogator;
     private IDAsyncStateManager? _stateManager;
     private IDAsyncTypeResolver? _typeResolver;
     // private IDAsyncCancellationProvider? _cancellationProvider;
     private IDAsyncSuspensionHandler? _suspensionHandler;
+    private DAsyncFlowServices.Scope _flowServicesScope;
 
-    protected override IDAsyncMarshaler Marshaler => GetService(ref _marshaler);
+    protected override IDAsyncSurrogator Surrogator => GetService(ref _surrogator);
 
     protected override IDAsyncStateManager StateManager => GetService(ref _stateManager);
 
@@ -29,5 +30,13 @@ public abstract partial class AspNetCoreDAsyncHost : DAsyncHost
         where TService : notnull
     {
         return service ??= Services.GetRequiredService<TService>();
+    }
+
+    public IDAsyncHost CreateHost(IDAsyncHostCreationContext context)
+    {
+        DAsyncFlowServices flowServices = Services.GetRequiredService<DAsyncFlowServices>();
+        _flowServicesScope = flowServices.UseFlowServices(context);
+
+        return this;
     }
 }

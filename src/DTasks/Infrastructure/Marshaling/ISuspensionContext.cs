@@ -5,7 +5,7 @@ namespace DTasks.Infrastructure.Marshaling;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface ISuspensionContext
 {
-    IDAsyncMarshaler Marshaler { get; }
+    IDAsyncSurrogator Surrogator { get; }
     
     bool IsSuspended<TAwaiter>(ref TAwaiter awaiter);
 }

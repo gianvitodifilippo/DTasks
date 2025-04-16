@@ -49,7 +49,7 @@ public sealed class DAsyncTypeResolverBuilder : IDAsyncTypeResolverBuilder, IDAs
         return _typesToIds[type];
     }
 
-    public static DAsyncTypeResolverBuilder CreateDefault()
+    public static DAsyncTypeResolverBuilder Create()
     {
         DAsyncTypeResolverBuilder builder = new();
         DAsyncFlow.RegisterTypeIds(builder);

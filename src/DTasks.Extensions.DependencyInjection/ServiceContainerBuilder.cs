@@ -23,19 +23,19 @@ internal sealed class ServiceContainerBuilder(
         name: nameof(IServiceMapper.MapSingleton),
         genericParameterCount: 0,
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-        parameterTypes: [typeof(IServiceProvider), typeof(object), typeof(ServiceToken)]);
+        parameterTypes: [typeof(IServiceProvider), typeof(object), typeof(ServiceSurrogate)]);
 
     private readonly MethodInfo _mapScopedMethod = typeof(IServiceMapper).GetRequiredMethod(
         name: nameof(IServiceMapper.MapScoped),
         genericParameterCount: 0,
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-        parameterTypes: [typeof(IServiceProvider), typeof(object), typeof(ServiceToken)]);
+        parameterTypes: [typeof(IServiceProvider), typeof(object), typeof(ServiceSurrogate)]);
 
     private readonly MethodInfo _mapTransientMethod = typeof(IServiceMapper).GetRequiredMethod(
         name: nameof(IServiceMapper.MapTransient),
         genericParameterCount: 0,
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-        parameterTypes: [typeof(IServiceProvider), typeof(object), typeof(ServiceToken)]);
+        parameterTypes: [typeof(IServiceProvider), typeof(object), typeof(ServiceSurrogate)]);
 
     private readonly MethodInfo _getServiceMapperMethod = typeof(ServiceProviderServiceExtensions).GetRequiredMethod(
         name: nameof(ServiceProviderServiceExtensions.GetRequiredService),
@@ -116,12 +116,12 @@ internal sealed class ServiceContainerBuilder(
             .AddSingleton(register)
             .AddSingleton(validator)
             .AddSingleton<IServiceMapper, ServiceMapper>()
-            .AddSingleton<RootServiceProviderDAsyncMarshaler>()
-            .AddSingleton<IRootDAsyncMarshaler>(provider => provider.GetRequiredService<RootServiceProviderDAsyncMarshaler>())
-            .AddSingleton<IRootServiceMapper>(provider => provider.GetRequiredService<RootServiceProviderDAsyncMarshaler>())
-            .AddScoped<ChildServiceProviderDAsyncMarshaler>()
-            .AddScoped<IDAsyncMarshaler>(provider => provider.GetRequiredService<ChildServiceProviderDAsyncMarshaler>())
-            .AddScoped<IChildServiceMapper>(provider => provider.GetRequiredService<ChildServiceProviderDAsyncMarshaler>());
+            .AddSingleton<RootServiceProviderDAsyncSurrogator>()
+            .AddSingleton<IRootDAsyncSurrogator>(provider => provider.GetRequiredService<RootServiceProviderDAsyncSurrogator>())
+            .AddSingleton<IRootServiceMapper>(provider => provider.GetRequiredService<RootServiceProviderDAsyncSurrogator>())
+            .AddScoped<ChildServiceProviderDAsyncSurrogator>()
+            .AddScoped<IDAsyncSurrogator>(provider => provider.GetRequiredService<ChildServiceProviderDAsyncSurrogator>())
+            .AddScoped<IChildServiceMapper>(provider => provider.GetRequiredService<ChildServiceProviderDAsyncSurrogator>());
     }
 
     public void Replace(ServiceDescriptor descriptor)
@@ -129,12 +129,12 @@ internal sealed class ServiceContainerBuilder(
         Debug.Assert(!descriptor.ServiceType.ContainsGenericParameters, "Open generic services can't be replaced.");
 
         TypeId typeId = registerBuilder.AddServiceType(descriptor.ServiceType);
-        ServiceToken token = descriptor.IsKeyedService
-            ? ServiceToken.Create(typeId, descriptor.ServiceKey!)
-            : ServiceToken.Create(typeId);
+        ServiceSurrogate surrogate = descriptor.IsKeyedService
+            ? ServiceSurrogate.Create(typeId, descriptor.ServiceKey!)
+            : ServiceSurrogate.Create(typeId);
 
         ParameterExpression providerParam = Expression.Parameter(typeof(IServiceProvider), "provider");
-        Expression body = MakeServiceFactoryBody(descriptor, providerParam, token);
+        Expression body = MakeServiceFactoryBody(descriptor, providerParam, surrogate);
 
         if (descriptor.IsKeyedService)
         {
@@ -155,7 +155,7 @@ internal sealed class ServiceContainerBuilder(
         services.Remove(descriptor);
     }
 
-    private Expression MakeServiceFactoryBody(ServiceDescriptor descriptor, Expression providerExpr, ServiceToken token)
+    private Expression MakeServiceFactoryBody(ServiceDescriptor descriptor, Expression providerExpr, ServiceSurrogate surrogate)
     {
         ExpressionOrError mappedInstanceResult = MakeMappedInstanceExpression(descriptor, providerExpr);
         if (mappedInstanceResult.IsError)
@@ -169,7 +169,7 @@ internal sealed class ServiceContainerBuilder(
             _ => throw new InvalidOperationException($"Invalid service lifetime: '{descriptor.Lifetime}'.")
         };
 
-        // provider.GetRequiredService<IServiceMapper>().`mapMethod`(provider, `mappedInstanceExpr`, token)
+        // provider.GetRequiredService<IServiceMapper>().`mapMethod`(provider, `mappedInstanceExpr`, surrogate)
         return Expression.Call(
             instance: Expression.Call(
                 method: _getServiceMapperMethod,
@@ -177,7 +177,7 @@ internal sealed class ServiceContainerBuilder(
             method: mapMethod,
             arg0: providerExpr,
             arg1: mappedInstanceResult.Expression,
-            arg2: Expression.Constant(token));
+            arg2: Expression.Constant(surrogate));
     }
 
     private ExpressionOrError MakeMappedInstanceExpression(ServiceDescriptor descriptor, Expression providerExpr)
