@@ -6,7 +6,7 @@ using DTasks.Utils;
 namespace DTasks.Infrastructure.Marshaling;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public sealed class DAsyncTypeResolverBuilder : IDAsyncTypeResolver
+public sealed class DAsyncTypeResolverBuilder : IDAsyncTypeResolverBuilder, IDAsyncTypeResolver
 {
     private readonly Dictionary<Type, TypeId> _typesToIds = [];
     private readonly Dictionary<TypeId, Type> _idsToTypes = [];

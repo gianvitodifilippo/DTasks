@@ -30,7 +30,6 @@ builder.Host.UseDTasks(dTasks => dTasks
 
 JsonMarshalingConfiguration marshalingConfiguration = JsonMarshalingConfiguration.Create();
 
-
 builder.Services.AddScoped<AsyncEndpoints>();
 builder.Services
     .AddSingleton(sp => ConnectionMultiplexer.Connect("localhost:6379"))

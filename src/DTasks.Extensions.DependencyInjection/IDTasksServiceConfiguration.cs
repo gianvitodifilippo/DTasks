@@ -4,9 +4,9 @@ namespace DTasks.Extensions.DependencyInjection;
 
 public interface IDTasksServiceConfiguration
 {
-    IDTasksServiceConfiguration UseTypeResolverBuilder(DAsyncTypeResolverBuilder typeResolverBuilder);
+    IDTasksServiceConfiguration UseTypeResolverBuilder(IDAsyncTypeResolverBuilder typeResolverBuilder);
 
-    IDTasksServiceConfiguration ConfigureTypeResolver(Action<DAsyncTypeResolverBuilder> configure);
+    IDTasksServiceConfiguration ConfigureTypeResolver(Action<IDAsyncTypeResolverBuilder> configure);
 
     IDTasksServiceConfiguration RegisterDAsyncService(Type serviceType);
 

@@ -18,7 +18,7 @@ public partial class JsonDAsyncSerializerTests
     private readonly IStateMachineInspector _inspector;
     private readonly IDAsyncTypeResolver _typeResolver;
     private readonly IDAsyncSurrogator _surrogator;
-    private readonly JsonSerializerOptions _jsonOptions;
+    private readonly JsonSerializerOptions _surrogatorOptions;
     private readonly JsonDAsyncSerializer _sut;
 
     public JsonDAsyncSerializerTests()
@@ -27,19 +27,24 @@ public partial class JsonDAsyncSerializerTests
         _inspector = Substitute.For<IStateMachineInspector>();
         _typeResolver = Substitute.For<IDAsyncTypeResolver>();
         _surrogator = new MockDAsyncSurrogator(_fixture);
-        JsonSerializerOptions globalOptions = new();
-        _jsonOptions = new()
+        StateMachineReferenceResolver referenceResolver = new();
+        JsonSerializerOptions defaultOptions = new()
+        {
+            ReferenceHandler = new StateMachineReferenceHandler(referenceResolver)
+        };
+        _surrogatorOptions = new()
         {
             WriteIndented = true,
             TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             Converters =
             {
-                new SurrogatableConverter<Service1>(globalOptions),
-                new SurrogatableConverter<Service2>(globalOptions)
-            }
+                new SurrogatableConverter<Service1>(_surrogator, defaultOptions),
+                new SurrogatableConverter<Service2>(_surrogator, defaultOptions)
+            },
+            ReferenceHandler = new StateMachineReferenceHandler(referenceResolver)
         };
-        _sut = new(_inspector, _typeResolver, _jsonOptions);
+        _sut = new(_inspector, _typeResolver, referenceResolver, _surrogatorOptions);
 
         _typeResolver
             .GetTypeId(typeof(StateMachine1))

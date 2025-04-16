@@ -4,7 +4,7 @@ using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Extensions.DependencyInjection;
 
-internal sealed class DAsyncServiceRegisterBuilder(DAsyncTypeResolverBuilder typeResolverBuilder) : IDAsyncServiceRegisterBuilder
+internal sealed class DAsyncServiceRegisterBuilder(IDAsyncTypeResolverBuilder typeResolverBuilder) : IDAsyncServiceRegisterBuilder
 {
     private readonly HashSet<Type> _types = [];
 
