@@ -1,29 +1,20 @@
 using Approvals;
 using DTasks;
-using DTasks.Serialization;
-using DTasks.Serialization.Json;
-using DTasks.Serialization.StackExchangeRedis;
-using Microsoft.AspNetCore.Mvc;
-using StackExchange.Redis;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using DTasks.AspNetCore;
 using DTasks.AspNetCore.Infrastructure;
+using DTasks.AspNetCore.Infrastructure.Http;
 using DTasks.Extensions.Hosting;
 using DTasks.Infrastructure.Execution;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
-using DTasks.AspNetCore.Infrastructure.Http;
-using System.Net;
+using DTasks.Serialization;
+using DTasks.Serialization.Json;
 using DTasks.Serialization.Json.Converters;
-
-JsonSerializerOptions options = new()
-{
-    Converters = { new MyConverterFactory() }
-};
-
-MyClass c = new();
-string json = JsonSerializer.Serialize(c, options);
+using DTasks.Serialization.StackExchangeRedis;
+using Microsoft.AspNetCore.Mvc;
+using StackExchange.Redis;
+using System.Net;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,25 +27,32 @@ builder.Host.UseDTasks(dTasks => dTasks
         })));
 
 #region In library
+
+JsonMarshalingConfiguration marshalingConfiguration = JsonMarshalingConfiguration.Create();
+
+
 builder.Services.AddScoped<AsyncEndpoints>();
 builder.Services
     .AddSingleton(sp => ConnectionMultiplexer.Connect("localhost:6379"))
     .AddSingleton(sp => sp.GetRequiredService<ConnectionMultiplexer>().GetDatabase());
 builder.Services
-    .AddScoped<IDAsyncSerializer>(sp => JsonDAsyncSerializer.Create(sp.GetRequiredService<IDAsyncTypeResolver>(), sp.GetRequiredService<JsonSerializerOptions>()))
-    .AddSingleton<IDAsyncStorage, RedisDAsyncStorage>()
-    .AddSingleton(sp => new JsonSerializerOptions()
+    .AddSingleton(sp =>
     {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        WriteIndented = true,
-        Converters =
+        IDAsyncTypeResolver typeResolver = sp.GetRequiredService<IDAsyncTypeResolver>();
+        
+        marshalingConfiguration.ConfigureSerializerOptions(options =>
         {
-            new TypeIdJsonConverter(),
-            new DAsyncIdJsonConverter(),
-            new TypedInstanceJsonConverter<object>(sp.GetRequiredService<IDAsyncTypeResolver>()),
-            new TypedInstanceJsonConverter<IDAsyncContinuationMemento>(sp.GetRequiredService<IDAsyncTypeResolver>()),
-        }
+            options.Converters.Add(new TypedInstanceJsonConverter<object>(typeResolver));
+            options.Converters.Add(new TypedInstanceJsonConverter<IDAsyncContinuationSurrogate>(typeResolver));
+        });
+        marshalingConfiguration.RegisterSurrogatableType(typeof(AsyncEndpoints));
+
+        return marshalingConfiguration.CreateSerializerFactory(typeResolver);
     })
+    .AddScoped<DAsyncFlowServices>()
+    .AddScoped<IDAsyncFlowServices>(sp => sp.GetRequiredService<DAsyncFlowServices>())
+    .AddScoped(sp => sp.GetRequiredService<JsonDAsyncSerializerFactory>().CreateSerializer(sp.GetRequiredService<IDAsyncFlowServices>().Surrogator))
+    .AddSingleton<IDAsyncStorage, RedisDAsyncStorage>()
     .AddHttpClient()
     .AddSingleton<RedisDAsyncSuspensionHandler>()
     .AddHostedService(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())

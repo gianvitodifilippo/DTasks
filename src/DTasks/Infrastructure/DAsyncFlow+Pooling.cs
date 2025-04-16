@@ -13,7 +13,7 @@ public sealed partial class DAsyncFlow
     private static readonly PaddedReference[] s_perCoreCache = new PaddedReference[Environment.ProcessorCount];
     [ThreadStatic] private static DAsyncFlow? t_tlsCache;
 
-    private static DAsyncFlow RentFromCache()
+    private static DAsyncFlow RentFromCache(bool returnToCache)
     {
         DAsyncFlow? flow = t_tlsCache;
         if (flow is not null)
@@ -32,6 +32,7 @@ public sealed partial class DAsyncFlow
         Debug.Assert(flow._state is FlowState.Idling);
         
         flow._state = FlowState.Pending;
+        flow._returnToCache = returnToCache;
         return flow;
     }
 

@@ -28,22 +28,22 @@ public abstract partial class AspNetCoreDAsyncHost
 
     public ValueTask StartAsync(IDAsyncRunnable runnable, CancellationToken cancellationToken = default)
     {
-        return DAsyncFlow.StartFlowAsync(this, runnable, cancellationToken);
+        return DAsyncFlow.StartFlowAsync(this as IDAsyncHostFactory, runnable, cancellationToken);
     }
     
     public ValueTask ResumeAsync(DAsyncId id, CancellationToken cancellationToken = default)
     {
-        return DAsyncFlow.ResumeFlowAsync(this, id, cancellationToken);
+        return DAsyncFlow.ResumeFlowAsync(this as IDAsyncHostFactory, id, cancellationToken);
     }
 
     public ValueTask ResumeAsync<TResult>(DAsyncId id, TResult result, CancellationToken cancellationToken = default)
     {
-        return DAsyncFlow.ResumeFlowAsync(this, id, result, cancellationToken);
+        return DAsyncFlow.ResumeFlowAsync(this as IDAsyncHostFactory, id, result, cancellationToken);
     }
 
     public ValueTask ResumeAsync(DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
     {
-        return DAsyncFlow.ResumeFlowAsync(this, id, exception, cancellationToken);
+        return DAsyncFlow.ResumeFlowAsync(this as IDAsyncHostFactory, id, exception, cancellationToken);
     }
 
     protected virtual Task OnStartCoreAsync(IDAsyncFlowStartContext context, CancellationToken cancellationToken)
@@ -260,7 +260,7 @@ public abstract partial class AspNetCoreDAsyncHost
         return new HttpRequestDAsyncHost(httpContext, monitorActionName);
     }
 
-    public static void RegisterTypeIds(IDAsyncTypeResolverBuilder typeResolverBuilder) // TODO: Remove
+    public static void RegisterTypeIds(DAsyncTypeResolverBuilder typeResolverBuilder) // TODO: Remove
     {
         typeResolverBuilder.Register(typeof(WebhookDAsyncContinuation.Surrogate));
         typeResolverBuilder.Register(typeof(WebSocketsDAsyncContinuation.Surrogate));

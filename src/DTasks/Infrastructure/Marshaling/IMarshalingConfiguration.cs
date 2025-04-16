@@ -1,6 +1,6 @@
 ﻿namespace DTasks.Infrastructure.Marshaling;
 
-public interface IDAsyncMarshaller
+public interface IMarshalingConfiguration
 {
     void RegisterSurrogatableType(Type type);
 }

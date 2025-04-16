@@ -12,12 +12,12 @@ internal sealed class DTasksServiceConfiguration(IServiceCollection services) : 
 {
     private readonly HashSet<KeyedServiceIdentifier> _additionalKeyedServiceTypes = [];
     private readonly HashSet<Type> _additionalServiceTypes = [];
-    private Action<IDAsyncTypeResolverBuilder>? _configureTypeResolver;
-    private IDAsyncTypeResolverBuilder? _typeResolverBuilder;
+    private Action<DAsyncTypeResolverBuilder>? _configureTypeResolver;
+    private DAsyncTypeResolverBuilder? _typeResolverBuilder;
 
     public ServiceContainerBuilder CreateContainerBuilder()
     {
-        IDAsyncTypeResolverBuilder typeResolverBuilder = _typeResolverBuilder ?? DAsyncTypeResolverBuilder.CreateDefault();
+        DAsyncTypeResolverBuilder typeResolverBuilder = _typeResolverBuilder ?? DAsyncTypeResolverBuilder.Create();
         _configureTypeResolver?.Invoke(typeResolverBuilder);
         typeResolverBuilder.Register(typeof(ServiceSurrogate));
         typeResolverBuilder.Register(typeof(KeyedServiceSurrogate<string>));
@@ -26,7 +26,7 @@ internal sealed class DTasksServiceConfiguration(IServiceCollection services) : 
         return new ServiceContainerBuilder(services, typeResolverBuilder, new DAsyncServiceRegisterBuilder(typeResolverBuilder));
     }
 
-    public IDTasksServiceConfiguration UseTypeResolverBuilder(IDAsyncTypeResolverBuilder typeResolverBuilder)
+    public IDTasksServiceConfiguration UseTypeResolverBuilder(DAsyncTypeResolverBuilder typeResolverBuilder)
     {
         ThrowHelper.ThrowIfNull(typeResolverBuilder);
 
@@ -34,7 +34,7 @@ internal sealed class DTasksServiceConfiguration(IServiceCollection services) : 
         return this;
     }
 
-    public IDTasksServiceConfiguration ConfigureTypeResolver(Action<IDAsyncTypeResolverBuilder> configure)
+    public IDTasksServiceConfiguration ConfigureTypeResolver(Action<DAsyncTypeResolverBuilder> configure)
     {
         ThrowHelper.ThrowIfNull(configure);
 

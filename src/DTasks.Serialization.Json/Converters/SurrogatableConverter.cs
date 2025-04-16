@@ -1,5 +1,4 @@
 ﻿using DTasks.Infrastructure.Marshaling;
-using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 #if NET9_0_OR_GREATER
@@ -8,15 +7,12 @@ using System.Runtime.CompilerServices;
 
 namespace DTasks.Serialization.Json.Converters;
 
-internal sealed class SurrogatableConverter<TSurrogatable>(JsonSerializerOptions globalOptions) : JsonConverter<TSurrogatable>
+internal sealed class SurrogatableConverter<TSurrogatable>(IDAsyncSurrogator surrogator, JsonSerializerOptions defaultOptions) : JsonConverter<TSurrogatable>
 {
     public override TSurrogatable? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if (options.GetState().Surrogator is not IDAsyncSurrogator surrogator)
-            return ReadNonSurrogated(ref reader, typeToConvert, options);
-
         if (reader.TokenType is not JsonTokenType.StartObject || !TryReadTypeId(ref reader, out TypeId typeId))
-            return ReadNonSurrogated(ref reader, typeToConvert, options);
+            return ReadNonSurrogated(ref reader, typeToConvert);
 
         reader.ExpectPropertyName("surrogate");
         reader.MoveNext();
@@ -44,34 +40,23 @@ internal sealed class SurrogatableConverter<TSurrogatable>(JsonSerializerOptions
 
     public override void Write(Utf8JsonWriter writer, TSurrogatable value, JsonSerializerOptions options)
     {
-        if (options.GetState().Surrogator is not IDAsyncSurrogator surrogator)
-        {
-            WriteNonSurrogated(writer, value, options);
+        SurrogationAction surrogationAction = new(writer, options);
+        if (surrogator.TrySurrogate(in value, ref surrogationAction))
             return;
-        }
 
-        ValueSurrogationAction surrogationAction = new(writer, options);
-        if (!surrogator.TrySurrogate(in value, ref surrogationAction))
-        {
-            WriteNonSurrogated(writer, value, options);
-        }
+        WriteNonSurrogated(writer, value);
     }
 
-    private TSurrogatable? ReadNonSurrogated(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    private TSurrogatable? ReadNonSurrogated(ref Utf8JsonReader reader, Type typeToConvert)
     {
-        var converter = GetDefaultConverter();
-        return converter.Read(ref reader, typeToConvert, options);
+        return typeof(TSurrogatable).IsValueType
+            ? JsonSerializer.Deserialize<TSurrogatable>(ref reader, defaultOptions)
+            : (TSurrogatable?)JsonSerializer.Deserialize(ref reader, typeToConvert, defaultOptions);
     }
 
-    private void WriteNonSurrogated(Utf8JsonWriter writer, TSurrogatable value, JsonSerializerOptions options)
+    private void WriteNonSurrogated(Utf8JsonWriter writer, TSurrogatable value)
     {
-        var converter = GetDefaultConverter();
-        converter.Write(writer, value, options);
-    }
-
-    private JsonConverter<TSurrogatable> GetDefaultConverter()
-    {
-        return (JsonConverter<TSurrogatable>)globalOptions.GetTypeInfo(typeof(TSurrogatable)).Converter;
+        JsonSerializer.Serialize(writer, value, defaultOptions);
     }
 
     private static bool TryReadTypeId(ref Utf8JsonReader reader, out TypeId typeId)
@@ -140,7 +125,7 @@ internal sealed class SurrogatableConverter<TSurrogatable>(JsonSerializerOptions
     }
 #endif
 
-    private readonly struct ValueSurrogationAction(Utf8JsonWriter writer, JsonSerializerOptions options) : ISurrogationAction
+    private readonly struct SurrogationAction(Utf8JsonWriter writer, JsonSerializerOptions options) : ISurrogationAction
     {
         public void SurrogateAs<TSurrogate>(TypeId typeId, TSurrogate surrogate)
         {

@@ -10,7 +10,7 @@ internal static class JsonExtensions
 {
     public static void WriteTypeId(this Utf8JsonWriter writer, string propertyName, TypeId typeId)
     {
-        writer.WriteString(propertyName, typeId.Value);
+        writer.WriteString(propertyName, typeId.ToString());
     }
 
     public static void WriteDAsyncId(this Utf8JsonWriter writer, string propertyName, DAsyncId id)
@@ -30,7 +30,7 @@ internal static class JsonExtensions
         if (typeIdValue is null)
             return default;
 
-        return new TypeId(typeIdValue);
+        return TypeId.Parse(typeIdValue);
     }
 
     public static DAsyncId ReadDAsyncId(this ref Utf8JsonReader reader)

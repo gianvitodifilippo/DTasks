@@ -4,6 +4,41 @@ namespace DTasks.Infrastructure;
 
 public sealed partial class DAsyncFlow
 {
+    private void AwaitOnStart()
+    {
+        Await(_host.OnStartAsync(this, _cancellationToken), FlowState.Starting);
+    }
+
+    private void AwaitOnSuspend()
+    {
+        Await(_host.OnSuspendAsync(_cancellationToken), FlowState.Returning);
+    }
+
+    private void AwaitOnSucceed()
+    {
+        Await(_host.OnSucceedAsync(this, _cancellationToken), FlowState.Returning);
+    }
+
+    private void AwaitOnSucceed<TResult>(TResult result)
+    {
+        Await(_host.OnSucceedAsync(this, result, _cancellationToken), FlowState.Returning);
+    }
+
+    private void AwaitOnFail(Exception exception)
+    {
+        Await(_host.OnFailAsync(this, exception, _cancellationToken), FlowState.Returning);
+    }
+
+    private void AwaitOnCancel(OperationCanceledException exception)
+    {
+        Await(_host.OnCancelAsync(this, exception, _cancellationToken), FlowState.Returning);
+    }
+
+    private void Return()
+    {
+        Await(Task.CompletedTask, FlowState.Returning);
+    }
+
     private void Await(Task task, FlowState state)
     {
         _state = state;

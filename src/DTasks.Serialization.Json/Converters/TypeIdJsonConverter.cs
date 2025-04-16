@@ -13,6 +13,6 @@ public sealed class TypeIdJsonConverter : JsonConverter<TypeId>
 
     public override void Write(Utf8JsonWriter writer, TypeId value, JsonSerializerOptions options)
     {
-        writer.WriteStringValue(value.Value);
+        writer.WriteStringValue(value.ToString());
     }
 }
