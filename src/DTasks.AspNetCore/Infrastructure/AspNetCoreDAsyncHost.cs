@@ -262,7 +262,7 @@ public abstract partial class AspNetCoreDAsyncHost
         return new HttpRequestDAsyncHost(httpContext, monitorActionName);
     }
 
-    public static void RegisterTypeIds(DAsyncTypeResolverBuilder typeResolverBuilder) // TODO: Remove
+    public static void RegisterTypeIds(IDAsyncTypeResolverBuilder typeResolverBuilder) // TODO: Remove
     {
         typeResolverBuilder.Register(typeof(WebhookDAsyncContinuation.Surrogate));
         typeResolverBuilder.Register(typeof(WebSocketsDAsyncContinuation.Surrogate));
