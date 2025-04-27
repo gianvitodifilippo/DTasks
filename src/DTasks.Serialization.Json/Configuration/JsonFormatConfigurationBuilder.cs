@@ -19,18 +19,6 @@ internal sealed class JsonFormatConfigurationBuilder : IJsonFormatConfigurationB
             typeof(IStateMachineResumer),
             configuration.TypeResolver));
 
-    public IJsonFormatConfigurationBuilder ConfigureSerializerOptions(Action<JsonSerializerOptions> configure)
-    {
-        configure(_serializerOptions);
-        return this;
-    }
-
-    public IJsonFormatConfigurationBuilder UseInspector(IComponentDescriptor<IStateMachineInspector> descriptor)
-    {
-        _inspectorDescriptor = descriptor;
-        return this;
-    }
-
     public ISerializationConfigurationBuilder Configure(ISerializationConfigurationBuilder builder)
     {
         var serializerFactoryDescriptor = _inspectorDescriptor.Map((config, inspector) =>
@@ -64,5 +52,17 @@ internal sealed class JsonFormatConfigurationBuilder : IJsonFormatConfigurationB
         return builder
             .UseSerializer(serializerDescriptor)
             .UseStateMachineSerializer(stateMachineSerializerDescriptor);
+    }
+
+    IJsonFormatConfigurationBuilder IJsonFormatConfigurationBuilder.ConfigureSerializerOptions(Action<JsonSerializerOptions> configure)
+    {
+        configure(_serializerOptions);
+        return this;
+    }
+
+    IJsonFormatConfigurationBuilder IJsonFormatConfigurationBuilder.UseInspector(IComponentDescriptor<IStateMachineInspector> descriptor)
+    {
+        _inspectorDescriptor = descriptor;
+        return this;
     }
 }

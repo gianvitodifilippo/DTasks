@@ -24,7 +24,7 @@ public static class DTasksServiceCollectionExtensions
     private static IServiceCollection AddDTasksCore(this IServiceCollection services, Action<IDependencyInjectionDTasksConfigurationBuilder> configure)
     {
         if (services.Any(descriptor => descriptor.ServiceType == typeof(DTasksServiceMarker)))
-            throw new InvalidOperationException($"DTasks services have already been added. Make sure to call '{nameof(AddDTasks)}' once.");
+            throw new InvalidOperationException($"DTasks services have already been added. Make sure to call '{nameof(AddDTasks)}' once and after registering all other services.");
 
         services.AddSingleton<DTasksServiceMarker>();
 

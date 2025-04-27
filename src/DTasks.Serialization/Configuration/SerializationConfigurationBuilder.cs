@@ -10,24 +10,6 @@ internal sealed class SerializationConfigurationBuilder : ISerializationConfigur
     private IComponentDescriptor<IDAsyncSerializer>? _serializerDescriptor;
     private IComponentDescriptor<IDAsyncStorage> _storageDescriptor = ComponentDescriptor.Singleton(DAsyncStorage.Default);
 
-    public ISerializationConfigurationBuilder UseStateMachineSerializer(IComponentDescriptor<IStateMachineSerializer> descriptor)
-    {
-        _stateMachineSerializerDescriptor = descriptor;
-        return this;
-    }
-
-    public ISerializationConfigurationBuilder UseSerializer(IComponentDescriptor<IDAsyncSerializer> descriptor)
-    {
-        _serializerDescriptor = descriptor;
-        return this;
-    }
-
-    public ISerializationConfigurationBuilder UseStorage(IComponentDescriptor<IDAsyncStorage> descriptor)
-    {
-        _storageDescriptor = descriptor;
-        return this;
-    }
-
     public TBuilder Configure<TBuilder>(TBuilder builder)
         where TBuilder : IDTasksConfigurationBuilder<TBuilder>
     {
@@ -47,5 +29,23 @@ internal sealed class SerializationConfigurationBuilder : ISerializationConfigur
         return builder.ConfigureState(stateManager => stateManager
             .UseStack(stackDescriptor)
             .UseHeap(heapDescriptor));
+    }
+
+    ISerializationConfigurationBuilder ISerializationConfigurationBuilder.UseStateMachineSerializer(IComponentDescriptor<IStateMachineSerializer> descriptor)
+    {
+        _stateMachineSerializerDescriptor = descriptor;
+        return this;
+    }
+
+    ISerializationConfigurationBuilder ISerializationConfigurationBuilder.UseSerializer(IComponentDescriptor<IDAsyncSerializer> descriptor)
+    {
+        _serializerDescriptor = descriptor;
+        return this;
+    }
+
+    ISerializationConfigurationBuilder ISerializationConfigurationBuilder.UseStorage(IComponentDescriptor<IDAsyncStorage> descriptor)
+    {
+        _storageDescriptor = descriptor;
+        return this;
     }
 }

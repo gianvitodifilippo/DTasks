@@ -599,31 +599,31 @@ public static class ComponentDescriptor
         return new UnitComponentDescriptor<TComponent>(component);
     }
 
-    private static IComponentDescriptor<TComponent> SingletonCore<TComponent>(ConfiguredImplementationFactory<TComponent> createComponent)
+    private static SingletonComponentDescriptor<TComponent> SingletonCore<TComponent>(ConfiguredImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
         return new SingletonComponentDescriptor<TComponent>(createComponent);
     }
 
-    private static IComponentDescriptor<TComponent> ScopedCore<TComponent>(FlowImplementationFactory<TComponent> createComponent)
+    private static ScopedComponentDescriptor<TComponent> ScopedCore<TComponent>(FlowImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
         return new ScopedComponentDescriptor<TComponent>(createComponent);
     }
 
-    private static IComponentDescriptor<TComponent> RootTransient<TComponent>(ConfiguredImplementationFactory<TComponent> createComponent)
+    private static RootTransientComponentDescriptor<TComponent> RootTransient<TComponent>(ConfiguredImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
         return new RootTransientComponentDescriptor<TComponent>(createComponent);
     }
 
-    private static IComponentDescriptor<TComponent> RootTransient<TComponent>(ImplementationFactory<TComponent> createComponent)
+    private static RootTransientComponentDescriptor<TComponent> RootTransient<TComponent>(ImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
         return new RootTransientComponentDescriptor<TComponent>(config => createComponent());
     }
 
-    private static IComponentDescriptor<TComponent> FlowTransient<TComponent>(FlowImplementationFactory<TComponent> createComponent)
+    private static FlowTransientComponentDescriptor<TComponent> FlowTransient<TComponent>(FlowImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
         return new FlowTransientComponentDescriptor<TComponent>(createComponent);

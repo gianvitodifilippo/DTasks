@@ -8,12 +8,6 @@ internal sealed class RedisStorageConfigurationBuilder : IRedisStorageConfigurat
 {
     private IComponentDescriptor<IDatabase>? _databaseDescriptor;
 
-    public IRedisStorageConfigurationBuilder UseDatabase(IComponentDescriptor<IDatabase> descriptor)
-    {
-        _databaseDescriptor = descriptor;
-        return this;
-    }
-
     public ISerializationConfigurationBuilder Configure(ISerializationConfigurationBuilder builder)
     {
         if (_databaseDescriptor is null)
@@ -21,5 +15,11 @@ internal sealed class RedisStorageConfigurationBuilder : IRedisStorageConfigurat
 
         var storageDescriptor = _databaseDescriptor.Map(database => new RedisDAsyncStorage(database));
         return builder.UseStorage(storageDescriptor);
+    }
+
+    IRedisStorageConfigurationBuilder IRedisStorageConfigurationBuilder.UseDatabase(IComponentDescriptor<IDatabase> descriptor)
+    {
+        _databaseDescriptor = descriptor;
+        return this;
     }
 }
