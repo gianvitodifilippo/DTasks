@@ -9,7 +9,6 @@ public static class AspNetCoreDTasksServiceConfigurationExtensions
         return builder
             .AddAspNetCore()
             .UseSerialization(serialization => serialization
-                .UseJsonFormat()
-                .UseInMemoryStorage());
+                .UseJsonFormat());
     }
 }

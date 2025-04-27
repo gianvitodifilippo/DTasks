@@ -9,7 +9,7 @@ public static class SerializationDTasksConfigurationBuilderExtensions
     {
         SerializationConfigurationBuilder serializationBuilder = new();
         configure(serializationBuilder);
-        
+
         return serializationBuilder.Configure(builder);
     }
 }

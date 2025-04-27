@@ -12,7 +12,7 @@ internal sealed class SingletonComponentProvider<TComponent>(
     protected override DTasksConfiguration Configuration => configuration;
 
     protected override TComponent GetComponent() => component;
-    
+
     [ExcludeFromCodeCoverage]
     public override string ToString()
     {

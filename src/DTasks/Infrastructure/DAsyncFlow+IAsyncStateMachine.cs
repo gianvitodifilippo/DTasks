@@ -1,7 +1,7 @@
-﻿using DTasks.Utils;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
@@ -15,7 +15,7 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
             {
                 case FlowState.Starting:
                     Assert.NotNull(_runnable);
-                    
+
                     GetVoidTaskResult();
                     object? resultOrException = Consume(ref _resultOrException);
                     if (resultOrException is null)
@@ -33,7 +33,7 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
                         _valueTaskSource.SetResult(default);
                     }
                     break;
-                
+
                 case FlowState.Running: // After awaiting a regular awaitable or a completed d-awaitable
                     Assert.NotNull(_stateMachine);
 
@@ -59,7 +59,7 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
                     _state = FlowState.Running;
                     runnable.Run(this);
                     break;
-                
+
                 case FlowState.Suspending: // After awaiting a method that results in suspending the d-async flow
                     GetVoidTaskResult();
                     AwaitOnSuspend();

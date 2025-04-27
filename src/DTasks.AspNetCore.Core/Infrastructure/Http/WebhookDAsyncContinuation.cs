@@ -43,7 +43,7 @@ internal sealed class WebhookDAsyncContinuation(IHttpClientFactory httpClientFac
     public sealed class Surrogate(Uri callbackAddress) : IDAsyncContinuationSurrogate
     {
         public Uri CallbackAddress { get; } = callbackAddress;
-        
+
         public IDAsyncContinuation Restore(IServiceProvider services)
         {
             return new WebhookDAsyncContinuation(

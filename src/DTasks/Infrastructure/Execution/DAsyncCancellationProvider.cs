@@ -1,26 +1,38 @@
 namespace DTasks.Infrastructure.Execution;
 
-internal static class DAsyncCancellationProvider
+public abstract class DAsyncCancellationProvider : IDAsyncCancellationProvider
 {
     public static readonly IDAsyncCancellationProvider Default = new DefaultDAsyncCancellationProvider();
 
-    private sealed class DefaultDAsyncCancellationProvider : IDAsyncCancellationProvider
+    private DAsyncCancellationProvider()
     {
-        public Task CancelAsync(DCancellationId id, CancellationToken cancellationToken = default)
+    }
+
+    public abstract void RegisterHandler(IDAsyncCancellationHandler handler);
+    
+    public abstract void UnregisterHandler(IDAsyncCancellationHandler handler);
+    
+    public abstract Task CancelAsync(DCancellationId id, CancellationToken cancellationToken = default);
+    
+    public abstract Task CancelAsync(DCancellationId id, DateTimeOffset expirationTime, CancellationToken cancellationToken = default);
+
+    private sealed class DefaultDAsyncCancellationProvider : DAsyncCancellationProvider
+    {
+        public override Task CancelAsync(DCancellationId id, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException("The current d-async host does not support distributed cancellation.");
         }
 
-        public Task CancelAsync(DCancellationId id, DateTimeOffset expirationTime, CancellationToken cancellationToken = default)
+        public override Task CancelAsync(DCancellationId id, DateTimeOffset expirationTime, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException("The current d-async host does not support distributed cancellation.");
         }
 
-        public void RegisterHandler(IDAsyncCancellationHandler handler)
+        public override void RegisterHandler(IDAsyncCancellationHandler handler)
         {
         }
 
-        public void UnregisterHandler(IDAsyncCancellationHandler handler)
+        public override void UnregisterHandler(IDAsyncCancellationHandler handler)
         {
         }
     }

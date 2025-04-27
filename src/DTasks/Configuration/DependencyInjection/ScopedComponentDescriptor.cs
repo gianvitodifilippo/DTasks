@@ -11,7 +11,7 @@ internal sealed class ScopedComponentDescriptor<TComponent>(FlowImplementationFa
     {
         return builder.Scoped(createComponent);
     }
-    
+
     [ExcludeFromCodeCoverage]
     public override string ToString()
     {

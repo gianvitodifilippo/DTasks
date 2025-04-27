@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel;
-using DTasks.Utils;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using DTasks.Utils;
 
 namespace DTasks;
 
@@ -90,7 +90,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
     internal static DAsyncId New()
     {
         Span<byte> bytes = stackalloc byte[ByteCount];
-        
+
         Create(bytes);
         return new(bytes);
     }
@@ -98,7 +98,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
     internal static DAsyncId NewFlowId()
     {
         Span<byte> bytes = stackalloc byte[ByteCount];
-        
+
         Create(bytes);
         bytes[0] |= FlowIdMask;
         return new(bytes);

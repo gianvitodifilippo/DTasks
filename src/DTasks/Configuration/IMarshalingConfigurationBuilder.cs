@@ -12,7 +12,7 @@ namespace DTasks.Configuration;
 public interface IMarshalingConfigurationBuilder
 {
     IMarshalingConfigurationBuilder AddSurrogator(IComponentDescriptor<IDAsyncSurrogator> descriptor);
-    
+
     IMarshalingConfigurationBuilder RegisterSurrogatableType(Type type);
 
     IMarshalingConfigurationBuilder RegisterTypeId(Type type);

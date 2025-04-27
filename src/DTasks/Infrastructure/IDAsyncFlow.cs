@@ -9,9 +9,9 @@ namespace DTasks.Infrastructure;
 public interface IDAsyncFlow
 {
     DTasksConfiguration Configuration { get; }
-    
+
     IDAsyncSurrogator Surrogator { get; }
-    
+
     bool TryGetProperty<TProperty>(DAsyncFlowPropertyKey<TProperty> key, [MaybeNullWhen(false)] out TProperty value);
 }
 

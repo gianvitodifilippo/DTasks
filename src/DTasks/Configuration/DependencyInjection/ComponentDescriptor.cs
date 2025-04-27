@@ -13,7 +13,7 @@ public static class ComponentDescriptor
 
         return Unit(component);
     }
-    
+
     public static IComponentDescriptor<TComponent> Singleton<TComponent>(ConfiguredImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
@@ -21,7 +21,7 @@ public static class ComponentDescriptor
 
         return SingletonCore(createComponent);
     }
-    
+
     public static IComponentDescriptor<TComponent> Scoped<TComponent>(FlowImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
@@ -29,7 +29,7 @@ public static class ComponentDescriptor
 
         return ScopedCore(createComponent);
     }
-    
+
     public static IComponentDescriptor<TComponent> Transient<TComponent>(ImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
@@ -37,7 +37,7 @@ public static class ComponentDescriptor
 
         return RootTransient(createComponent);
     }
-    
+
     public static IComponentDescriptor<TComponent> Transient<TComponent>(ConfiguredImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
@@ -45,7 +45,7 @@ public static class ComponentDescriptor
 
         return RootTransient(createComponent);
     }
-    
+
     public static IComponentDescriptor<TComponent> Transient<TComponent>(FlowImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
@@ -67,7 +67,7 @@ public static class ComponentDescriptor
         return descriptors
             .Aggregate(seed, (accumulated, descriptor) => accumulated
                 .Bind(list => descriptor
-                    .Map<TComponent, List<TComponent>>(component => [..list, component])))
+                    .Map<TComponent, List<TComponent>>(component => [.. list, component])))
             .Map(aggregate);
     }
 
@@ -81,10 +81,10 @@ public static class ComponentDescriptor
     {
         ThrowHelper.ThrowIfNull(descriptor);
         ThrowHelper.ThrowIfNull(map);
-        
+
         return descriptor.Bind(dependency => Unit(map(dependency)));
     }
-    
+
     public static IComponentDescriptor<TResult> Map<TComponent, TResult>(
         this IComponentDescriptor<TComponent> descriptor,
         Func<DTasksConfiguration, TComponent, TResult> map)
@@ -93,7 +93,7 @@ public static class ComponentDescriptor
     {
         ThrowHelper.ThrowIfNull(descriptor);
         ThrowHelper.ThrowIfNull(map);
-        
+
         return descriptor.Bind(dependency => SingletonCore(config => map(config, dependency)));
     }
 
@@ -105,7 +105,7 @@ public static class ComponentDescriptor
     {
         ThrowHelper.ThrowIfNull(descriptor);
         ThrowHelper.ThrowIfNull(map);
-        
+
         return descriptor.Bind(dependency => ScopedCore(flow => map(flow, dependency)));
     }
 
@@ -117,7 +117,7 @@ public static class ComponentDescriptor
     {
         ThrowHelper.ThrowIfNull(descriptor);
         ThrowHelper.ThrowIfNull(map);
-        
+
         return descriptor.Bind(dependency => RootTransient(() => map(dependency)));
     }
 
@@ -129,7 +129,7 @@ public static class ComponentDescriptor
     {
         ThrowHelper.ThrowIfNull(descriptor);
         ThrowHelper.ThrowIfNull(map);
-        
+
         return descriptor.Bind(dependency => RootTransient(config => map(config, dependency)));
     }
 
@@ -141,7 +141,7 @@ public static class ComponentDescriptor
     {
         ThrowHelper.ThrowIfNull(descriptor);
         ThrowHelper.ThrowIfNull(map);
-        
+
         return descriptor.Bind(dependency => FlowTransient(flow => map(flow, dependency)));
     }
 
@@ -592,37 +592,37 @@ public static class ComponentDescriptor
     }
 
     #endregion
-    
+
     private static UnitComponentDescriptor<TComponent> Unit<TComponent>(TComponent component)
         where TComponent : notnull
     {
         return new UnitComponentDescriptor<TComponent>(component);
     }
-    
+
     private static IComponentDescriptor<TComponent> SingletonCore<TComponent>(ConfiguredImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
         return new SingletonComponentDescriptor<TComponent>(createComponent);
     }
-    
+
     private static IComponentDescriptor<TComponent> ScopedCore<TComponent>(FlowImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
         return new ScopedComponentDescriptor<TComponent>(createComponent);
     }
-    
+
     private static IComponentDescriptor<TComponent> RootTransient<TComponent>(ConfiguredImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
         return new RootTransientComponentDescriptor<TComponent>(createComponent);
     }
-    
+
     private static IComponentDescriptor<TComponent> RootTransient<TComponent>(ImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {
         return new RootTransientComponentDescriptor<TComponent>(config => createComponent());
     }
-    
+
     private static IComponentDescriptor<TComponent> FlowTransient<TComponent>(FlowImplementationFactory<TComponent> createComponent)
         where TComponent : notnull
     {

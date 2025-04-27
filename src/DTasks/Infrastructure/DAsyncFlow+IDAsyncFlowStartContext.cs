@@ -22,10 +22,10 @@ internal sealed partial class DAsyncFlow : IDAsyncFlowStartContext
     private void SetResultOrException(object resultOrException)
     {
         Debug.Assert(_state is FlowState.Starting, $"{nameof(IDAsyncResultBuilder)} should be exposed only when starting.");
-        
+
         if (_resultOrException is not null)
             throw new InvalidOperationException("The result was already set.");
-        
+
         _resultOrException = resultOrException;
     }
 }

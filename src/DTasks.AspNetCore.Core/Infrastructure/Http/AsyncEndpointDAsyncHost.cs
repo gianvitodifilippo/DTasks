@@ -17,22 +17,22 @@ internal sealed class AsyncEndpointDAsyncHost(HttpContext httpContext) : AspNetC
         IHeaderDictionary headers = httpContext.Request.Headers;
         if (!headers.TryGetValue(AsyncHeaders.CallbackType, out StringValues callbackTypeHeaderValues))
             return Task.CompletedTask;
-        
+
         int callbackTypeHeaderCount = callbackTypeHeaderValues.Count;
         if (callbackTypeHeaderCount == 0)
             return Task.CompletedTask;
-        
+
         var continuationFactory = httpContext.RequestServices.GetRequiredService<IDAsyncContinuationFactory>();
-        
+
         if (callbackTypeHeaderCount == 1)
         {
             var callbackType = (string?)callbackTypeHeaderValues;
             if (callbackType is null)
                 return OnNullCallbackHeaderAsync(cancellationToken);
-            
+
             if (!continuationFactory.TryCreateSurrogate(callbackType, headers, out TypedInstance<object> continuationSurrogate))
                 return OnUnsupportedCallbackTypeAsync(callbackType, cancellationToken);
-            
+
             SetContinuation(continuationSurrogate);
             return Task.CompletedTask;
         }
@@ -54,10 +54,10 @@ internal sealed class AsyncEndpointDAsyncHost(HttpContext httpContext) : AspNetC
                 unsupportedCallbackTypes.Add(callbackType);
             }
         }
-        
+
         if (unsupportedCallbackTypes is not null)
             return OnUnsupportedCallbackTypesAsync(unsupportedCallbackTypes, cancellationToken);
-        
+
         SetContinuation(continuationSurrogateArray);
         return Task.CompletedTask;
     }
@@ -102,7 +102,7 @@ internal sealed class AsyncEndpointDAsyncHost(HttpContext httpContext) : AspNetC
 
             return httpResult.ExecuteAsync(this, context, cancellationToken);
         }
-        
+
         return base.SucceedOnResumeAsync(context, result, cancellationToken);
     }
 
@@ -111,7 +111,7 @@ internal sealed class AsyncEndpointDAsyncHost(HttpContext httpContext) : AspNetC
         return SucceedOnResumeAsync(context, cancellationToken);
     }
 
-    Task IAsyncHttpResultHandler.SucceedAsync<TResult>(IDAsyncFlowCompletionContext context,TResult result, CancellationToken cancellationToken)
+    Task IAsyncHttpResultHandler.SucceedAsync<TResult>(IDAsyncFlowCompletionContext context, TResult result, CancellationToken cancellationToken)
     {
         return SucceedOnResumeAsync(context, result, cancellationToken);
     }

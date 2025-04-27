@@ -29,9 +29,9 @@ internal sealed class DAsyncInfrastructureBuilder
         1 => _surrogatorDescriptors[0],
         _ => ComponentDescriptor.Aggregate(_surrogatorDescriptors, DAsyncSurrogator.Aggregate)
     };
-    
+
     private IComponentDescriptor<IDAsyncCancellationProvider> CancellationProviderDescriptor => OrDefault(_cancellationProviderDescriptor, DAsyncCancellationProvider.Default);
-    
+
     private IComponentDescriptor<IDAsyncSuspensionHandler> SuspensionHandlerProvider => OrDefault(_suspensionHandlerDescriptor, DAsyncSuspensionHandler.Default);
     public void UseStack(IComponentDescriptor<IDAsyncStack> descriptor)
     {

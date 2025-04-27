@@ -23,12 +23,12 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
     {
         return _infrastructureBuilder.BuildInfrastructure(configuration);
     }
-    
+
     public IDAsyncTypeResolver TypeResolver => new DAsyncTypeResolver(
         _typesToIds.ToFrozenDictionary(),
         _idsToTypes.ToFrozenDictionary());
 
-    public ImmutableArray<Type> SurrogatableTypes => [.._surrogatableTypes];
+    public ImmutableArray<Type> SurrogatableTypes => [.. _surrogatableTypes];
 
     IDTasksConfigurationBuilder IDTasksConfigurationBuilder<IDTasksConfigurationBuilder>.ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure)
     {

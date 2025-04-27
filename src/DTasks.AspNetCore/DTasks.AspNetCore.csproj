@@ -18,7 +18,6 @@
       <ProjectReference Include="..\DTasks.Extensions.DependencyInjection\DTasks.Extensions.DependencyInjection.csproj" />
       <ProjectReference Include="..\DTasks.Inspection.Dynamic\DTasks.Inspection.Dynamic.csproj" />
       <ProjectReference Include="..\DTasks.Serialization.Json\DTasks.Serialization.Json.csproj" />
-      <ProjectReference Include="..\DTasks.Serialization.InMemory\DTasks.Serialization.InMemory.csproj" />
     </ItemGroup>
 
 </Project>

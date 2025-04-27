@@ -6,8 +6,6 @@ using DTasks.Configuration.DependencyInjection;
 using DTasks.Execution;
 using DTasks.Infrastructure.Execution;
 using DTasks.Infrastructure.Fakes;
-using DTasks.Infrastructure.Marshaling;
-using NSubstitute.ExceptionExtensions;
 using Xunit.Sdk;
 
 namespace DTasks.Infrastructure;
@@ -28,7 +26,7 @@ public class DAsyncRunnerTests
         var stateManagerDescriptor =
             from flow in ComponentDescriptors.Flow
             select new FakeDAsyncStateManager(_storage, flow.Configuration.TypeResolver, flow.Surrogator);
-        
+
         DTasksConfiguration configuration = DTasksConfiguration.Create(configuration => configuration
             .ConfigureState(state => state
                 .UseStack(stateManagerDescriptor)
@@ -38,7 +36,7 @@ public class DAsyncRunnerTests
 
         _host = Substitute.For<IDAsyncHost>();
         _host.Configuration.Returns(configuration);
-        
+
         _sut = DAsyncRunner.Create();
     }
 
@@ -618,7 +616,7 @@ public class DAsyncRunnerTests
         DAsyncId yieldId1 = _storage.Ids[1];
         DAsyncId id2 = _storage.Ids[2];
         DAsyncId yieldId2 = _storage.Ids[3];
-        
+
         hostYieldId1.Should().Be(yieldId1);
         hostYieldId2.Should().Be(yieldId2);
         hostYieldId1.Should().NotBe(hostYieldId2);

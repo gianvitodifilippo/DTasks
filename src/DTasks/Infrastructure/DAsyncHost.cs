@@ -9,16 +9,16 @@ namespace DTasks.Infrastructure;
 public abstract class DAsyncHost : IDAsyncHost, IDisposable
 {
     private DAsyncRunner? _runner = DAsyncRunner.Create();
-    
+
     protected abstract DTasksConfiguration Configuration { get; }
-    
+
     public ValueTask StartAsync(IDAsyncRunnable runnable, CancellationToken cancellationToken = default)
     {
         CheckDisposed();
-        
+
         return _runner.StartAsync(this, runnable, cancellationToken);
     }
-    
+
     public ValueTask ResumeAsync(DAsyncId id, CancellationToken cancellationToken = default)
     {
         CheckDisposed();
@@ -29,7 +29,7 @@ public abstract class DAsyncHost : IDAsyncHost, IDisposable
     public ValueTask ResumeAsync<TResult>(DAsyncId id, TResult result, CancellationToken cancellationToken = default)
     {
         CheckDisposed();
-        
+
         return _runner.ResumeAsync(this, id, result, cancellationToken);
     }
 
@@ -39,7 +39,7 @@ public abstract class DAsyncHost : IDAsyncHost, IDisposable
 
         return _runner.ResumeAsync(this, id, exception, cancellationToken);
     }
-    
+
     protected virtual void OnInitialize(IDAsyncFlowInitializationContext context) { }
 
     protected virtual void OnFinalize(IDAsyncFlowFinalizationContext context) { }
@@ -59,9 +59,9 @@ public abstract class DAsyncHost : IDAsyncHost, IDisposable
     DTasksConfiguration IDAsyncHost.Configuration => Configuration;
 
     void IDAsyncHost.OnInitialize(IDAsyncFlowInitializationContext context) => OnInitialize(context);
-    
+
     void IDAsyncHost.OnFinalize(IDAsyncFlowFinalizationContext context) => OnFinalize(context);
-    
+
     Task IDAsyncHost.OnStartAsync(IDAsyncFlowStartContext context, CancellationToken cancellationToken) => OnStartAsync(context, cancellationToken);
 
     Task IDAsyncHost.OnSuspendAsync(IDAsyncFlowSuspensionContext context, CancellationToken cancellationToken) => OnSuspendAsync(context, cancellationToken);
@@ -78,7 +78,7 @@ public abstract class DAsyncHost : IDAsyncHost, IDisposable
     {
         if (!disposing)
             return;
-        
+
         _runner?.Dispose();
         _runner = null;
     }
@@ -104,14 +104,14 @@ public abstract class DAsyncHost : IDAsyncHost, IDisposable
     public static DAsyncHost CreateDefault(Action<IDTasksConfigurationBuilder> configure)
     {
         ThrowHelper.ThrowIfNull(configure);
-        
+
         return new DefaultDAsyncHost(DTasksConfiguration.Create(configure));
     }
 
     public static DAsyncHost CreateDefault(DTasksConfiguration configuration)
     {
         ThrowHelper.ThrowIfNull(configuration);
-        
+
         return new DefaultDAsyncHost(configuration);
     }
 

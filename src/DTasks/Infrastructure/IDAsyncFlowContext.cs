@@ -9,12 +9,12 @@ namespace DTasks.Infrastructure;
 public interface IDAsyncFlowContext
 {
     IDAsyncStack Stack { get; }
-    
+
     IDAsyncHeap Heap { get; }
-    
+
     IDAsyncSurrogator Surrogator { get; }
-    
+
     IDAsyncCancellationProvider CancellationProvider { get; }
-    
+
     IDAsyncSuspensionHandler SuspensionHandler { get; }
 }

@@ -11,7 +11,7 @@ internal sealed class FlowTransientComponentDescriptor<TComponent>(FlowImplement
     {
         return builder.FlowTransient(createComponent);
     }
-    
+
     [ExcludeFromCodeCoverage]
     public override string ToString()
     {

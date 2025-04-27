@@ -11,7 +11,7 @@ internal sealed class RootTransientComponentDescriptor<TComponent>(ConfiguredImp
     {
         return builder.RootTransient(createComponent);
     }
-    
+
     [ExcludeFromCodeCoverage]
     public override string ToString()
     {

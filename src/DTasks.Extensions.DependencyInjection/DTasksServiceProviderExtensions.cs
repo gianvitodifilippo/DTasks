@@ -1,6 +1,6 @@
-﻿using DTasks.Utils;
+﻿using System.Runtime.CompilerServices;
+using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
-using System.Runtime.CompilerServices;
 
 namespace DTasks.Extensions.DependencyInjection;
 

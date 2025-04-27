@@ -12,8 +12,13 @@ namespace DTasks.Serialization.Json.Configuration;
 internal sealed class JsonFormatConfigurationBuilder : IJsonFormatConfigurationBuilder
 {
     private readonly JsonSerializerOptions _serializerOptions = new();
-    private IComponentDescriptor<IStateMachineInspector>? _inspectorDescriptor;
-    
+
+    private IComponentDescriptor<IStateMachineInspector> _inspectorDescriptor = ComponentDescriptor.Singleton(
+        static configuration => DynamicStateMachineInspector.Create(
+            typeof(IStateMachineSuspender<>),
+            typeof(IStateMachineResumer),
+            configuration.TypeResolver));
+
     public IJsonFormatConfigurationBuilder ConfigureSerializerOptions(Action<JsonSerializerOptions> configure)
     {
         configure(_serializerOptions);
@@ -28,20 +33,14 @@ internal sealed class JsonFormatConfigurationBuilder : IJsonFormatConfigurationB
 
     public ISerializationConfigurationBuilder Configure(ISerializationConfigurationBuilder builder)
     {
-        var inspectorDescriptor = _inspectorDescriptor ?? ComponentDescriptor.Singleton(
-            static configuration => DynamicStateMachineInspector.Create(
-                typeof(IStateMachineSuspender<>),
-                typeof(IStateMachineResumer),
-                configuration.TypeResolver));
-        
-        var serializerFactoryDescriptor = inspectorDescriptor.Map((config, inspector) =>
+        var serializerFactoryDescriptor = _inspectorDescriptor.Map((config, inspector) =>
         {
             JsonSerializerOptions clonedOptions = new(_serializerOptions)
             {
                 AllowOutOfOrderMetadataProperties = false,
                 ReferenceHandler = ReferenceHandler.Preserve
             };
-            
+
             ImmutableArray<Type> surrogatableTypes = config.SurrogatableTypes;
             FrozenSet<Type> surrogatableNonGenericTypes = surrogatableTypes
                 .Where(type => !type.IsGenericType)
@@ -49,7 +48,7 @@ internal sealed class JsonFormatConfigurationBuilder : IJsonFormatConfigurationB
             FrozenSet<Type> surrogatableGenericTypes = surrogatableTypes
                 .Where(type => type.IsGenericType)
                 .ToFrozenSet();
-            
+
             return new JsonDAsyncSerializerFactory(
                 inspector,
                 config.TypeResolver,

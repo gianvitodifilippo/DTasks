@@ -1,5 +1,5 @@
-﻿using DTasks.Utils;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 

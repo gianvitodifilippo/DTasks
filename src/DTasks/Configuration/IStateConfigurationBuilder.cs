@@ -6,6 +6,6 @@ namespace DTasks.Configuration;
 public interface IStateConfigurationBuilder
 {
     IStateConfigurationBuilder UseStack(IComponentDescriptor<IDAsyncStack> descriptor);
-    
+
     IStateConfigurationBuilder UseHeap(IComponentDescriptor<IDAsyncHeap> descriptor);
 }

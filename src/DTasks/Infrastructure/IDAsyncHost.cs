@@ -7,13 +7,13 @@ namespace DTasks.Infrastructure;
 public interface IDAsyncHost
 {
     DTasksConfiguration Configuration { get; }
-    
+
     void OnInitialize(IDAsyncFlowInitializationContext context);
-    
+
     void OnFinalize(IDAsyncFlowFinalizationContext context);
-    
+
     Task OnStartAsync(IDAsyncFlowStartContext context, CancellationToken cancellationToken);
-    
+
     Task OnSuspendAsync(IDAsyncFlowSuspensionContext context, CancellationToken cancellationToken);
 
     Task OnSucceedAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken);

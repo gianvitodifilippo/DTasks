@@ -9,9 +9,9 @@ public interface IDAsyncInfrastructureBuilder<in TComponent, out TReturn>
     TReturn Unit(TComponent component);
 
     TReturn Singleton(ConfiguredImplementationFactory<TComponent> createComponent);
-    
+
     TReturn Scoped(FlowImplementationFactory<TComponent> createComponent);
-    
+
     TReturn RootTransient(ConfiguredImplementationFactory<TComponent> createComponent);
 
     TReturn FlowTransient(FlowImplementationFactory<TComponent> createComponent);

@@ -11,18 +11,18 @@ namespace DTasks.AspNetCore.Http;
 public static class EndpointRouteBuilderExtensions
 {
     private static readonly int s_endpointPrefixLength = DTasksHttpConstants.DTasksEndpointPrefix.Length + 1;
-    
+
     public static IEndpointRouteBuilder MapDTasks(this IEndpointRouteBuilder endpoints)
     {
         endpoints.Map(DTasksHttpConstants.DTasksStatusEndpoint, GetStatusAsync);
-        
+
         return endpoints;
     }
 
     private static Task GetStatusAsync(HttpContext httpContext)
     {
         Debug.Assert(httpContext.Request.Path.HasValue);
-            
+
         string path = httpContext.Request.Path.Value;
         ReadOnlySpan<char> flowIdSpan = path.AsSpan()[s_endpointPrefixLength..];
 
@@ -36,7 +36,7 @@ public static class EndpointRouteBuilderExtensions
     {
         var endpointMonitor = httpContext.RequestServices.GetRequiredService<IAsyncEndpointMonitor>();
         Option<AsyncEndpointInfo> infoOption = await endpointMonitor.GetEndpointInfoAsync(flowId, httpContext.RequestAborted);
-        
+
         IResult result = infoOption.Fold(Results.Ok, () => Results.NotFound());
         await result.ExecuteAsync(httpContext);
     }

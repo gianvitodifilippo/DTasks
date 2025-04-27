@@ -1,7 +1,7 @@
-﻿using DTasks.Utils;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Sources;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
@@ -50,7 +50,7 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
         _runnable = null;
         _valueTaskSource.Reset();
         _cancellationToken = CancellationToken.None;
-        
+
         CancellationProvider.UnregisterHandler(this);
         _host = s_nullHost;
         _stack = null;

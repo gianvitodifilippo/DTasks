@@ -11,7 +11,7 @@ internal sealed class UnitComponentDescriptor<TComponent>(TComponent component) 
     {
         return builder.Unit(component);
     }
-    
+
     [ExcludeFromCodeCoverage]
     public override string ToString()
     {

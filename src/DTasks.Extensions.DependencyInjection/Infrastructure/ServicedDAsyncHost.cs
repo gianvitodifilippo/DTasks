@@ -8,9 +8,9 @@ namespace DTasks.Extensions.DependencyInjection.Infrastructure;
 public abstract class ServicedDAsyncHost : DAsyncHost
 {
     private DTasksConfiguration? _configuration;
-    
+
     protected abstract IServiceProvider Services { get; }
-    
+
     protected sealed override DTasksConfiguration Configuration => _configuration ??= Services.GetRequiredService<DTasksConfiguration>();
 
     protected virtual void OnInitializeCore(IDAsyncFlowInitializationContext context)

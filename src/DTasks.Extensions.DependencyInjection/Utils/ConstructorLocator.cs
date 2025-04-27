@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Frozen;
+﻿using System.Collections.Frozen;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Extensions.DependencyInjection.Utils;
 

@@ -13,10 +13,10 @@ public interface IDAsyncHeapSupportsRefStructKey
 
     Task SaveAsync<TKey, TValue>(TKey key, TValue value, CancellationToken cancellationToken = default)
         where TKey : notnull, allows ref struct;
-    
+
     Task<Option<TValue>> LoadAsync<TKey, TValue>(TKey key, CancellationToken cancellationToken = default)
         where TKey : notnull, allows ref struct;
-    
+
     Task DeleteAsync<TKey>(TKey key, CancellationToken cancellationToken = default)
         where TKey : notnull, allows ref struct;
 }

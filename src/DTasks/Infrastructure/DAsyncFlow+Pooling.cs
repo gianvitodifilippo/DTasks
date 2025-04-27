@@ -36,7 +36,7 @@ internal sealed partial class DAsyncFlow
         }
 
         Debug.Assert(flow._state is FlowState.Idling);
-        
+
         flow._state = FlowState.Pending;
         flow._returnToCache = returnToCache;
         return flow;
@@ -46,9 +46,9 @@ internal sealed partial class DAsyncFlow
     private void ReturnToCache()
     {
         Debug.Assert(_state is FlowState.Pending);
-        
+
         _state = FlowState.Idling;
-        
+
         if (t_tlsCache is null)
         {
             t_tlsCache = this;

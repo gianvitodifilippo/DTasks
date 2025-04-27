@@ -1,6 +1,4 @@
 using DTasks.Configuration;
-using DTasks.Extensions.DependencyInjection.Infrastructure;
-using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -31,7 +29,7 @@ internal sealed class DependencyInjectionDTasksConfigurationBuilder : IDependenc
             {
                 builder.ConfigureExecution(configure);
             }
-            
+
             builder
                 .ConfigureMarshaling(marshaling => marshaling
                     .AddSurrogator(InfrastructureServiceProvider.GetRequiredService<IDAsyncSurrogator>()));

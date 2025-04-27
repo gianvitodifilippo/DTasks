@@ -1,10 +1,9 @@
-﻿using DTasks.Extensions.DependencyInjection;
-using DTasks.Extensions.DependencyInjection.Configuration;
+﻿using System.Diagnostics;
+using DTasks.Configuration;
+using DTasks.Extensions.DependencyInjection;
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System.Diagnostics;
-using DTasks.Configuration;
 
 namespace DTasks.Extensions.Hosting;
 

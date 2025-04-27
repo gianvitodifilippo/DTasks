@@ -12,7 +12,7 @@ internal sealed class RootTransientComponentProvider<TComponent>(
     protected override DTasksConfiguration Configuration => configuration;
 
     protected override TComponent GetComponent() => createComponent(configuration);
-    
+
     [ExcludeFromCodeCoverage]
     public override string ToString()
     {

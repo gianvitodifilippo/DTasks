@@ -21,7 +21,7 @@ public sealed class BinaryDAsyncHeap(IDAsyncSerializer serializer, IDAsyncStorag
         Option<ReadOnlyMemory<byte>> loadResult = await storage.LoadAsync(key, cancellationToken);
         if (!loadResult.HasValue)
             return Option<TValue>.None;
-        
+
         return Option.Some(serializer.Deserialize<TValue>(loadResult.Value.Span));
     }
 

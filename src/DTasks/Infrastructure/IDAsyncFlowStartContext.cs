@@ -6,8 +6,8 @@ namespace DTasks.Infrastructure;
 public interface IDAsyncFlowStartContext : IDAsyncFlowContext
 {
     void SetResult();
-    
+
     void SetException(Exception exception);
-    
+
     DAsyncId FlowId { get; }
 }

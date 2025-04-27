@@ -1,10 +1,8 @@
-﻿using DTasks.Infrastructure.Marshaling;
+﻿using System.Buffers;
+using System.Text.Json;
+using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
 using DTasks.Inspection;
-using System.Buffers;
-using System.Text.Json;
-using DTasks.Configuration;
-using DTasks.Infrastructure;
 
 namespace DTasks.Serialization.Json;
 

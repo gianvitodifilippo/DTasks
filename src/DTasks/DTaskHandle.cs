@@ -1,6 +1,6 @@
-﻿using DTasks.Infrastructure;
+﻿using System.Diagnostics;
+using DTasks.Infrastructure;
 using DTasks.Utils;
-using System.Diagnostics;
 
 namespace DTasks;
 
@@ -103,7 +103,7 @@ internal sealed class DTaskHandle<TResult>(DAsyncId id) : DTask<TResult>, IDAsyn
                 break;
 
             case DTaskStatus.Canceled:
-            
+
                 break;
 
             default:

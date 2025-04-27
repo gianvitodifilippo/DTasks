@@ -9,18 +9,18 @@ public sealed class DTasksConfiguration
     {
         TypeResolver = builder.TypeResolver;
         SurrogatableTypes = builder.SurrogatableTypes;
-        
+
         // BuildInfrastructure may use public properties of this instance,
         // therefore it must be call after those properties are assigned
         Infrastructure = builder.BuildInfrastructure(this);
     }
-    
+
     public IDAsyncTypeResolver TypeResolver { get; }
 
     public ImmutableArray<Type> SurrogatableTypes { get; }
-    
+
     internal IDAsyncInfrastructure Infrastructure { get; }
-    
+
     public static DTasksConfiguration Create()
     {
         throw new NotImplementedException();

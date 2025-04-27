@@ -11,7 +11,7 @@ internal sealed class AggregateDAsyncContinuation : IDAsyncContinuation
         // TODO: Support parallel execution when configured
         _callbacks = callbacks;
     }
-    
+
     public async Task OnSucceedAsync(DAsyncId flowId, CancellationToken cancellationToken = default)
     {
         foreach (IDAsyncContinuation callback in _callbacks)
@@ -61,7 +61,7 @@ internal sealed class AggregateDAsyncContinuation : IDAsyncContinuation
                 var surrogate = (IDAsyncContinuationSurrogate)Surrogates[i].Instance;
                 callbacks[i] = surrogate.Restore(services);
             }
-            
+
             return new AggregateDAsyncContinuation(callbacks);
         }
     }

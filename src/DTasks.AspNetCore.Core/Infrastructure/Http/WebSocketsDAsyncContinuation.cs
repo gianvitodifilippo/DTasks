@@ -11,7 +11,7 @@ internal sealed class WebSocketsDAsyncContinuation(IWebSocketHandler handler, st
         {
             operationId = flowId.ToString()
         };
-        
+
         return handler.SendAsync(connectionId, message, cancellationToken);
     }
 
@@ -22,7 +22,7 @@ internal sealed class WebSocketsDAsyncContinuation(IWebSocketHandler handler, st
             operationId = flowId.ToString(),
             result
         };
-        
+
         return handler.SendAsync(connectionId, message, cancellationToken);
     }
 
@@ -40,11 +40,11 @@ internal sealed class WebSocketsDAsyncContinuation(IWebSocketHandler handler, st
     {
         return new Surrogate(connectionId);
     }
-    
+
     public sealed class Surrogate(string connectionId) : IDAsyncContinuationSurrogate
     {
         public string ConnectionId { get; } = connectionId;
-        
+
         public IDAsyncContinuation Restore(IServiceProvider services)
         {
             return new WebSocketsDAsyncContinuation(

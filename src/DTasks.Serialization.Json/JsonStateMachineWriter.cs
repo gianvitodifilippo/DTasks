@@ -1,8 +1,8 @@
-﻿using DTasks.Infrastructure.Marshaling;
-using System.Buffers;
+﻿using System.Buffers;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json;
 

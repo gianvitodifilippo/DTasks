@@ -13,7 +13,7 @@ internal sealed class FakeDAsyncStateManager(
     IDAsyncSurrogator surrogator) : IDAsyncStack, IDAsyncHeap
 {
     private readonly DynamicStateMachineInspector _inspector = DynamicStateMachineInspector.Create(typeof(IFakeStateMachineSuspender<>), typeof(IFakeStateMachineResumer), typeResolver);
-    
+
     public ValueTask DehydrateAsync<TStateMachine>(ISuspensionContext context, DAsyncId parentId, DAsyncId id, ref TStateMachine stateMachine, CancellationToken cancellationToken = default)
         where TStateMachine : notnull
     {

@@ -6,6 +6,6 @@ namespace DTasks.Infrastructure.Marshaling;
 public interface IResumptionContext
 {
     DAsyncId Id { get; }
-    
+
     IDAsyncSurrogator Surrogator { get; }
 }

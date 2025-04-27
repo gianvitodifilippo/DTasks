@@ -1,14 +1,14 @@
-﻿using DTasks.Execution;
-using DTasks.Infrastructure.Execution;
-using DTasks.Infrastructure.Marshaling;
-using DTasks.Infrastructure.State;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Sources;
 using DTasks.Configuration;
+using DTasks.Execution;
+using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 
 namespace DTasks.Infrastructure;
 
@@ -19,14 +19,14 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private ManualResetValueTaskSourceCore<VoidDTaskResult> _valueTaskSource;
     private CancellationToken _cancellationToken;
     private object? _resultOrException;
-    
+
     private IDAsyncHost _host;
     private IDAsyncStack? _stack;
     private IDAsyncHeap? _heap;
     private IDAsyncSurrogator? _surrogator;
     private IDAsyncCancellationProvider? _cancellationProvider;
     private IDAsyncSuspensionHandler? _suspensionHandler;
-    
+
     private bool _returnToCache;
 #if DEBUG
     private string? _stackTrace;
@@ -79,9 +79,9 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     }
 
     private IDAsyncTypeResolver TypeResolver => _host.Configuration.TypeResolver;
-    
+
     private IDAsyncStack Stack => GetComponent(ref _stack, static (infrastructure, scope) => infrastructure.GetStack(scope));
-    
+
     private IDAsyncHeap Heap => GetComponent(ref _heap, static (infrastructure, scope) => infrastructure.GetHeap(scope));
 
     private IDAsyncSurrogator Surrogator => GetComponent(ref _surrogator, static (infrastructure, scope) => infrastructure.GetSurrogator(scope));
@@ -108,7 +108,7 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         _host = host;
         CancellationProvider.RegisterHandler(this);
     }
-    
+
     protected override ValueTask StartCoreAsync(IDAsyncHost host, IDAsyncRunnable runnable, CancellationToken cancellationToken)
     {
         if (_state is not FlowState.Pending)
@@ -145,7 +145,7 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         _state = FlowState.Running;
         _cancellationToken = cancellationToken;
         Initialize(host);
-        
+
         Resume(id, result);
         return new ValueTask(this, _valueTaskSource.Version);
     }
@@ -176,15 +176,15 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     {
         return component ??= factory(_host.Configuration.Infrastructure, this);
     }
-    
+
 #if DEBUG
     public static DAsyncFlow Create(string stackTrace)
     {
         DAsyncFlow flow = RentFromCache(returnToCache: false);
-        
+
         GC.ReRegisterForFinalize(flow);
         flow._stackTrace = stackTrace;
-        
+
         return flow;
     }
 #else

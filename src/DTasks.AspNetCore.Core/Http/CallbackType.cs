@@ -6,7 +6,7 @@ public readonly struct CallbackType : IEquatable<CallbackType>
 {
     public static readonly CallbackType Webhook = "webhook";
     public static readonly CallbackType WebSockets = "websockets";
-    
+
     private readonly string _value;
 
     private CallbackType(string value)
@@ -23,8 +23,8 @@ public readonly struct CallbackType : IEquatable<CallbackType>
     public override string ToString() => _value;
 
     public static implicit operator CallbackType(string value) => new(value);
-    
+
     public static bool operator ==(CallbackType left, CallbackType right) => left.Equals(right);
-    
+
     public static bool operator !=(CallbackType left, CallbackType right) => !(left == right);
 }

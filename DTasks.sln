@@ -44,8 +44,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Tests", "tests\DTask
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.AspNetCore.Core", "src\DTasks.AspNetCore.Core\DTasks.AspNetCore.Core.csproj", "{C7461106-8C45-4B64-8749-65E3AFBC4F39}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Serialization.InMemory", "src\DTasks.Serialization.InMemory\DTasks.Serialization.InMemory.csproj", "{DA419D98-0F34-48AD-B0B3-9D99806A2DB6}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Serialization.StackExchangeRedis.DependencyInjection", "src\DTasks.Serialization.StackExchangeRedis.DependencyInjection\DTasks.Serialization.StackExchangeRedis.DependencyInjection.csproj", "{C65DF4E3-3B98-426C-894C-41EF5CE02662}"
 EndProject
 Global
@@ -192,14 +190,6 @@ Global
 		{C7461106-8C45-4B64-8749-65E3AFBC4F39}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C7461106-8C45-4B64-8749-65E3AFBC4F39}.Release-Tests|Any CPU.ActiveCfg = Release-Tests|Any CPU
 		{C7461106-8C45-4B64-8749-65E3AFBC4F39}.Release-Tests|Any CPU.Build.0 = Release-Tests|Any CPU
-		{DA419D98-0F34-48AD-B0B3-9D99806A2DB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DA419D98-0F34-48AD-B0B3-9D99806A2DB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DA419D98-0F34-48AD-B0B3-9D99806A2DB6}.Debug-Tests|Any CPU.ActiveCfg = Debug-Tests|Any CPU
-		{DA419D98-0F34-48AD-B0B3-9D99806A2DB6}.Debug-Tests|Any CPU.Build.0 = Debug-Tests|Any CPU
-		{DA419D98-0F34-48AD-B0B3-9D99806A2DB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DA419D98-0F34-48AD-B0B3-9D99806A2DB6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DA419D98-0F34-48AD-B0B3-9D99806A2DB6}.Release-Tests|Any CPU.ActiveCfg = Release-Tests|Any CPU
-		{DA419D98-0F34-48AD-B0B3-9D99806A2DB6}.Release-Tests|Any CPU.Build.0 = Release-Tests|Any CPU
 		{C65DF4E3-3B98-426C-894C-41EF5CE02662}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C65DF4E3-3B98-426C-894C-41EF5CE02662}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C65DF4E3-3B98-426C-894C-41EF5CE02662}.Debug-Tests|Any CPU.ActiveCfg = Debug-Tests|Any CPU

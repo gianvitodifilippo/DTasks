@@ -25,10 +25,10 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
     protected override async Task OnSuspendAsync(IDAsyncFlowSuspensionContext context, CancellationToken cancellationToken)
     {
         Reset();
-        
+
         if (!_startFlowState.IsOnStart)
             return;
-        
+
         DAsyncId flowId = _startFlowState.FlowId;
         Debug.Assert(flowId != default);
         Reset();
@@ -59,7 +59,7 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
         if (_startFlowState.IsOnStart)
         {
             Reset();
-            
+
             // TODO: If configured, we can optionally also update the status for the status monitor
             return SucceedOnStartAsync(context, cancellationToken);
         }
@@ -72,7 +72,7 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
         if (_startFlowState.IsOnStart)
         {
             Reset();
-            
+
             // TODO: If configured, we can optionally also update the status for the status monitor
             return SucceedOnStartAsync(context, result, cancellationToken);
         }
@@ -85,7 +85,7 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
         if (_startFlowState.IsOnStart)
         {
             Reset();
-            
+
             // TODO: If configured, we can optionally also update the status for the status monitor
             return FailOnStartAsync(context, exception, cancellationToken);
         }
@@ -98,7 +98,7 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
         if (_startFlowState.IsOnStart)
         {
             Reset();
-            
+
             // TODO: If configured, we can optionally also update the status for the status monitor
             return CancelOnStartAsync(context, cancellationToken);
         }
@@ -115,7 +115,7 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
     {
         return Task.CompletedTask;
     }
-    
+
     protected virtual Task SucceedOnStartAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 
     protected virtual Task SucceedOnStartAsync<TResult>(IDAsyncFlowCompletionContext context, TResult result, CancellationToken cancellationToken) => Task.CompletedTask;
@@ -167,14 +167,14 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
     protected void SetContinuation(TypedInstance<object> surrogate)
     {
         Debug.Assert(_startFlowState.IsOnStart);
-        
+
         _startFlowState.ContinuationSurrogate = surrogate;
     }
 
     protected void SetContinuation(TypedInstance<object>[] surrogateArray)
     {
         Debug.Assert(_startFlowState.IsOnStart);
-        
+
         _startFlowState.ContinuationSurrogateArray = surrogateArray;
     }
 
@@ -192,11 +192,11 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
 
         string continuationKey = GetContinuationKey(flowId);
         Option<TypedInstance<IDAsyncContinuationSurrogate>> loadResult = await context.Heap.LoadAsync<string, TypedInstance<IDAsyncContinuationSurrogate>>(continuationKey, cancellationToken);
-        
+
         // TODO: Check before and decide what to do should it be empty
         IDAsyncContinuation continuation = loadResult.Value.Instance.Restore(Services);
         await continuationAction(continuation, flowId, value, cancellationToken);
-        
+
         Reset();
     }
 
@@ -214,7 +214,7 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
     public static AspNetCoreDAsyncHost Create(IServiceProvider services)
     {
         ArgumentNullException.ThrowIfNull(services);
-        
+
         return new DefaultDAsyncHost(services);
     }
 

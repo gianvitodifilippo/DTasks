@@ -6,7 +6,7 @@ public readonly struct DAsyncFlowPropertyKey<TProperty>(object key)
         : this(new object())
     {
     }
-    
+
     public object Key => key;
 
     public override string ToString()

@@ -9,7 +9,7 @@ internal sealed partial class DAsyncFlow : IDAsyncScope
     DTasksConfiguration IDAsyncFlow.Configuration => _host.Configuration;
 
     IDAsyncSurrogator IDAsyncFlow.Surrogator => this;
-    
+
     bool IDAsyncFlow.TryGetProperty<TProperty>(DAsyncFlowPropertyKey<TProperty> key, [MaybeNullWhen(false)] out TProperty value)
     {
         if (_properties.TryGetValue(key.Key, out object? untypedValue) && untypedValue is TProperty typedValue)

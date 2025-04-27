@@ -7,7 +7,7 @@ namespace DTasks.Extensions.Hosting;
 public interface IDTasksHostBuilderConfiguration
 {
     IServiceCollection Services { get; }
-    
+
     IDTasksHostBuilderConfiguration UseServiceProviderOptions(ServiceProviderOptions options);
 
     IDTasksHostBuilderConfiguration UseServiceProviderOptions(Action<ServiceProviderOptions> configureOptions);

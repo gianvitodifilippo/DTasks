@@ -9,7 +9,7 @@ public readonly record struct TypedInstance<TValue>(Type? Type, TValue Instance)
         : this(null, instance)
     {
     }
-    
+
     public static implicit operator TypedInstance<TValue>(TValue? instance) => TypedInstance.From(instance);
 }
 
@@ -24,10 +24,10 @@ public static class TypedInstance
         Type runtimeType = instance.GetType();
         if (typeof(TValue) == runtimeType)
             return new(null, instance);
-        
+
         return new(runtimeType, instance);
     }
-    
+
     public static TypedInstance<TValue> Untyped<TValue>(TValue? instance)
     {
         if (instance is null)

@@ -20,7 +20,7 @@ internal sealed class ScopedComponentProvider<TComponent>(
 
         return component;
     }
-    
+
     [ExcludeFromCodeCoverage]
     public override string ToString()
     {

@@ -7,11 +7,11 @@ namespace DTasks.AspNetCore.Infrastructure.Http;
 public sealed class DAsyncContinuationFactory : IDAsyncContinuationFactory
 {
     // TODO: Add a builder interface to make configurable
-    
+
     public bool TryCreateSurrogate(CallbackType callbackType, IHeaderDictionary headers, out TypedInstance<object> surrogate)
     {
         // TODO: We should validate the specific headers and return an error message if invalid
-        
+
         if (callbackType == CallbackType.Webhook)
         {
             string callbackUrl = headers["Async-CallbackUrl"]!;

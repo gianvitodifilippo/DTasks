@@ -21,7 +21,7 @@ public sealed class BinaryDAsyncStack(IStateMachineSerializer stateMachineSerial
         Option<ReadOnlyMemory<byte>> loadResult = await storage.LoadAsync(id, cancellationToken);
         if (!loadResult.HasValue)
             throw new InvalidOperationException("Invalid id."); // TODO: Improve error message
-        
+
         return stateMachineSerializer.DeserializeStateMachine(context, loadResult.Value.Span);
     }
 

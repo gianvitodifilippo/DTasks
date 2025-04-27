@@ -1,6 +1,6 @@
-﻿using DTasks.Infrastructure;
+﻿using System.Runtime.CompilerServices;
+using DTasks.Infrastructure;
 using DTasks.Utils;
-using System.Runtime.CompilerServices;
 
 namespace DTasks;
 
