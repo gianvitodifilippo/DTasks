@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+        <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace(".Core", ""))</RootNamespace>
+
+        <PackageId>DTasks.AspNetCore.Core</PackageId>
+        <Summary>Integrates DTasks into ASP.NET Core.</Summary>
+        <Description>Integrates DTasks into ASP.NET Core.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\DTasks.Extensions.DependencyInjection\DTasks.Extensions.DependencyInjection.csproj" />
+      <ProjectReference Include="..\DTasks\DTasks.csproj" />
+    </ItemGroup>
+
+</Project>

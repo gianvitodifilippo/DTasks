@@ -1,7 +1,8 @@
-﻿using DTasks.Utils;
-using Microsoft.Extensions.DependencyInjection;
+﻿using DTasks.Configuration;
+using DTasks.Extensions.DependencyInjection.Configuration;
+using DTasks.Utils;
 
-namespace DTasks.Extensions.DependencyInjection;
+namespace Microsoft.Extensions.DependencyInjection;
 
 public static class DTasksServiceCollectionExtensions
 {
@@ -12,7 +13,7 @@ public static class DTasksServiceCollectionExtensions
         return services.AddDTasksCore(config => { });
     }
 
-    public static IServiceCollection AddDTasks(this IServiceCollection services, Action<IDTasksServiceConfiguration> configure)
+    public static IServiceCollection AddDTasks(this IServiceCollection services, Action<IDependencyInjectionDTasksConfigurationBuilder> configure)
     {
         ThrowHelper.ThrowIfNull(services);
         ThrowHelper.ThrowIfNull(configure);
@@ -20,21 +21,17 @@ public static class DTasksServiceCollectionExtensions
         return services.AddDTasksCore(configure);
     }
 
-    private static IServiceCollection AddDTasksCore(this IServiceCollection services, Action<IDTasksServiceConfiguration> configure)
+    private static IServiceCollection AddDTasksCore(this IServiceCollection services, Action<IDependencyInjectionDTasksConfigurationBuilder> configure)
     {
         if (services.Any(descriptor => descriptor.ServiceType == typeof(DTasksServiceMarker)))
-            throw new InvalidOperationException($"DTasks services have already been added. Make sure to call '{nameof(AddDTasks)}' once after registering all services involved in d-async flows.");
+            throw new InvalidOperationException($"DTasks services have already been added. Make sure to call '{nameof(AddDTasks)}' once.");
 
         services.AddSingleton<DTasksServiceMarker>();
 
-        DTasksServiceConfiguration configuration = new(services);
-        configure(configuration);
+        DependencyInjectionDTasksConfigurationBuilder builder = new();
+        configure(builder);
 
-        ServiceContainerBuilder containerBuilder = configuration.CreateContainerBuilder();
-        configuration.ReplaceDAsyncServices(containerBuilder);
-        containerBuilder.AddDTaskServices();
-
-        return services;
+        return builder.Configure(services);
     }
 
     private sealed class DTasksServiceMarker;

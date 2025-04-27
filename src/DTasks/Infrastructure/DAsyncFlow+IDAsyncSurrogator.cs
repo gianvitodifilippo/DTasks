@@ -4,7 +4,7 @@ using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow : IDAsyncSurrogator
+internal sealed partial class DAsyncFlow : IDAsyncSurrogator
 {
     private static readonly HandleRunnableSurrogateConverter s_handleRunnableConverter = new();
 
@@ -21,32 +21,9 @@ public sealed partial class DAsyncFlow : IDAsyncSurrogator
                 _surrogates.Add(task, taskSurrogate);
             }
 
-            taskSurrogate.Write<T, TAction>(ref action, _host.TypeResolver);
+            taskSurrogate.Write<T, TAction>(ref action, TypeResolver);
             return true;
         }
-
-//        if (value is IEnumerable<DTask> tasks)
-//        {
-//            List<DTaskSurrogate> surrogates =
-//#if NET6_0_OR_GREATER
-//                tasks.TryGetNonEnumeratedCount(out int count)
-//                    ? new List<DTaskSurrogate>(count)
-//                    : [];
-//#else
-//                [];
-//#endif
-
-//            foreach (DTask taskItem in tasks)
-//            {
-//                if (!_surrogates.TryGetValue(taskItem, out DTaskSurrogate? taskSurrogate))
-//                {
-//                    taskSurrogate = DTaskSurrogate.Create(taskItem);
-//                    _surrogates.Add(taskItem, taskSurrogate);
-//                }
-
-//                surrogates.Add(taskSurrogate);
-//            }
-//        }
 
         if (value is HandleRunnable handleRunnable)
         {
@@ -55,14 +32,14 @@ public sealed partial class DAsyncFlow : IDAsyncSurrogator
             return true;
         }
 
-        return _host.Surrogator.TrySurrogate(in value, ref action);
+        return Surrogator.TrySurrogate(in value, ref action);
     }
 
     bool IDAsyncSurrogator.TryRestore<T, TAction>(TypeId typeId, scoped ref TAction action)
     {
         Type objectType = typeId == default
             ? typeof(T)
-            : _host.TypeResolver.GetType(typeId);
+            : TypeResolver.GetType(typeId);
 
         if (objectType == typeof(DTask))
         {
@@ -86,7 +63,7 @@ public sealed partial class DAsyncFlow : IDAsyncSurrogator
             return true;
         }
 
-        return _host.Surrogator.TryRestore<T, TAction>(typeId, ref action);
+        return Surrogator.TryRestore<T, TAction>(typeId, ref action);
     }
 
     private sealed class DTaskSurrogateConverter(DAsyncFlow flow) : ISurrogateConverter
@@ -95,7 +72,7 @@ public sealed partial class DAsyncFlow : IDAsyncSurrogator
         {
             // TODO: Unify this logic with that of RestorationActionExtensions.FuncSurrogateConverterWrapper
             if (surrogate is not DTaskSurrogate taskSurrogate)
-                throw new ArgumentException($"Expected a surrogate of type '{typeof(DTaskSurrogate).Name}'.", nameof(surrogate));
+                throw new ArgumentException($"Expected a surrogate of type '{nameof(DTaskSurrogate)}'.", nameof(surrogate));
 
             if (!flow._tasks.TryGetValue(taskSurrogate.Id, out DTask? task))
             {

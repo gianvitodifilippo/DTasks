@@ -1,8 +1,10 @@
 ﻿using DTasks.Extensions.DependencyInjection;
+using DTasks.Extensions.DependencyInjection.Configuration;
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Diagnostics;
+using DTasks.Configuration;
 
 namespace DTasks.Extensions.Hosting;
 
@@ -12,7 +14,9 @@ internal sealed class DTasksHostBuilderConfiguration(HostBuilderContext context,
     private Action<ServiceProviderOptions>? _configureServiceProviderOptions1;
     private Action<HostBuilderContext, ServiceProviderOptions>? _configureServiceProviderOptions2;
     private object? _serviceProviderOptionsOrConfiguration;
-    private Action<IDTasksServiceConfiguration>? _configureDTasksServices;
+    private Action<IDependencyInjectionDTasksConfigurationBuilder>? _configureDTasksServices;
+
+    public IServiceCollection Services => services;
 
     public IServiceProvider BuildServiceProvider()
     {
@@ -88,7 +92,7 @@ internal sealed class DTasksHostBuilderConfiguration(HostBuilderContext context,
         return this;
     }
 
-    public IDTasksHostBuilderConfiguration Configure(Action<IDTasksServiceConfiguration> configure)
+    public IDTasksHostBuilderConfiguration Configure(Action<IDependencyInjectionDTasksConfigurationBuilder> configure)
     {
         ThrowHelper.ThrowIfNull(configure);
 

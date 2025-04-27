@@ -3,7 +3,7 @@ using DTasks.Infrastructure.Execution;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow : IDAsyncCancellationHandler
+internal sealed partial class DAsyncFlow : IDAsyncCancellationHandler
 {
     void IDAsyncCancellationHandler.Cancel(DCancellationId id)
     {

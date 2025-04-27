@@ -8,9 +8,9 @@ using System.Text.Json.Serialization;
 
 namespace DTasks.Serialization.Json;
 
-public sealed class JsonDAsyncSerializerFactory
+internal sealed class JsonDAsyncSerializerFactory
 {
-    private static readonly ImmutableArray<JsonConverter> _wellKnownConverters =
+    private static readonly ImmutableArray<JsonConverter> s_wellKnownConverters =
     [
         new TypeIdJsonConverter(),
         new DAsyncIdJsonConverter()
@@ -18,25 +18,30 @@ public sealed class JsonDAsyncSerializerFactory
 
     private readonly IStateMachineInspector _inspector;
     private readonly IDAsyncTypeResolver _typeResolver;
-    private readonly FrozenSet<Type> _surrogatableTypes;
+    private readonly FrozenSet<Type> _surrogatableNonGenericTypes;
     private readonly FrozenSet<Type> _surrogatableGenericTypes;
     private readonly JsonSerializerOptions _options;
 
-    internal JsonDAsyncSerializerFactory(
+    public JsonDAsyncSerializerFactory(
         IStateMachineInspector inspector,
         IDAsyncTypeResolver typeResolver,
-        FrozenSet<Type> surrogatableTypes,
+        FrozenSet<Type> surrogatableNonGenericTypes,
         FrozenSet<Type> surrogatableGenericTypes,
         JsonSerializerOptions options)
     {
         _inspector = inspector;
         _typeResolver = typeResolver;
-        _surrogatableTypes = surrogatableTypes;
+        _surrogatableNonGenericTypes = surrogatableNonGenericTypes;
         _surrogatableGenericTypes = surrogatableGenericTypes;
         _options = options;
     }
 
-    public IDAsyncSerializer CreateSerializer(IDAsyncSurrogator surrogator)
+    public IDAsyncSerializer CreateSerializer()
+    {
+        return new JsonDAsyncSerializer(_typeResolver, _options);
+    }
+
+    public IStateMachineSerializer CreateStateMachineSerializer(IDAsyncSurrogator surrogator)
     {
         JsonSerializerOptions surrogatorOptions = new(_options);
         JsonSerializerOptions defaultOptions = new(_options);
@@ -47,14 +52,14 @@ public sealed class JsonDAsyncSerializerFactory
 
         object[] converterConstructorArguments = [surrogator, defaultOptions];
 
-        foreach (Type surrogatableType in _surrogatableTypes)
+        foreach (Type surrogatableType in _surrogatableNonGenericTypes)
         {
             Type surrogatableConverterType = typeof(SurrogatableConverter<>).MakeGenericType(surrogatableType);
             JsonConverter surrogatableConverter = (JsonConverter)Activator.CreateInstance(surrogatableConverterType, converterConstructorArguments)!;
             surrogatorOptions.Converters.Add(surrogatableConverter);
         }
 
-        foreach (JsonConverter wellKnownConverter in _wellKnownConverters)
+        foreach (JsonConverter wellKnownConverter in s_wellKnownConverters)
         {
             surrogatorOptions.Converters.Add(wellKnownConverter);
         }
@@ -64,6 +69,6 @@ public sealed class JsonDAsyncSerializerFactory
 
         defaultOptions.TypeInfoResolverChain.Add(new SurrogatorJsonTypeInfoResolver(defaultOptions));
 
-        return new JsonDAsyncSerializer(_inspector, _typeResolver, referenceResolver, surrogatorOptions);
+        return new JsonStateMachineSerializer(_inspector, _typeResolver, referenceResolver, surrogatorOptions);
     }
 }

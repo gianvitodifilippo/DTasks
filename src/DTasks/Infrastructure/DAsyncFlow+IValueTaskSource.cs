@@ -5,7 +5,7 @@ using System.Threading.Tasks.Sources;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow : IValueTaskSource
+internal sealed partial class DAsyncFlow : IValueTaskSource
 {
     void IValueTaskSource.GetResult(short token)
     {
@@ -50,8 +50,14 @@ public sealed partial class DAsyncFlow : IValueTaskSource
         _runnable = null;
         _valueTaskSource.Reset();
         _cancellationToken = CancellationToken.None;
-        _host.CancellationProvider.UnregisterHandler(this);
+        
+        CancellationProvider.UnregisterHandler(this);
         _host = s_nullHost;
+        _stack = null;
+        _heap = null;
+        _surrogator = null;
+        _cancellationProvider = null;
+        _suspensionHandler = null;
 
         _parentId = default;
         _id = default;

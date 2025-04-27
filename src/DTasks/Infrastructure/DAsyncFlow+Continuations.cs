@@ -4,7 +4,7 @@ using DTasks.Execution;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow
+internal sealed partial class DAsyncFlow
 {
     private static class Continuations
     {

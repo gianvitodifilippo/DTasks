@@ -25,13 +25,27 @@ public readonly struct Option<TValue> : IEquatable<Option<TValue>>
         get
         {
             if (!HasValue)
-                throw new InvalidOperationException("Optiona");
+                throw new InvalidOperationException("Option has no value.");
 
             return _value;
         }
     }
 
     public static Option<TValue> None => new(default!, hasValue: false);
+
+    public Option<TOther> Map<TOther>(Func<TValue, TOther> map)
+    {
+        return HasValue
+            ? map(_value)
+            : Option<TOther>.None;
+    }
+
+    public TResult Fold<TResult>(Func<TValue, TResult> mapSome, Func<TResult> mapNone)
+    {
+        return HasValue
+            ? mapSome(_value)
+            : mapNone();
+    }
 
     public bool Equals(Option<TValue> other) =>
         HasValue == other.HasValue &&
@@ -59,4 +73,10 @@ public readonly struct Option<TValue> : IEquatable<Option<TValue>>
     public static Option<TValue> Some(TValue value) => new(value);
 
     public static implicit operator Option<TValue>(TValue value) => new(value);
+}
+
+[EditorBrowsable(EditorBrowsableState.Never)]
+public static class Option
+{
+    public static Option<TValue> Some<TValue>(TValue value) => new(value);
 }

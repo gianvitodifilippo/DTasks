@@ -77,6 +77,13 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
             runner.Start(this);
         }
 
+        internal override TReturn Accept<TReturn>(IDTaskVisitor<TReturn> visitor)
+        {
+            return typeof(TResult) == typeof(VoidDTaskResult)
+                ? visitor.Visit(this as DTask)
+                : visitor.Visit(this);
+        }
+
         public override void SetResult(TResult result)
         {
             Debug.Assert(IsRunning, "The DTask should complete when running.");

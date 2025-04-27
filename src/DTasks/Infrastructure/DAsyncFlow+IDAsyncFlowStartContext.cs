@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow : IDAsyncFlowStartContext
+internal sealed partial class DAsyncFlow : IDAsyncFlowStartContext
 {
     private static readonly object s_resultSentinel = new();
 

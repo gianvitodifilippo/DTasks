@@ -8,11 +8,11 @@ using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json;
 
-public partial class JsonDAsyncSerializerTests
+public partial class JsonStateMachineSerializerTests
 {
     private static readonly Type s_stateMachineType;
 
-    static JsonDAsyncSerializerTests()
+    static JsonStateMachineSerializerTests()
     {
         MethodInfo method = typeof(AsyncMethodContainer).GetRequiredMethod(
             name: nameof(AsyncMethodContainer.Method),

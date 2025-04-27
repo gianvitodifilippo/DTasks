@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow
+internal sealed partial class DAsyncFlow
 {
     private void SetBranchResult()
     {

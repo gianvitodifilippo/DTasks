@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>netstandard2.1;net8.0;net9.0</TargetFrameworks>
+
+        <PackageId>DTasks.Serialization.InMemory</PackageId>
+        <Summary>Simple in-memory storage for serialized async state.</Summary>
+        <Description>Simple in-memory storage for serialized async state.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\DTasks.Serialization\DTasks.Serialization.csproj" />
+    </ItemGroup>
+
+</Project>

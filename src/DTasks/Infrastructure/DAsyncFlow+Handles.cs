@@ -6,7 +6,7 @@ using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow
+internal sealed partial class DAsyncFlow
 {
     private sealed class HandleRunnableWrapper(DAsyncFlow flow, IDAsyncRunnable runnable, DAsyncId id) : IDAsyncRunnable, IDAsyncStateMachine
     {

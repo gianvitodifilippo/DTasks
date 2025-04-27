@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow : IAsyncStateMachine
+internal sealed partial class DAsyncFlow : IAsyncStateMachine
 {
     void IAsyncStateMachine.MoveNext()
     {
@@ -40,7 +40,7 @@ public sealed partial class DAsyncFlow : IAsyncStateMachine
                     _stateMachine.MoveNext();
                     break;
 
-                case FlowState.Dehydrating: // After awaiting _stateManager.DehydrateAsync
+                case FlowState.Dehydrating: // After awaiting Stack.DehydrateAsync
                     Assert.NotNull(_continuation);
 
                     GetVoidValueTaskResult();
@@ -49,7 +49,7 @@ public sealed partial class DAsyncFlow : IAsyncStateMachine
                     Consume(ref _continuation).Invoke(this);
                     break;
 
-                case FlowState.Hydrating: // After awaiting _stateManager.HydrateAsync
+                case FlowState.Hydrating: // After awaiting Stack.HydrateAsync
                     (DAsyncId parentId, IDAsyncRunnable runnable) = GetLinkValueTaskResult();
                     if (parentId != default)
                     {

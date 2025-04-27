@@ -1,28 +1,20 @@
 ﻿using System.ComponentModel;
-using DTasks.Infrastructure.Execution;
-using DTasks.Infrastructure.Marshaling;
-using DTasks.Infrastructure.State;
+using DTasks.Configuration;
 
 namespace DTasks.Infrastructure;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IDAsyncHost
 {
-    IDAsyncStateManager StateManager { get; }
-
-    IDAsyncSurrogator Surrogator { get; }
+    DTasksConfiguration Configuration { get; }
     
-    IDAsyncTypeResolver TypeResolver { get; }
+    void OnInitialize(IDAsyncFlowInitializationContext context);
     
-    IDAsyncCancellationProvider CancellationProvider { get; }
-    
-    IDAsyncSuspensionHandler SuspensionHandler { get; }
-    
-    // TODO: Add distributed lock provider
+    void OnFinalize(IDAsyncFlowFinalizationContext context);
     
     Task OnStartAsync(IDAsyncFlowStartContext context, CancellationToken cancellationToken);
     
-    Task OnSuspendAsync(CancellationToken cancellationToken);
+    Task OnSuspendAsync(IDAsyncFlowSuspensionContext context, CancellationToken cancellationToken);
 
     Task OnSucceedAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken);
 
