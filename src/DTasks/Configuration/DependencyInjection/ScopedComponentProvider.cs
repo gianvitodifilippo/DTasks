@@ -10,16 +10,7 @@ internal sealed class ScopedComponentProvider<TComponent>(
     FlowImplementationFactory<TComponent> createComponent) : FlowComponentProvider<TComponent>
     where TComponent : notnull
 {
-    public override TComponent GetComponent(IDAsyncScope scope)
-    {
-        if (!scope.TryGetComponent(descriptor, out TComponent? component))
-        {
-            component = createComponent(scope);
-            scope.AddComponent(descriptor, component);
-        }
-
-        return component;
-    }
+    public override TComponent GetComponent(IDAsyncScope scope) => scope.GetScopedComponent(descriptor, createComponent);
 
     [ExcludeFromCodeCoverage]
     public override string ToString()

@@ -96,11 +96,6 @@ public abstract class DAsyncHost : IDAsyncHost, IDisposable
             throw new ObjectDisposedException(GetType().Name);
     }
 
-    public static DAsyncHost CreateDefault()
-    {
-        return new DefaultDAsyncHost(DTasksConfiguration.Create());
-    }
-
     public static DAsyncHost CreateDefault(Action<IDTasksConfigurationBuilder> configure)
     {
         ThrowHelper.ThrowIfNull(configure);

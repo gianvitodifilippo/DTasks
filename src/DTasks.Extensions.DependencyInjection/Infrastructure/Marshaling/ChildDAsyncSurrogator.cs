@@ -6,7 +6,7 @@ internal class ChildDAsyncSurrogator(
     IServiceProvider provider,
     IDAsyncServiceRegister register,
     IDAsyncTypeResolver typeResolver,
-    IRootDAsyncSurrogator rootSurrogator) : ServiceProviderDAsyncSurrogator(provider, register, typeResolver), IRootDAsyncSurrogator, IChildServiceMapper
+    IRootDAsyncSurrogator rootSurrogator) : ServiceProviderDAsyncSurrogator(provider, register, typeResolver), IChildServiceMapper
 {
     protected override bool TrySurrogate<T, TAction>(in T value, scoped ref TAction action)
     {

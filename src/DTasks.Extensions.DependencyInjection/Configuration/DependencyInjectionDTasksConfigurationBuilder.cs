@@ -1,19 +1,27 @@
+using System.Collections.Frozen;
+using System.Collections.Immutable;
 using DTasks.Configuration;
-using DTasks.Infrastructure.Marshaling;
+using DTasks.Configuration.DependencyInjection;
+using DTasks.Extensions.DependencyInjection.Infrastructure.Marshaling;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Extensions.DependencyInjection.Configuration;
 
-internal sealed class DependencyInjectionDTasksConfigurationBuilder : IDependencyInjectionDTasksConfigurationBuilder
+internal sealed class DependencyInjectionDTasksConfigurationBuilder(IServiceCollection services) : IDependencyInjectionDTasksConfigurationBuilder
 {
-    private readonly ServiceConfigurationBuilder _serviceConfiguration = new();
+    private readonly ServiceConfigurationBuilder _serviceConfigurationBuilder = new();
     private readonly List<Action<IMarshalingConfigurationBuilder>> _configureMarshalingActions = [];
     private readonly List<Action<IStateConfigurationBuilder>> _configureStateActions = [];
     private readonly List<Action<IExecutionConfigurationBuilder>> _configureExecutionActions = [];
 
-    public IServiceCollection Configure(IServiceCollection services)
+    IServiceCollection IDependencyInjectionDTasksConfigurationBuilder<IDependencyInjectionDTasksConfigurationBuilder>.Services => services;
+
+    public IServiceCollection Configure()
     {
-        return services.AddSingleton(sp => DTasksConfiguration.Create(builder =>
+        ImmutableArray<ServiceDescriptor> dAsyncDescriptors = [.. services.Where(_serviceConfigurationBuilder.IsDAsyncService)];
+        FrozenSet<Type> dAsyncTypes = dAsyncDescriptors.Select(descriptor => descriptor.ServiceType).ToFrozenSet();
+
+        DTasksConfiguration configuration = DTasksConfiguration.Create(builder =>
         {
             foreach (var configure in _configureMarshalingActions)
             {
@@ -32,8 +40,35 @@ internal sealed class DependencyInjectionDTasksConfigurationBuilder : IDependenc
 
             builder
                 .ConfigureMarshaling(marshaling => marshaling
-                    .AddSurrogator(InfrastructureServiceProvider.GetRequiredService<IDAsyncSurrogator>()));
-        }));
+                    .AddSurrogator(InfrastructureServiceProvider.Descriptor.Map(provider => provider.GetRequiredService<DAsyncSurrogatorProvider>().GetSurrogator(provider)))
+                    .RegisterTypeId(typeof(ServiceSurrogate))
+                    .RegisterTypeId(typeof(KeyedServiceSurrogate<string>))
+                    .RegisterTypeId(typeof(KeyedServiceSurrogate<int>))
+                    .RegisterTypeIds(dAsyncTypes));
+        });
+
+        ServiceContainerBuilder containerBuilder = new(services, configuration.TypeResolver);
+        foreach (ServiceDescriptor descriptor in dAsyncDescriptors)
+        {
+            containerBuilder.Replace(descriptor);
+        }
+
+        DAsyncServiceRegister serviceRegister = new(dAsyncTypes, configuration.TypeResolver);
+        DAsyncServiceValidator validator = containerBuilder.ValidationErrors.Count == 0
+            ? () => { }
+            : () => throw new AggregateException("Some d-async services are not able to be constructed.", containerBuilder.ValidationErrors);
+
+        return services
+            .AddSingleton(configuration)
+            .AddSingleton(validator)
+            .AddSingleton<IDAsyncServiceRegister>(serviceRegister)
+            .AddSingleton<IServiceMapper, ServiceMapper>()
+            .AddSingleton<DAsyncSurrogatorProvider>()
+            .AddSingleton<RootDAsyncSurrogator>()
+            .AddSingleton<IRootDAsyncSurrogator>(provider => provider.GetRequiredService<RootDAsyncSurrogator>())
+            .AddSingleton<IRootServiceMapper>(provider => provider.GetRequiredService<RootDAsyncSurrogator>())
+            .AddScoped<ChildDAsyncSurrogator>()
+            .AddScoped<IChildServiceMapper>(provider => provider.GetRequiredService<ChildDAsyncSurrogator>());
     }
 
     IDependencyInjectionDTasksConfigurationBuilder IDTasksConfigurationBuilder<IDependencyInjectionDTasksConfigurationBuilder>.ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure)
@@ -56,7 +91,7 @@ internal sealed class DependencyInjectionDTasksConfigurationBuilder : IDependenc
 
     IDependencyInjectionDTasksConfigurationBuilder IDependencyInjectionDTasksConfigurationBuilder<IDependencyInjectionDTasksConfigurationBuilder>.ConfigureServices(Action<IServiceConfigurationBuilder> configure)
     {
-        configure(_serviceConfiguration);
+        configure(_serviceConfigurationBuilder);
         return this;
     }
 }

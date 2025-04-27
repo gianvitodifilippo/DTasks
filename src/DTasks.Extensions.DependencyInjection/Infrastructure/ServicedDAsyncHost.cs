@@ -21,13 +21,13 @@ public abstract class ServicedDAsyncHost : DAsyncHost
     {
     }
 
-    protected override void OnInitialize(IDAsyncFlowInitializationContext context)
+    protected sealed override void OnInitialize(IDAsyncFlowInitializationContext context)
     {
         context.AddProperty(InfrastructureServiceProvider.ServiceProviderKey, Services);
         OnInitializeCore(context);
     }
 
-    protected override void OnFinalize(IDAsyncFlowFinalizationContext context)
+    protected sealed override void OnFinalize(IDAsyncFlowFinalizationContext context)
     {
         _configuration = null;
         context.RemoveProperty(InfrastructureServiceProvider.ServiceProviderKey);

@@ -17,6 +17,6 @@ internal abstract class RootComponentProvider<TComponent> : IComponentProvider<T
         TComponent component = GetComponent();
         IComponentDescriptor<TResult> resolvedResultDescriptor = resolveResult(component);
 
-        return ComponentProviderFactory.CreateProvider(Configuration, resolvedResultDescriptor);
+        return Configuration.CreateProvider(resolvedResultDescriptor);
     }
 }

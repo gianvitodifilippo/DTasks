@@ -1,12 +1,16 @@
-using System.Diagnostics.CodeAnalysis;
+using DTasks.Configuration.DependencyInjection;
 
 namespace DTasks.Infrastructure;
 
 internal interface IDAsyncScope : IDAsyncFlow
 {
-    bool TryGetComponent<TComponent>(object key, [NotNullWhen(true)] out TComponent? component)
+    TComponent GetScopedComponent<TComponent>(IComponentDescriptor<TComponent> descriptor, FlowImplementationFactory<TComponent> createComponent)
         where TComponent : notnull;
 
-    void AddComponent<TComponent>(object key, TComponent component)
-        where TComponent : notnull;
+    TComponent GetBoundComponent<TComponent, TDependency>(
+        IComponentProvider<TDependency> dependencyProvider,
+        IComponentDescriptor<TComponent> descriptor,
+        DescriptorResolver<TComponent, TDependency> resolve)
+        where TComponent : notnull
+        where TDependency : notnull;
 }

@@ -8,17 +8,17 @@ public static class InfrastructureServiceProvider
 {
     internal static readonly DAsyncFlowPropertyKey<IServiceProvider> ServiceProviderKey = new();
 
-    public static readonly IComponentDescriptor<IServiceProvider> ServicesProvider = ComponentDescriptor.Scoped(flow => flow.GetProperty(ServiceProviderKey));
+    public static readonly IComponentDescriptor<IServiceProvider> Descriptor = ComponentDescriptor.Scoped(flow => flow.GetProperty(ServiceProviderKey));
 
     public static IComponentDescriptor<TService> GetRequiredService<TService>()
         where TService : notnull
     {
-        return ServicesProvider.Map(services => services.GetRequiredService<TService>());
+        return Descriptor.Map(services => services.GetRequiredService<TService>());
     }
 
     public static IComponentDescriptor<TService> GetRequiredKeyedService<TService>(object serviceKey)
         where TService : notnull
     {
-        return ServicesProvider.Map(services => services.GetRequiredKeyedService<TService>(serviceKey));
+        return Descriptor.Map(services => services.GetRequiredKeyedService<TService>(serviceKey));
     }
 }

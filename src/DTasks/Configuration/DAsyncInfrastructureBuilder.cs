@@ -61,7 +61,7 @@ internal sealed class DAsyncInfrastructureBuilder
     private static IComponentDescriptor<TComponent> EnsureAssigned<TComponent>(IComponentDescriptor<TComponent>? descriptor)
         where TComponent : notnull
     {
-        return descriptor ?? throw new InvalidOperationException($"Missing required component of type {typeof(TComponent).Name})");
+        return descriptor ?? throw new InvalidOperationException($"Missing required component of type '{typeof(TComponent).Name}'.");
     }
 
     private static IComponentDescriptor<TComponent> OrDefault<TComponent>(IComponentDescriptor<TComponent>? descriptor, TComponent defaultComponent)
@@ -74,11 +74,11 @@ internal sealed class DAsyncInfrastructureBuilder
         DAsyncInfrastructureBuilder builder,
         DTasksConfiguration configuration) : IDAsyncInfrastructure
     {
-        private readonly IComponentProvider<IDAsyncStack> _stackProvider = ComponentProviderFactory.CreateProvider(configuration, builder.StackDescriptor);
-        private readonly IComponentProvider<IDAsyncHeap> _heapProvider = ComponentProviderFactory.CreateProvider(configuration, builder.HeapDescriptor);
-        private readonly IComponentProvider<IDAsyncSurrogator> _surrogatorProvider = ComponentProviderFactory.CreateProvider(configuration, builder.SurrogatorDescriptor);
-        private readonly IComponentProvider<IDAsyncCancellationProvider> _cancellationProviderProvider = ComponentProviderFactory.CreateProvider(configuration, builder.CancellationProviderDescriptor);
-        private readonly IComponentProvider<IDAsyncSuspensionHandler> _suspensionHandlerProvider = ComponentProviderFactory.CreateProvider(configuration, builder.SuspensionHandlerProvider);
+        private readonly IComponentProvider<IDAsyncStack> _stackProvider = configuration.CreateProvider(builder.StackDescriptor);
+        private readonly IComponentProvider<IDAsyncHeap> _heapProvider = configuration.CreateProvider(builder.HeapDescriptor);
+        private readonly IComponentProvider<IDAsyncSurrogator> _surrogatorProvider = configuration.CreateProvider(builder.SurrogatorDescriptor);
+        private readonly IComponentProvider<IDAsyncCancellationProvider> _cancellationProviderProvider = configuration.CreateProvider(builder.CancellationProviderDescriptor);
+        private readonly IComponentProvider<IDAsyncSuspensionHandler> _suspensionHandlerProvider = configuration.CreateProvider(builder.SuspensionHandlerProvider);
 
         public IDAsyncStack GetStack(IDAsyncScope scope) => _stackProvider.GetComponent(scope);
 

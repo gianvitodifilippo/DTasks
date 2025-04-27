@@ -20,7 +20,20 @@ public interface IMarshalingConfigurationBuilder
 
 public static class MarshalingConfigurationBuilderExtensions
 {
-    public static void RegisterDAsyncMethod(this IMarshalingConfigurationBuilder builder, MethodInfo method)
+    public static IMarshalingConfigurationBuilder RegisterTypeIds(this IMarshalingConfigurationBuilder builder, IEnumerable<Type> types)
+    {
+        ThrowHelper.ThrowIfNull(builder);
+        ThrowHelper.ThrowIfNull(types);
+
+        foreach (Type type in types)
+        {
+            builder.RegisterTypeId(type);
+        }
+
+        return builder;
+    }
+
+    public static IMarshalingConfigurationBuilder RegisterDAsyncMethod(this IMarshalingConfigurationBuilder builder, MethodInfo method)
     {
         ThrowHelper.ThrowIfNull(builder);
         ThrowHelper.ThrowIfNull(method);
@@ -40,25 +53,25 @@ public static class MarshalingConfigurationBuilderExtensions
             stateMachineType = stateMachineType.MakeGenericType(genericTypeArguments);
         }
 
-        builder.RegisterTypeId(stateMachineType);
+        return builder.RegisterTypeId(stateMachineType);
     }
 
-    public static void RegisterDAsyncType(this IMarshalingConfigurationBuilder builder, Type type)
+    public static IMarshalingConfigurationBuilder RegisterDAsyncType(this IMarshalingConfigurationBuilder builder, Type type)
     {
         ThrowHelper.ThrowIfNull(builder);
         ThrowHelper.ThrowIfNull(type);
 
-        RegisterDAsyncTypeCore(builder, type);
+        return RegisterDAsyncTypeCore(builder, type);
     }
 
-    public static void RegisterDAsyncType<T>(this IMarshalingConfigurationBuilder builder)
+    public static IMarshalingConfigurationBuilder RegisterDAsyncType<T>(this IMarshalingConfigurationBuilder builder)
     {
         ThrowHelper.ThrowIfNull(builder);
 
-        RegisterDAsyncTypeCore(builder, typeof(T));
+        return RegisterDAsyncTypeCore(builder, typeof(T));
     }
 
-    private static void RegisterDAsyncTypeCore(IMarshalingConfigurationBuilder builder, Type type)
+    private static IMarshalingConfigurationBuilder RegisterDAsyncTypeCore(IMarshalingConfigurationBuilder builder, Type type)
     {
         if (type.ContainsGenericParameters)
             throw new ArgumentException("Invalid d-async type.", nameof(type));
@@ -97,5 +110,7 @@ public static class MarshalingConfigurationBuilderExtensions
                 DAsyncFlow.RegisterGenericTypeIds(builder, genericTypeArguments[0]);
             }
         }
+
+        return builder;
     }
 }

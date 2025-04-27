@@ -12,13 +12,7 @@ internal sealed class BoundComponentProvider<TComponent, TDependency>(
     where TComponent : notnull
     where TDependency : notnull
 {
-    public override TComponent GetComponent(IDAsyncScope scope)
-    {
-        if (scope.TryGetComponent(descriptor, out TComponent? component))
-            return component;
-
-        return BoundComponentFactory.CreateComponent(dependencyProvider, descriptor, resolve, scope);
-    }
+    public override TComponent GetComponent(IDAsyncScope scope) => scope.GetBoundComponent(dependencyProvider, descriptor, resolve);
 
     [ExcludeFromCodeCoverage]
     public override string ToString()

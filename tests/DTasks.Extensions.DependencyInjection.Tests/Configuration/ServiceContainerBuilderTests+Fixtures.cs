@@ -6,7 +6,7 @@ using DTasks.Infrastructure.Marshaling;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit.Sdk;
 
-namespace DTasks.Extensions.DependencyInjection;
+namespace DTasks.Extensions.DependencyInjection.Configuration;
 
 public partial class ServiceContainerBuilderTests
 {

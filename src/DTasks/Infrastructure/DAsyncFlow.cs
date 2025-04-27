@@ -63,7 +63,12 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private readonly Dictionary<DAsyncId, DTask> _tasks;
     private readonly ConcurrentDictionary<DCancellationTokenSource, CancellationInfo> _cancellationInfos;
     private readonly ConcurrentDictionary<DCancellationId, DCancellationTokenSource> _cancellations;
+
     private readonly Dictionary<object, object?> _properties;
+    private readonly Dictionary<object, object> _components;
+    private readonly Dictionary<object, object> _scopedComponents;
+    private bool _isCreatingComponent;
+    private bool _usedPropertyInScopedComponent;
 
     private DAsyncFlow()
     {
@@ -76,9 +81,13 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         _cancellationInfos = [];
         _cancellations = [];
         _properties = [];
+        _components = [];
+        _scopedComponents = [];
     }
 
-    private IDAsyncTypeResolver TypeResolver => _host.Configuration.TypeResolver;
+    private DTasksConfiguration Configuration => _host.Configuration;
+
+    private IDAsyncTypeResolver TypeResolver => Configuration.TypeResolver;
 
     private IDAsyncStack Stack => GetComponent(ref _stack, static (infrastructure, scope) => infrastructure.GetStack(scope));
 
@@ -106,6 +115,8 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private void Initialize(IDAsyncHost host)
     {
         _host = host;
+        
+        host.OnInitialize(this);
         CancellationProvider.RegisterHandler(this);
     }
 
@@ -118,9 +129,10 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         _cancellationToken = cancellationToken;
         _parentId = DAsyncId.NewFlowId();
         _id = DAsyncId.New();
-        Initialize(host);
 
+        Initialize(host);
         AwaitOnStart();
+        
         return new ValueTask(this, _valueTaskSource.Version);
     }
 
@@ -131,9 +143,10 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
 
         _state = FlowState.Running;
         _cancellationToken = cancellationToken;
-        Initialize(host);
 
+        Initialize(host);
         Resume(id);
+        
         return new ValueTask(this, _valueTaskSource.Version);
     }
 
@@ -144,9 +157,10 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
 
         _state = FlowState.Running;
         _cancellationToken = cancellationToken;
+        
         Initialize(host);
-
         Resume(id, result);
+
         return new ValueTask(this, _valueTaskSource.Version);
     }
 
@@ -157,9 +171,10 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
 
         _state = FlowState.Running;
         _cancellationToken = cancellationToken;
-        Initialize(host);
 
+        Initialize(host);
         Resume(id, exception);
+        
         return new ValueTask(this, _valueTaskSource.Version);
     }
 
@@ -174,7 +189,14 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private TComponent GetComponent<TComponent>([NotNull] ref TComponent? component, Func<IDAsyncInfrastructure, IDAsyncScope, TComponent> factory)
         where TComponent : notnull
     {
-        return component ??= factory(_host.Configuration.Infrastructure, this);
+        if (component is not null)
+            return component;
+
+        _isCreatingComponent = true;
+        component = factory(Configuration.Infrastructure, this);
+        _isCreatingComponent = false;
+
+        return component;
     }
 
 #if DEBUG
