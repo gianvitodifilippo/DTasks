@@ -1,8 +1,8 @@
 ﻿using DTasks.Configuration;
+using DTasks.Extensions.Hosting;
 using DTasks.Utils;
-using Microsoft.Extensions.Hosting;
 
-namespace DTasks.Extensions.Hosting;
+namespace Microsoft.Extensions.Hosting;
 
 public static class DTasksHostBuilderExtensions
 {

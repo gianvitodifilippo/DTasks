@@ -16,6 +16,7 @@
     <ItemGroup>
       <ProjectReference Include="..\DTasks.AspNetCore.Core\DTasks.AspNetCore.Core.csproj" />
       <ProjectReference Include="..\DTasks.Extensions.DependencyInjection\DTasks.Extensions.DependencyInjection.csproj" />
+      <ProjectReference Include="..\DTasks.Extensions.Hosting\DTasks.Extensions.Hosting.csproj" />
       <ProjectReference Include="..\DTasks.Inspection.Dynamic\DTasks.Inspection.Dynamic.csproj" />
       <ProjectReference Include="..\DTasks.Serialization.Json\DTasks.Serialization.Json.csproj" />
     </ItemGroup>

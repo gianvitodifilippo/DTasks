@@ -1,20 +1,14 @@
-using Approvals;
-using DTasks;
-using DTasks.AspNetCore;
-using DTasks.AspNetCore.Infrastructure;
-using DTasks.AspNetCore.Infrastructure.Http;
-using DTasks.Extensions.Hosting;
-using DTasks.Infrastructure.Execution;
-using DTasks.Infrastructure.Marshaling;
-using DTasks.Infrastructure.State;
-using DTasks.Serialization;
-using DTasks.Serialization.Json;
-using DTasks.Serialization.Json.Converters;
-using DTasks.Serialization.StackExchangeRedis;
-using Microsoft.AspNetCore.Mvc;
-using StackExchange.Redis;
 using System.Net;
 using System.Text.Json;
+using Approvals;
+using DTasks;
+using Microsoft.Extensions.Hosting;
+using DTasks.AspNetCore.Infrastructure;
+using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Marshaling;
+using DTasks.Serialization.Json.Converters;
+using Microsoft.AspNetCore.Mvc;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,12 +22,9 @@ builder.Host.UseDTasks(dTasks => dTasks
 
 #region In library
 
-JsonMarshalingConfiguration marshalingConfiguration = JsonMarshalingConfiguration.Create();
+IDatabase database = ConnectionMultiplexer.Connect("localhost:6379").GetDatabase();
 
 builder.Services.AddScoped<AsyncEndpoints>();
-builder.Services
-    .AddSingleton(sp => ConnectionMultiplexer.Connect("localhost:6379"))
-    .AddSingleton(sp => sp.GetRequiredService<ConnectionMultiplexer>().GetDatabase());
 builder.Services
     .AddSingleton(sp =>
     {
@@ -48,10 +39,6 @@ builder.Services
 
         return marshalingConfiguration.CreateSerializerFactory(typeResolver);
     })
-    .AddScoped<DAsyncFlowServices>()
-    .AddScoped<IDAsyncFlowServices>(sp => sp.GetRequiredService<DAsyncFlowServices>())
-    .AddScoped(sp => sp.GetRequiredService<JsonDAsyncSerializerFactory>().CreateSerializer(sp.GetRequiredService<IDAsyncFlowServices>().Surrogator))
-    .AddSingleton<IDAsyncStorage, RedisDAsyncStorage>()
     .AddHttpClient()
     .AddSingleton<RedisDAsyncSuspensionHandler>()
     .AddHostedService(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
@@ -73,7 +60,7 @@ app.MapPost("/approvals", async (
     [FromBody] NewApprovalRequest request,
     CancellationToken cancellationToken) =>
 {
-    AspNetCoreDAsyncHost host = AspNetCoreDAsyncHost.CreateHttpHost(httpContext, "GetApprovalsStatus");
+    AspNetCoreDAsyncHost host = AspNetCoreDAsyncHost.CreateAsyncEndpointHost(httpContext);
     DTask<IResult> task = endpoints.NewApproval(request);
 
     await host.StartAsync(task, cancellationToken);

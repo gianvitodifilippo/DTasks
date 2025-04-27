@@ -27,6 +27,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Serialization", "..\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Serialization.Json", "..\..\src\DTasks.Serialization.Json\DTasks.Serialization.Json.csproj", "{63ECF1A4-4B0E-410B-B61A-9CE58E3F453B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.AspNetCore.Core", "..\..\src\DTasks.AspNetCore.Core\DTasks.AspNetCore.Core.csproj", "{97D66139-F022-19AD-F7CE-37069592DAD8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -123,6 +125,14 @@ Global
 		{63ECF1A4-4B0E-410B-B61A-9CE58E3F453B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{63ECF1A4-4B0E-410B-B61A-9CE58E3F453B}.Release-Tests|Any CPU.ActiveCfg = Release-Tests|Any CPU
 		{63ECF1A4-4B0E-410B-B61A-9CE58E3F453B}.Release-Tests|Any CPU.Build.0 = Release-Tests|Any CPU
+		{97D66139-F022-19AD-F7CE-37069592DAD8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97D66139-F022-19AD-F7CE-37069592DAD8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97D66139-F022-19AD-F7CE-37069592DAD8}.Debug-Tests|Any CPU.ActiveCfg = Debug-Tests|Any CPU
+		{97D66139-F022-19AD-F7CE-37069592DAD8}.Debug-Tests|Any CPU.Build.0 = Debug-Tests|Any CPU
+		{97D66139-F022-19AD-F7CE-37069592DAD8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97D66139-F022-19AD-F7CE-37069592DAD8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97D66139-F022-19AD-F7CE-37069592DAD8}.Release-Tests|Any CPU.ActiveCfg = Release-Tests|Any CPU
+		{97D66139-F022-19AD-F7CE-37069592DAD8}.Release-Tests|Any CPU.Build.0 = Release-Tests|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -137,5 +147,9 @@ Global
 		{CB32CE77-E4B1-4E9E-B977-11BFDA068D6A} = {70843178-A5B6-4FB1-A628-0DD2693ECBE3}
 		{8FEBC525-D031-4CAC-A3E9-68D59D76898E} = {70843178-A5B6-4FB1-A628-0DD2693ECBE3}
 		{63ECF1A4-4B0E-410B-B61A-9CE58E3F453B} = {70843178-A5B6-4FB1-A628-0DD2693ECBE3}
+		{97D66139-F022-19AD-F7CE-37069592DAD8} = {70843178-A5B6-4FB1-A628-0DD2693ECBE3}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {42F2554F-D18D-4677-97E8-C2D9A8DD8499}
 	EndGlobalSection
 EndGlobal
