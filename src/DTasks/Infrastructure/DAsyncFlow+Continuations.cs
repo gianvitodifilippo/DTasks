@@ -1,10 +1,10 @@
-﻿using DTasks.Utils;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using DTasks.Execution;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow
+internal sealed partial class DAsyncFlow
 {
     private static class Continuations
     {

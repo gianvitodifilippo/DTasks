@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow : IDAsyncFlowCompletionContext
+internal sealed partial class DAsyncFlow : IDAsyncFlowCompletionContext
 {
     DAsyncId IDAsyncFlowCompletionContext.FlowId
     {

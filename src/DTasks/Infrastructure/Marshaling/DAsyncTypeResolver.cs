@@ -8,8 +8,6 @@ internal sealed class DAsyncTypeResolver(
     FrozenDictionary<Type, TypeId> typesToIds,
     FrozenDictionary<TypeId, Type> idsToTypes) : IDAsyncTypeResolver
 {
-    public static readonly IDAsyncTypeResolver Default = DAsyncTypeResolverBuilder.Create().Build();
-    
     public Type GetType(TypeId id) => idsToTypes[id];
 
     public TypeId GetTypeId(Type type) => typesToIds[type];

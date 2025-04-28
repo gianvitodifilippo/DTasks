@@ -2,7 +2,7 @@
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow
+internal sealed partial class DAsyncFlow
 {
     private void AwaitOnStart()
     {
@@ -11,7 +11,7 @@ public sealed partial class DAsyncFlow
 
     private void AwaitOnSuspend()
     {
-        Await(_host.OnSuspendAsync(_cancellationToken), FlowState.Returning);
+        Await(_host.OnSuspendAsync(this, _cancellationToken), FlowState.Returning);
     }
 
     private void AwaitOnSucceed()

@@ -1,6 +1,9 @@
+using System.ComponentModel;
+
 namespace DTasks.Infrastructure;
 
-public interface IDAsyncFlowCompletionContext
+[EditorBrowsable(EditorBrowsableState.Never)]
+public interface IDAsyncFlowCompletionContext : IDAsyncFlowContext
 {
     DAsyncId FlowId { get; }
 }

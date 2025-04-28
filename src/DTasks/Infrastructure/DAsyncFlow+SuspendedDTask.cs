@@ -1,9 +1,9 @@
-﻿using DTasks.Utils;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow
+internal sealed partial class DAsyncFlow
 {
     private sealed class SuspendedDTask : DTask
     {

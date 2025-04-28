@@ -15,7 +15,7 @@ public readonly struct DCancellationToken : IEquatable<DCancellationToken>
     {
         if (!canceled)
             return;
-        
+
         _source = DCancellationTokenSource.CanceledSource;
     }
 

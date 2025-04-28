@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel;
-using DTasks.Utils;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using DTasks.Utils;
 
 namespace DTasks;
 
@@ -27,13 +27,6 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
     private readonly uint _b;
     private readonly uint _c;
 
-    private DAsyncId(uint a, uint b, uint c)
-    {
-        _a = a;
-        _b = b;
-        _c = c;
-    }
-
     private DAsyncId(ReadOnlySpan<byte> bytes)
     {
         Debug.Assert(bytes.Length == ByteCount);
@@ -47,7 +40,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
     {
         get
         {
-            ref byte firstByte = ref Unsafe.As<DAsyncId, byte>(ref Unsafe.AsRef(in this));
+            ref readonly byte firstByte = ref Unsafe.As<DAsyncId, byte>(ref Unsafe.AsRef(in this));
             return (firstByte & FlowIdMask) != 0;
         }
     }
@@ -97,7 +90,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
     internal static DAsyncId New()
     {
         Span<byte> bytes = stackalloc byte[ByteCount];
-        
+
         Create(bytes);
         return new(bytes);
     }
@@ -105,7 +98,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
     internal static DAsyncId NewFlowId()
     {
         Span<byte> bytes = stackalloc byte[ByteCount];
-        
+
         Create(bytes);
         bytes[0] |= FlowIdMask;
         return new(bytes);
@@ -157,6 +150,19 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
         return id;
     }
 
+    public static bool TryParse(ReadOnlySpan<char> value, out DAsyncId id)
+    {
+        return TryParseCore(value, out id);
+    }
+
+    public static DAsyncId Parse(ReadOnlySpan<char> value)
+    {
+        if (!TryParseCore(value, out DAsyncId id))
+            throw new ArgumentException($"'{value.ToString()}' does not represent a valid {nameof(DAsyncId)}.", nameof(value));
+
+        return id;
+    }
+
     public static bool TryParse(string value, out DAsyncId id)
     {
         ThrowHelper.ThrowIfNull(value);
@@ -177,10 +183,10 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
         return TryReadBytesCore(bytes, out id);
     }
 
-    private static bool TryParseCore(string value, out DAsyncId id)
+    private static bool TryParseCore(ReadOnlySpan<char> value, out DAsyncId id)
     {
         Span<byte> bytes = stackalloc byte[ByteCount];
-        if (!Convert.TryFromBase64String(value, bytes, out int bytesWritten) || bytesWritten != ByteCount)
+        if (!Convert.TryFromBase64Chars(value, bytes, out int bytesWritten) || bytesWritten != ByteCount)
         {
             id = default;
             return false;

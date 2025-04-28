@@ -1,12 +1,12 @@
-﻿using DTasks.Inspection;
-using DTasks.Utils;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Inspection;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow
+internal sealed partial class DAsyncFlow
 {
     private sealed class HandleRunnableWrapper(DAsyncFlow flow, IDAsyncRunnable runnable, DAsyncId id) : IDAsyncRunnable, IDAsyncStateMachine
     {

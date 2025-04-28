@@ -4,7 +4,7 @@ using DTasks.Infrastructure.Execution;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow : IDAsyncCancellationManager
+internal sealed partial class DAsyncFlow : IDAsyncCancellationManager
 {
     Task IDAsyncCancellationManager.CreateAsync(DCancellationTokenSource source, DAsyncCancellationHandle handle, CancellationToken cancellationToken)
     {
@@ -16,20 +16,20 @@ public sealed partial class DAsyncFlow : IDAsyncCancellationManager
     {
         DateTimeOffset expirationTime = DateTimeOffset.Now + delay;
         DCancellationId id = Register(source, handle);
-        return _host.CancellationProvider.CancelAsync(id, expirationTime, cancellationToken);
+        return CancellationProvider.CancelAsync(id, expirationTime, cancellationToken);
     }
 
     Task IDAsyncCancellationManager.CancelAsync(DCancellationTokenSource source, CancellationToken cancellationToken)
     {
         CancellationInfo info = _cancellationInfos[source];
-        return _host.CancellationProvider.CancelAsync(info.Id, cancellationToken);
+        return CancellationProvider.CancelAsync(info.Id, cancellationToken);
     }
 
     Task IDAsyncCancellationManager.CancelAfterAsync(DCancellationTokenSource source, TimeSpan delay, CancellationToken cancellationToken)
     {
         DateTimeOffset expirationTime = DateTimeOffset.Now + delay;
         CancellationInfo info = _cancellationInfos[source];
-        return _host.CancellationProvider.CancelAsync(info.Id, expirationTime, cancellationToken);
+        return CancellationProvider.CancelAsync(info.Id, expirationTime, cancellationToken);
     }
 
     private DCancellationId Register(DCancellationTokenSource source, DAsyncCancellationHandle handle)

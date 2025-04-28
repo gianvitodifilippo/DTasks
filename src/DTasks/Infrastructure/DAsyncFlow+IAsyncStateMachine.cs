@@ -1,11 +1,11 @@
-﻿using DTasks.Utils;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow : IAsyncStateMachine
+internal sealed partial class DAsyncFlow : IAsyncStateMachine
 {
     void IAsyncStateMachine.MoveNext()
     {
@@ -15,7 +15,7 @@ public sealed partial class DAsyncFlow : IAsyncStateMachine
             {
                 case FlowState.Starting:
                     Assert.NotNull(_runnable);
-                    
+
                     GetVoidTaskResult();
                     object? resultOrException = Consume(ref _resultOrException);
                     if (resultOrException is null)
@@ -33,14 +33,14 @@ public sealed partial class DAsyncFlow : IAsyncStateMachine
                         _valueTaskSource.SetResult(default);
                     }
                     break;
-                
+
                 case FlowState.Running: // After awaiting a regular awaitable or a completed d-awaitable
                     Assert.NotNull(_stateMachine);
 
                     _stateMachine.MoveNext();
                     break;
 
-                case FlowState.Dehydrating: // After awaiting _stateManager.DehydrateAsync
+                case FlowState.Dehydrating: // After awaiting Stack.DehydrateAsync
                     Assert.NotNull(_continuation);
 
                     GetVoidValueTaskResult();
@@ -49,7 +49,7 @@ public sealed partial class DAsyncFlow : IAsyncStateMachine
                     Consume(ref _continuation).Invoke(this);
                     break;
 
-                case FlowState.Hydrating: // After awaiting _stateManager.HydrateAsync
+                case FlowState.Hydrating: // After awaiting Stack.HydrateAsync
                     (DAsyncId parentId, IDAsyncRunnable runnable) = GetLinkValueTaskResult();
                     if (parentId != default)
                     {
@@ -59,7 +59,7 @@ public sealed partial class DAsyncFlow : IAsyncStateMachine
                     _state = FlowState.Running;
                     runnable.Run(this);
                     break;
-                
+
                 case FlowState.Suspending: // After awaiting a method that results in suspending the d-async flow
                     GetVoidTaskResult();
                     AwaitOnSuspend();

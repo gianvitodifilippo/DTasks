@@ -1,11 +1,11 @@
-﻿using DTasks.Utils;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Sources;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow : IValueTaskSource
+internal sealed partial class DAsyncFlow : IValueTaskSource
 {
     void IValueTaskSource.GetResult(short token)
     {
@@ -46,12 +46,20 @@ public sealed partial class DAsyncFlow : IValueTaskSource
         Assert.Null(_resultOrException);
         Debug.Assert(_branchIndex == -1);
 
+        CancellationProvider.UnregisterHandler(this);
+        _host.OnFinalize(this);
+
         _state = FlowState.Pending;
         _runnable = null;
         _valueTaskSource.Reset();
         _cancellationToken = CancellationToken.None;
-        _host.CancellationProvider.UnregisterHandler(this);
+
         _host = s_nullHost;
+        _stack = null;
+        _heap = null;
+        _surrogator = null;
+        _cancellationProvider = null;
+        _suspensionHandler = null;
 
         _parentId = default;
         _id = default;
@@ -62,6 +70,10 @@ public sealed partial class DAsyncFlow : IValueTaskSource
         _tasks.Clear();
         _cancellationInfos.Clear();
         _cancellations.Clear();
+
+        _usedPropertyInScopedComponent = false;
+        _properties.Clear();
+        _scopedComponents.Clear();
 
         if (_returnToCache)
         {

@@ -2,5 +2,5 @@
 
 public interface IDAsyncHostFactory
 {
-    IDAsyncHost CreateHost(IDAsyncHostCreationContext context);
+    IDAsyncHost CreateHost(IDAsyncFlow flow);
 }

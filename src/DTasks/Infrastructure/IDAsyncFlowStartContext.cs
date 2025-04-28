@@ -1,10 +1,13 @@
+using System.ComponentModel;
+
 namespace DTasks.Infrastructure;
 
-public interface IDAsyncFlowStartContext
+[EditorBrowsable(EditorBrowsableState.Never)]
+public interface IDAsyncFlowStartContext : IDAsyncFlowContext
 {
     void SetResult();
-    
+
     void SetException(Exception exception);
-    
+
     DAsyncId FlowId { get; }
 }

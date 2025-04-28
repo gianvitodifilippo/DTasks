@@ -1,11 +1,11 @@
-﻿using DTasks.CompilerServices;
-using DTasks.Infrastructure;
-using DTasks.Utils;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using DTasks.CompilerServices;
+using DTasks.Infrastructure;
+using DTasks.Utils;
 
 namespace DTasks;
 
@@ -216,7 +216,7 @@ public abstract class DTask<TResult> : DTask
 
     protected virtual TResult ResultCore => throw new NotImplementedException($"If a DTask can be '{DTaskStatus.Succeeded}', then it should override {nameof(ResultCore)}.");
 
-    internal sealed override TReturn Accept<TReturn>(IDTaskVisitor<TReturn> visitor) => visitor.Visit(this);
+    internal override TReturn Accept<TReturn>(IDTaskVisitor<TReturn> visitor) => visitor.Visit(this);
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     public new Awaiter GetAwaiter() => new Awaiter(this);

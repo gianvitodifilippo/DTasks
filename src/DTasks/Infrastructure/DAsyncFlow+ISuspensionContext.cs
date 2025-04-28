@@ -3,10 +3,8 @@ using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow : ISuspensionContext
+internal sealed partial class DAsyncFlow : ISuspensionContext
 {
-    IDAsyncSurrogator ISuspensionContext.Surrogator => this;
-
     bool ISuspensionContext.IsSuspended<TAwaiter>(ref TAwaiter awaiter)
     {
         Assert.NotNull(_suspendingAwaiterOrType);

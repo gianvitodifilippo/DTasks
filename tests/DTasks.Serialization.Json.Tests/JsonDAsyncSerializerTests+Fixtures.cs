@@ -1,18 +1,18 @@
-﻿using DTasks.Infrastructure;
-using DTasks.Utils;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Utils;
 
 namespace DTasks.Serialization.Json;
 
-public partial class JsonDAsyncSerializerTests
+public partial class JsonStateMachineSerializerTests
 {
     private static readonly Type s_stateMachineType;
 
-    static JsonDAsyncSerializerTests()
+    static JsonStateMachineSerializerTests()
     {
         MethodInfo method = typeof(AsyncMethodContainer).GetRequiredMethod(
             name: nameof(AsyncMethodContainer.Method),

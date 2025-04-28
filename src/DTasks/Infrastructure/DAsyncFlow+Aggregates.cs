@@ -1,11 +1,11 @@
-﻿using DTasks.Inspection;
-using DTasks.Utils;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using DTasks.Inspection;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow
+internal sealed partial class DAsyncFlow
 {
     private void SetBranchResult()
     {

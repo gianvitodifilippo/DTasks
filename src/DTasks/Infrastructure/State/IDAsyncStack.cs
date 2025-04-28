@@ -7,7 +7,7 @@ namespace DTasks.Infrastructure.State;
 public interface IDAsyncStack
 {
     // TODO: See if we can pass parentId and id within suspension context
-    
+
     ValueTask DehydrateAsync<TStateMachine>(ISuspensionContext context, DAsyncId parentId, DAsyncId id, ref TStateMachine stateMachine, CancellationToken cancellationToken = default)
         where TStateMachine : notnull;
 

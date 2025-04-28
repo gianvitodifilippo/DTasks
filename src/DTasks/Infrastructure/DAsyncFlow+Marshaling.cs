@@ -1,10 +1,10 @@
-﻿using DTasks.Utils;
-using System.Reflection;
-using DTasks.Infrastructure.Marshaling;
+﻿using System.Reflection;
+using DTasks.Configuration;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow
+internal sealed partial class DAsyncFlow
 {
     private static readonly MethodInfo s_whenAllDAsyncMethod = typeof(DAsyncFlow).GetRequiredMethod(
         name: nameof(WhenAllDAsync),
@@ -18,26 +18,20 @@ public sealed partial class DAsyncFlow
         bindingAttr: BindingFlags.Static | BindingFlags.NonPublic,
         parameterTypes: [typeof(Dictionary<,>).MakeGenericType(typeof(int), Type.MakeGenericMethodParameter(0)), typeof(int)]);
 
-    public static void RegisterTypeIds(IDAsyncTypeResolverBuilder builder)
-    {
-        builder.Register(typeof(HostIndirectionStateMachine));
-        builder.Register(typeof(HandleStateMachine));
-        builder.Register(typeof(CompletedHandleStateMachine));
-        builder.Register(typeof(WhenAllResultBranchStateMachine));
-        builder.Register(typeof(WhenAnyStateMachine));
-        builder.RegisterDAsyncMethod(s_whenAllDAsyncMethod);
-    }
+    internal static void ConfigureMarshaling(IMarshalingConfigurationBuilder builder) => builder
+        .RegisterSurrogatableType(typeof(object))
+        .RegisterSurrogatableType(typeof(DTask))
+        .RegisterSurrogatableType(typeof(DTask<>))
+        .RegisterSurrogatableType(typeof(HandleRunnable))
+        .RegisterTypeId(typeof(HostIndirectionStateMachine))
+        .RegisterTypeId(typeof(HandleStateMachine))
+        .RegisterTypeId(typeof(CompletedHandleStateMachine))
+        .RegisterTypeId(typeof(WhenAllResultBranchStateMachine))
+        .RegisterTypeId(typeof(WhenAnyStateMachine))
+        .RegisterDAsyncMethod(s_whenAllDAsyncMethod);
 
-    public static void RegisterGenericTypeIds(IDAsyncTypeResolverBuilder builder, Type resultType)
+    public static void RegisterGenericTypeIds(IMarshalingConfigurationBuilder builder, Type resultType)
     {
         builder.RegisterDAsyncMethod(s_whenAllDAsyncGenericMethod.MakeGenericMethod(resultType)); // TODO: This won't work with NativeAOT
-    }
-
-    public static void RegisterSurrogatableTypes(IMarshalingConfiguration configuration)
-    {
-        configuration.RegisterSurrogatableType(typeof(object));
-        configuration.RegisterSurrogatableType(typeof(DTask));
-        configuration.RegisterSurrogatableType(typeof(DTask<>)); // TODO: This won't work with NativeAOT
-        configuration.RegisterSurrogatableType(typeof(HandleRunnable));
     }
 }

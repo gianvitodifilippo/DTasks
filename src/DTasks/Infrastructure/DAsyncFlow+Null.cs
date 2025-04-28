@@ -1,41 +1,37 @@
-﻿using DTasks.Execution;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using DTasks.Infrastructure.Execution;
-using DTasks.Infrastructure.Marshaling;
-using DTasks.Infrastructure.State;
+using DTasks.Configuration;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow
+internal sealed partial class DAsyncFlow
 {
     // Since _host is initialized in the entrypoints and defaulted only when calling Reset,
-    // the following saves the trouble of asserting it's not null whenever it's used.
+    // the following saves the trouble of asserting it's not null whenever used.
     private static readonly IDAsyncHost s_nullHost = new NullDAsyncHost();
+
+    [DoesNotReturn]
+    private static TResult Fail<TResult>(string name)
+    {
+        Debug.Fail($"'{name}' was not initialized.");
+        throw new UnreachableException();
+    }
 
     [ExcludeFromCodeCoverage]
     private sealed class NullDAsyncHost : IDAsyncHost
     {
         [DoesNotReturn]
-        private static TResult Fail<TResult>()
-        {
-            Debug.Fail($"'{nameof(_host)}' was not initialized.");
-            throw new UnreachableException();
-        }
-        
-        IDAsyncStateManager IDAsyncHost.StateManager => Fail<IDAsyncStateManager>();
+        private static TResult Fail<TResult>() => DAsyncFlow.Fail<TResult>(nameof(_host));
 
-        IDAsyncSurrogator IDAsyncHost.Surrogator => Fail<IDAsyncSurrogator>();
+        DTasksConfiguration IDAsyncHost.Configuration => Fail<DTasksConfiguration>();
 
-        IDAsyncTypeResolver IDAsyncHost.TypeResolver => Fail<IDAsyncTypeResolver>();
+        void IDAsyncHost.OnInitialize(IDAsyncFlowInitializationContext context) => Fail<VoidDTaskResult>();
 
-        IDAsyncCancellationProvider IDAsyncHost.CancellationProvider => Fail<IDAsyncCancellationProvider>();
-
-        IDAsyncSuspensionHandler IDAsyncHost.SuspensionHandler => Fail<IDAsyncSuspensionHandler>();
+        void IDAsyncHost.OnFinalize(IDAsyncFlowFinalizationContext context) => Fail<VoidDTaskResult>();
 
         Task IDAsyncHost.OnStartAsync(IDAsyncFlowStartContext context, CancellationToken cancellationToken) => Fail<Task>();
 
-        Task IDAsyncHost.OnSuspendAsync(CancellationToken cancellationToken) => Fail<Task>();
+        Task IDAsyncHost.OnSuspendAsync(IDAsyncFlowSuspensionContext context, CancellationToken cancellationToken) => Fail<Task>();
 
         Task IDAsyncHost.OnSucceedAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken) => Fail<Task>();
 

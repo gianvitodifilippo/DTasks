@@ -1,24 +1,18 @@
-﻿using DTasks.Infrastructure.Execution;
-using DTasks.Infrastructure.Marshaling;
-using DTasks.Infrastructure.State;
+﻿using DTasks.Configuration;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow : IDAsyncHost
+internal sealed partial class DAsyncFlow : IDAsyncHost
 {
-    IDAsyncStateManager IDAsyncHost.StateManager => _host.StateManager;
+    DTasksConfiguration IDAsyncHost.Configuration => Configuration;
 
-    IDAsyncSurrogator IDAsyncHost.Surrogator => _host.Surrogator;
+    void IDAsyncHost.OnInitialize(IDAsyncFlowInitializationContext context) { }
 
-    IDAsyncTypeResolver IDAsyncHost.TypeResolver => _host.TypeResolver;
-
-    IDAsyncCancellationProvider IDAsyncHost.CancellationProvider => _host.CancellationProvider;
-
-    IDAsyncSuspensionHandler IDAsyncHost.SuspensionHandler => _host.SuspensionHandler;
+    void IDAsyncHost.OnFinalize(IDAsyncFlowFinalizationContext context) { }
 
     Task IDAsyncHost.OnStartAsync(IDAsyncFlowStartContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 
-    Task IDAsyncHost.OnSuspendAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    Task IDAsyncHost.OnSuspendAsync(IDAsyncFlowSuspensionContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 
     Task IDAsyncHost.OnSucceedAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 

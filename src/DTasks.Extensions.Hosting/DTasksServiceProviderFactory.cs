@@ -1,19 +1,20 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using DTasks.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace DTasks.Extensions.Hosting;
 
 public sealed class DTasksServiceProviderFactory(
     HostBuilderContext context,
-    Action<IDTasksHostBuilderConfiguration> configure) : IServiceProviderFactory<IServiceCollection>
+    Action<IHostingDTasksConfigurationBuilder> configure) : IServiceProviderFactory<IServiceCollection>
 {
     public IServiceCollection CreateBuilder(IServiceCollection services) => services;
 
     public IServiceProvider CreateServiceProvider(IServiceCollection services)
     {
-        DTasksHostBuilderConfiguration configuration = new(context, services);
-        configure(configuration);
+        HostingDTasksConfigurationBuilder builder = new(context, services);
+        configure(builder);
 
-        return configuration.BuildServiceProvider();
+        return builder.BuildServiceProvider();
     }
 }

@@ -8,12 +8,12 @@ using DTasks.Utils;
 namespace DTasks.Infrastructure;
 
 // Code borrowed and adapted from https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Runtime/CompilerServices/PoolingAsyncValueTaskMethodBuilderT.cs
-public sealed partial class DAsyncFlow
+internal sealed partial class DAsyncFlow
 {
     private static readonly PaddedReference[] s_perCoreCache = new PaddedReference[Environment.ProcessorCount];
     [ThreadStatic] private static DAsyncFlow? t_tlsCache;
 
-    private static DAsyncFlow RentFromCache(bool returnToCache)
+    public static DAsyncFlow RentFromCache(bool returnToCache)
     {
         DAsyncFlow? flow = t_tlsCache;
         if (flow is not null)
@@ -26,11 +26,17 @@ public sealed partial class DAsyncFlow
             if (slot is null || (flow = Interlocked.Exchange(ref slot, null)) is null)
             {
                 flow = new DAsyncFlow();
+#if DEBUG
+                if (returnToCache)
+                {
+                    GC.SuppressFinalize(flow);
+                }
+#endif
             }
         }
 
         Debug.Assert(flow._state is FlowState.Idling);
-        
+
         flow._state = FlowState.Pending;
         flow._returnToCache = returnToCache;
         return flow;
@@ -40,9 +46,9 @@ public sealed partial class DAsyncFlow
     private void ReturnToCache()
     {
         Debug.Assert(_state is FlowState.Pending);
-        
+
         _state = FlowState.Idling;
-        
+
         if (t_tlsCache is null)
         {
             t_tlsCache = this;

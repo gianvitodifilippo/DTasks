@@ -1,6 +1,6 @@
-﻿using DTasks.Utils;
+﻿using System.Runtime.CompilerServices;
+using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
-using System.Runtime.CompilerServices;
 
 namespace DTasks.Extensions.DependencyInjection;
 
@@ -84,7 +84,7 @@ public static class DTasksServiceProviderExtensions
         return services;
     }
 
-    // TODO: provider.GetKeyedService(serviceType, serviceKey) should be available when .NET 9 is shipped (https://github.com/dotnet/runtime/issues/102816)
+    // TODO: provider.GetKeyedService(serviceType, serviceKey) should be available when .NET 10 is shipped (https://github.com/dotnet/runtime/issues/102816)
     [return: DAsyncService]
     public static object? GetKeyedDAsyncService(this IServiceProvider provider, Type serviceType, object? serviceKey)
     {

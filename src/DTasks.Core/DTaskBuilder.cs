@@ -1,8 +1,8 @@
-﻿using DTasks.Infrastructure;
-using DTasks.Utils;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using DTasks.Infrastructure;
+using DTasks.Utils;
 
 namespace DTasks;
 
@@ -75,6 +75,13 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
                 throw new InvalidOperationException("The DTask was already run.");
 
             runner.Start(this);
+        }
+
+        internal override TReturn Accept<TReturn>(IDTaskVisitor<TReturn> visitor)
+        {
+            return typeof(TResult) == typeof(VoidDTaskResult)
+                ? visitor.Visit(this as DTask)
+                : visitor.Visit(this);
         }
 
         public override void SetResult(TResult result)

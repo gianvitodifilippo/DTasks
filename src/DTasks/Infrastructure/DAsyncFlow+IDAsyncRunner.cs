@@ -1,12 +1,12 @@
-﻿using DTasks.Utils;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using DTasks.Execution;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
-public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
+internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 {
     private static readonly object s_branchSuspensionSentinel = new();
 
@@ -113,7 +113,7 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         }
 
         _suspendingAwaiterOrType = null;
-        Await(_host.SuspensionHandler.OnYieldAsync(_id, _cancellationToken), FlowState.Suspending);
+        Await(SuspensionHandler.OnYieldAsync(_id, _cancellationToken), FlowState.Suspending);
     }
 
     private void Delay(TimeSpan delay)
@@ -126,7 +126,7 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         }
 
         _suspendingAwaiterOrType = null;
-        Await(_host.SuspensionHandler.OnDelayAsync(_id, delay, _cancellationToken), FlowState.Suspending);
+        Await(SuspensionHandler.OnDelayAsync(_id, delay, _cancellationToken), FlowState.Suspending);
     }
 
     private void Callback(ISuspensionCallback callback)
@@ -161,32 +161,33 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         Debug.Assert(_branchCount == 0);
 
         _aggregateType = AggregateType.WhenAll;
-        DAsyncFlow childFlow = Create();
-
-        foreach (IDAsyncRunnable branch in branches)
+        using (DAsyncFlow childFlow = RentFromCache(returnToCache: false))
         {
-            IDAsyncRunnable runnable = branch is DTask task && _surrogates.TryGetValue(task, out DTaskSurrogate? surrogate)
-                ? new HandleRunnableWrapper(childFlow, branch, surrogate.Id)
-                : branch;
-
-            childFlow._state = FlowState.Running;
-            childFlow._parent = this;
-            childFlow._parentId = _id;
-            childFlow._id = DAsyncId.New();
-            childFlow.Initialize(this);
-
-            try
+            foreach (IDAsyncRunnable branch in branches)
             {
-                runnable.Run(childFlow);
-                await new ValueTask(childFlow, childFlow._valueTaskSource.Version);
-            }
-            catch (Exception ex)
-            {
-                _aggregateExceptions ??= new(1);
-                _aggregateExceptions.Add(ex);
-            }
+                IDAsyncRunnable runnable = branch is DTask task && _surrogates.TryGetValue(task, out DTaskSurrogate? surrogate)
+                    ? new HandleRunnableWrapper(childFlow, branch, surrogate.Id)
+                    : branch;
 
-            _branchCount++;
+                childFlow._state = FlowState.Running;
+                childFlow._parent = this;
+                childFlow._parentId = _id;
+                childFlow._id = DAsyncId.New();
+                childFlow.Initialize(this);
+
+                try
+                {
+                    runnable.Run(childFlow);
+                    await new ValueTask(childFlow, childFlow._valueTaskSource.Version);
+                }
+                catch (Exception ex)
+                {
+                    _aggregateExceptions ??= new(1);
+                    _aggregateExceptions.Add(ex);
+                }
+
+                _branchCount++;
+            }
         }
 
         if (_aggregateExceptions is not null)
@@ -239,33 +240,34 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
         _aggregateType = AggregateType.WhenAllResult;
         _whenAllBranchResults = new Dictionary<int, TResult>();
-        DAsyncFlow childFlow = Create();
-
-        foreach (IDAsyncRunnable branch in branches)
+        using (DAsyncFlow childFlow = RentFromCache(returnToCache: false))
         {
-            IDAsyncRunnable runnable = branch is DTask task && _surrogates.TryGetValue(task, out DTaskSurrogate? surrogate)
-                ? new HandleRunnableWrapper(childFlow, branch, surrogate.Id)
-                : branch;
-
-            childFlow._state = FlowState.Running;
-            childFlow._parent = this;
-            childFlow._parentId = _id;
-            childFlow._id = DAsyncId.New();
-            childFlow._branchIndex = _branchCount;
-            childFlow.Initialize(this);
-
-            try
+            foreach (IDAsyncRunnable branch in branches)
             {
-                runnable.Run(childFlow);
-                await new ValueTask(childFlow, childFlow._valueTaskSource.Version);
-            }
-            catch (Exception ex)
-            {
-                _aggregateExceptions ??= new(1);
-                _aggregateExceptions.Add(ex);
-            }
+                IDAsyncRunnable runnable = branch is DTask task && _surrogates.TryGetValue(task, out DTaskSurrogate? surrogate)
+                    ? new HandleRunnableWrapper(childFlow, branch, surrogate.Id)
+                    : branch;
 
-            _branchCount++;
+                childFlow._state = FlowState.Running;
+                childFlow._parent = this;
+                childFlow._parentId = _id;
+                childFlow._id = DAsyncId.New();
+                childFlow._branchIndex = _branchCount;
+                childFlow.Initialize(this);
+
+                try
+                {
+                    runnable.Run(childFlow);
+                    await new ValueTask(childFlow, childFlow._valueTaskSource.Version);
+                }
+                catch (Exception ex)
+                {
+                    _aggregateExceptions ??= new(1);
+                    _aggregateExceptions.Add(ex);
+                }
+
+                _branchCount++;
+            }
         }
 
         Assert.Is<Dictionary<int, TResult>>(_whenAllBranchResults);
@@ -329,31 +331,44 @@ public sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         Debug.Assert(_branchCount == 0);
 
         _aggregateType = AggregateType.WhenAny;
-        DAsyncFlow childFlow = Create();
 
-        foreach (IDAsyncRunnable branch in branches)
+        using (DAsyncFlow childFlow = RentFromCache(returnToCache: false))
         {
-            IDAsyncRunnable runnable = branch is DTask task && _surrogates.TryGetValue(task, out DTaskSurrogate? surrogate)
-                ? new HandleRunnableWrapper(childFlow, branch, surrogate.Id)
-                : branch;
+            var oldProperties = childFlow._properties;
+            var oldComponents = childFlow._components;
+            var oldScopedComponents = childFlow._scopedComponents;
 
-            childFlow._state = FlowState.Running;
-            childFlow._parent = this;
-            childFlow._parentId = _id;
-            childFlow._id = DAsyncId.New();
-            childFlow.Initialize(this);
-            
-            try
+            foreach (IDAsyncRunnable branch in branches)
             {
-                runnable.Run(childFlow);
-                await new ValueTask(childFlow, childFlow._valueTaskSource.Version);
-            }
-            catch
-            {
-                throw new NotImplementedException();
+                IDAsyncRunnable runnable = branch is DTask task && _surrogates.TryGetValue(task, out DTaskSurrogate? surrogate)
+                    ? new HandleRunnableWrapper(childFlow, branch, surrogate.Id)
+                    : branch;
+
+                childFlow._state = FlowState.Running;
+                childFlow._parent = this;
+                childFlow._parentId = _id;
+                childFlow._id = DAsyncId.New();
+                childFlow.Initialize(this);
+                childFlow._properties = new(_properties);
+                childFlow._components = new(_components);
+                childFlow._scopedComponents = new(_scopedComponents);
+
+                try
+                {
+                    runnable.Run(childFlow);
+                    await new ValueTask(childFlow, childFlow._valueTaskSource.Version);
+                }
+                catch
+                {
+                    throw new NotImplementedException();
+                }
+
+                _branchCount++;
             }
 
-            _branchCount++;
+            childFlow._properties = oldProperties;
+            childFlow._components = oldComponents;
+            childFlow._scopedComponents = oldScopedComponents;
         }
 
         int branchCount = _branchCount;

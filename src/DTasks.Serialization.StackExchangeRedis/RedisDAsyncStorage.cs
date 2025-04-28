@@ -1,5 +1,4 @@
-﻿using DTasks.Infrastructure;
-using DTasks.Utils;
+﻿using DTasks.Utils;
 using StackExchange.Redis;
 
 namespace DTasks.Serialization.StackExchangeRedis;
@@ -10,7 +9,7 @@ public sealed class RedisDAsyncStorage(IDatabase database) : IDAsyncStorage
         where TKey : notnull
     {
         RedisValue value = await database.StringGetAsync(key.ToString());
-        
+
         return value.HasValue
             ? Option<ReadOnlyMemory<byte>>.Some(value)
             : Option<ReadOnlyMemory<byte>>.None;

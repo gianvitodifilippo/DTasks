@@ -1,6 +1,6 @@
-﻿using DTasks.Infrastructure.Marshaling;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using DTasks.Infrastructure.Marshaling;
 #if NET9_0_OR_GREATER
 using System.Runtime.CompilerServices;
 #endif
