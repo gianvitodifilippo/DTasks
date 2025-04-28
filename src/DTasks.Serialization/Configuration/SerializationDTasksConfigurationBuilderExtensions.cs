@@ -5,7 +5,7 @@ namespace DTasks.Configuration;
 public static class SerializationDTasksConfigurationBuilderExtensions
 {
     public static TBuilder UseSerialization<TBuilder>(this TBuilder builder, Action<ISerializationConfigurationBuilder> configure)
-        where TBuilder : IDTasksConfigurationBuilder<TBuilder>
+        where TBuilder : IDTasksConfigurationBuilder
     {
         SerializationConfigurationBuilder serializationBuilder = new();
         configure(serializationBuilder);

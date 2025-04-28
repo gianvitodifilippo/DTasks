@@ -64,9 +64,9 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private readonly ConcurrentDictionary<DCancellationTokenSource, CancellationInfo> _cancellationInfos;
     private readonly ConcurrentDictionary<DCancellationId, DCancellationTokenSource> _cancellations;
 
-    private readonly Dictionary<object, object?> _properties;
-    private readonly Dictionary<object, object> _components;
-    private readonly Dictionary<object, object> _scopedComponents;
+    private Dictionary<object, object?> _properties;
+    private Dictionary<object, object> _components;
+    private Dictionary<object, object> _scopedComponents;
     private bool _isCreatingComponent;
     private bool _usedPropertyInScopedComponent;
 

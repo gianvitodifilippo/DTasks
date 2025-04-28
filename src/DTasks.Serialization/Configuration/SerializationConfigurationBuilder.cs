@@ -11,7 +11,7 @@ internal sealed class SerializationConfigurationBuilder : ISerializationConfigur
     private IComponentDescriptor<IDAsyncStorage> _storageDescriptor = ComponentDescriptor.Singleton(DAsyncStorage.Default);
 
     public TBuilder Configure<TBuilder>(TBuilder builder)
-        where TBuilder : IDTasksConfigurationBuilder<TBuilder>
+        where TBuilder : IDTasksConfigurationBuilder
     {
         if (_stateMachineSerializerDescriptor is null || _serializerDescriptor is null)
             throw new InvalidOperationException("Serialization was not properly configured."); // TODO: Dedicated exception type
@@ -26,9 +26,11 @@ internal sealed class SerializationConfigurationBuilder : ISerializationConfigur
             _storageDescriptor,
             (serializer, storage) => new BinaryDAsyncHeap(serializer, storage));
 
-        return builder.ConfigureState(stateManager => stateManager
+        builder.ConfigureState(stateManager => stateManager
             .UseStack(stackDescriptor)
             .UseHeap(heapDescriptor));
+
+        return builder;
     }
 
     ISerializationConfigurationBuilder ISerializationConfigurationBuilder.UseStateMachineSerializer(IComponentDescriptor<IStateMachineSerializer> descriptor)

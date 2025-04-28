@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using DTasks.AspNetCore.Http;
 using DTasks.AspNetCore.Infrastructure.Http;
 using DTasks.Extensions.DependencyInjection.Infrastructure;
 using DTasks.Infrastructure;
@@ -9,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.AspNetCore.Infrastructure;
 
-public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
+public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost, IAsyncHttpResultHandler
 {
     private delegate Task ContinuationAction<in T>(IDAsyncContinuation continuation, DAsyncId flowId, T value, CancellationToken cancellationToken);
     private delegate Task EndpointMonitorAction<in T>(IAsyncEndpointMonitor monitor, DAsyncId flowId, T value, CancellationToken cancellationToken);
@@ -24,16 +25,13 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
 
     protected override async Task OnSuspendAsync(IDAsyncFlowSuspensionContext context, CancellationToken cancellationToken)
     {
-        Reset();
-
         if (!_startFlowState.IsOnStart)
             return;
 
         DAsyncId flowId = _startFlowState.FlowId;
         Debug.Assert(flowId != default);
-        Reset();
 
-        var endpointMonitor = Services.GetRequiredService<IAsyncEndpointMonitor>();
+        var endpointMonitor = new AsyncEndpointMonitor(context.Heap);
         await endpointMonitor.SetRunningAsync(flowId, cancellationToken);
 
         TypedInstance<object> continuationSurrogate = _startFlowState.ContinuationSurrogate;
@@ -52,6 +50,7 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
         }
 
         await SuspendOnStartAsync(flowId, cancellationToken);
+        Reset();
     }
 
     protected sealed override Task OnSucceedAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken)
@@ -136,6 +135,14 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
 
     protected virtual Task SucceedOnResumeAsync<TResult>(IDAsyncFlowCompletionContext context, TResult result, CancellationToken cancellationToken)
     {
+        if (result is IResult)
+        {
+            if (result is not IAsyncHttpResult httpResult)
+                throw new InvalidOperationException("Unsupported result type returned from a d-async endpoint. Use DAsyncResults to return from a d-async method.");
+
+            return httpResult.ExecuteAsync(this, context, cancellationToken);
+        }
+
         return CompleteOnResumeAsync(
             context,
             result,
@@ -187,7 +194,7 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
     {
         DAsyncId flowId = context.FlowId;
 
-        var endpointMonitor = Services.GetRequiredService<IAsyncEndpointMonitor>();
+        var endpointMonitor = new AsyncEndpointMonitor(context.Heap);
         await endpointMonitorAction(endpointMonitor, flowId, value, cancellationToken);
 
         string continuationKey = GetContinuationKey(flowId);
@@ -198,6 +205,16 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost
         await continuationAction(continuation, flowId, value, cancellationToken);
 
         Reset();
+    }
+
+    Task IAsyncHttpResultHandler.SucceedAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken)
+    {
+        return SucceedOnResumeAsync(context, cancellationToken);
+    }
+
+    Task IAsyncHttpResultHandler.SucceedAsync<TResult>(IDAsyncFlowCompletionContext context, TResult result, CancellationToken cancellationToken)
+    {
+        return SucceedOnResumeAsync(context, result, cancellationToken);
     }
 
     private void Reset()

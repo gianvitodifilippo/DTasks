@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using DTasks.Configuration;
 using DTasks.Configuration.DependencyInjection;
 using DTasks.Extensions.DependencyInjection.Infrastructure.Marshaling;
+using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Extensions.DependencyInjection.Configuration;
@@ -14,7 +15,7 @@ internal sealed class DependencyInjectionDTasksConfigurationBuilder(IServiceColl
     private readonly List<Action<IStateConfigurationBuilder>> _configureStateActions = [];
     private readonly List<Action<IExecutionConfigurationBuilder>> _configureExecutionActions = [];
 
-    IServiceCollection IDependencyInjectionDTasksConfigurationBuilder<IDependencyInjectionDTasksConfigurationBuilder>.Services => services;
+    IServiceCollection IDependencyInjectionDTasksConfigurationBuilder.Services => services;
 
     public IServiceCollection Configure()
     {
@@ -61,6 +62,7 @@ internal sealed class DependencyInjectionDTasksConfigurationBuilder(IServiceColl
         return services
             .AddSingleton(configuration)
             .AddSingleton(validator)
+            .AddSingleton(configuration.TypeResolver)
             .AddSingleton<IDAsyncServiceRegister>(serviceRegister)
             .AddSingleton<IServiceMapper, ServiceMapper>()
             .AddSingleton<DAsyncSurrogatorProvider>()
@@ -71,27 +73,59 @@ internal sealed class DependencyInjectionDTasksConfigurationBuilder(IServiceColl
             .AddScoped<IChildServiceMapper>(provider => provider.GetRequiredService<ChildDAsyncSurrogator>());
     }
 
-    IDependencyInjectionDTasksConfigurationBuilder IDTasksConfigurationBuilder<IDependencyInjectionDTasksConfigurationBuilder>.ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure)
+    IDependencyInjectionDTasksConfigurationBuilder IDependencyInjectionDTasksConfigurationBuilder.ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure)
     {
+        ThrowHelper.ThrowIfNull(configure);
+
         _configureMarshalingActions.Add(configure);
         return this;
     }
 
-    IDependencyInjectionDTasksConfigurationBuilder IDTasksConfigurationBuilder<IDependencyInjectionDTasksConfigurationBuilder>.ConfigureState(Action<IStateConfigurationBuilder> configure)
+    IDependencyInjectionDTasksConfigurationBuilder IDependencyInjectionDTasksConfigurationBuilder.ConfigureState(Action<IStateConfigurationBuilder> configure)
     {
+        ThrowHelper.ThrowIfNull(configure);
+
         _configureStateActions.Add(configure);
         return this;
     }
 
-    IDependencyInjectionDTasksConfigurationBuilder IDTasksConfigurationBuilder<IDependencyInjectionDTasksConfigurationBuilder>.ConfigureExecution(Action<IExecutionConfigurationBuilder> configure)
+    IDependencyInjectionDTasksConfigurationBuilder IDependencyInjectionDTasksConfigurationBuilder.ConfigureExecution(Action<IExecutionConfigurationBuilder> configure)
     {
+        ThrowHelper.ThrowIfNull(configure);
+
         _configureExecutionActions.Add(configure);
         return this;
     }
 
-    IDependencyInjectionDTasksConfigurationBuilder IDependencyInjectionDTasksConfigurationBuilder<IDependencyInjectionDTasksConfigurationBuilder>.ConfigureServices(Action<IServiceConfigurationBuilder> configure)
+    IDependencyInjectionDTasksConfigurationBuilder IDependencyInjectionDTasksConfigurationBuilder.ConfigureServices(Action<IServiceConfigurationBuilder> configure)
     {
+        ThrowHelper.ThrowIfNull(configure);
+
         configure(_serviceConfigurationBuilder);
+        return this;
+    }
+
+    IDTasksConfigurationBuilder IDTasksConfigurationBuilder.ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure)
+    {
+        ThrowHelper.ThrowIfNull(configure);
+
+        _configureMarshalingActions.Add(configure);
+        return this;
+    }
+
+    IDTasksConfigurationBuilder IDTasksConfigurationBuilder.ConfigureState(Action<IStateConfigurationBuilder> configure)
+    {
+        ThrowHelper.ThrowIfNull(configure);
+
+        _configureStateActions.Add(configure);
+        return this;
+    }
+
+    IDTasksConfigurationBuilder IDTasksConfigurationBuilder.ConfigureExecution(Action<IExecutionConfigurationBuilder> configure)
+    {
+        ThrowHelper.ThrowIfNull(configure);
+
+        _configureExecutionActions.Add(configure);
         return this;
     }
 }

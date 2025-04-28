@@ -334,6 +334,10 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
         using (DAsyncFlow childFlow = RentFromCache(returnToCache: false))
         {
+            var oldProperties = childFlow._properties;
+            var oldComponents = childFlow._components;
+            var oldScopedComponents = childFlow._scopedComponents;
+
             foreach (IDAsyncRunnable branch in branches)
             {
                 IDAsyncRunnable runnable = branch is DTask task && _surrogates.TryGetValue(task, out DTaskSurrogate? surrogate)
@@ -345,6 +349,9 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
                 childFlow._parentId = _id;
                 childFlow._id = DAsyncId.New();
                 childFlow.Initialize(this);
+                childFlow._properties = new(_properties);
+                childFlow._components = new(_components);
+                childFlow._scopedComponents = new(_scopedComponents);
 
                 try
                 {
@@ -358,6 +365,10 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
                 _branchCount++;
             }
+
+            childFlow._properties = oldProperties;
+            childFlow._components = oldComponents;
+            childFlow._scopedComponents = oldScopedComponents;
         }
 
         int branchCount = _branchCount;

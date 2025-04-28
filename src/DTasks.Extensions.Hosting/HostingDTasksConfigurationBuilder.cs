@@ -19,6 +19,8 @@ internal sealed class HostingDTasksConfigurationBuilder(HostBuilderContext conte
     private Action<HostBuilderContext, ServiceProviderOptions>? _configureServiceProviderOptions2;
     private object? _serviceProviderOptionsOrConfiguration;
 
+    IServiceCollection IDependencyInjectionDTasksConfigurationBuilder.Services => services;
+
     public IServiceProvider BuildServiceProvider()
     {
         services.AddDTasks(builder =>
@@ -80,9 +82,39 @@ internal sealed class HostingDTasksConfigurationBuilder(HostBuilderContext conte
         return options;
     }
 
-    IServiceCollection IDependencyInjectionDTasksConfigurationBuilder<IHostingDTasksConfigurationBuilder>.Services => services;
+    IDependencyInjectionDTasksConfigurationBuilder IHostingDTasksConfigurationBuilder.ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure)
+    {
+        ThrowHelper.ThrowIfNull(configure);
 
-    IHostingDTasksConfigurationBuilder IHostingDTasksConfigurationBuilder<IHostingDTasksConfigurationBuilder>.UseServiceProviderOptions(ServiceProviderOptions options)
+        _configureMarshalingActions.Add(configure);
+        return this;
+    }
+
+    IDependencyInjectionDTasksConfigurationBuilder IHostingDTasksConfigurationBuilder.ConfigureState(Action<IStateConfigurationBuilder> configure)
+    {
+        ThrowHelper.ThrowIfNull(configure);
+
+        _configureStateActions.Add(configure);
+        return this;
+    }
+
+    IDependencyInjectionDTasksConfigurationBuilder IHostingDTasksConfigurationBuilder.ConfigureExecution(Action<IExecutionConfigurationBuilder> configure)
+    {
+        ThrowHelper.ThrowIfNull(configure);
+
+        _configureExecutionActions.Add(configure);
+        return this;
+    }
+
+    IDependencyInjectionDTasksConfigurationBuilder IHostingDTasksConfigurationBuilder.ConfigureServices(Action<IServiceConfigurationBuilder> configure)
+    {
+        ThrowHelper.ThrowIfNull(configure);
+
+        _configureServicesActions.Add(configure);
+        return this;
+    }
+
+    IHostingDTasksConfigurationBuilder IHostingDTasksConfigurationBuilder.UseServiceProviderOptions(ServiceProviderOptions options)
     {
         ThrowHelper.ThrowIfNull(options);
 
@@ -91,7 +123,7 @@ internal sealed class HostingDTasksConfigurationBuilder(HostBuilderContext conte
         return this;
     }
 
-    IHostingDTasksConfigurationBuilder IHostingDTasksConfigurationBuilder<IHostingDTasksConfigurationBuilder>.UseServiceProviderOptions(Action<ServiceProviderOptions> configureOptions)
+    IHostingDTasksConfigurationBuilder IHostingDTasksConfigurationBuilder.UseServiceProviderOptions(Action<ServiceProviderOptions> configureOptions)
     {
         ThrowHelper.ThrowIfNull(configureOptions);
 
@@ -100,7 +132,7 @@ internal sealed class HostingDTasksConfigurationBuilder(HostBuilderContext conte
         return this;
     }
 
-    IHostingDTasksConfigurationBuilder IHostingDTasksConfigurationBuilder<IHostingDTasksConfigurationBuilder>.UseServiceProviderOptions(Action<HostBuilderContext, ServiceProviderOptions> configureOptions)
+    IHostingDTasksConfigurationBuilder IHostingDTasksConfigurationBuilder.UseServiceProviderOptions(Action<HostBuilderContext, ServiceProviderOptions> configureOptions)
     {
         ThrowHelper.ThrowIfNull(configureOptions);
 
@@ -109,26 +141,58 @@ internal sealed class HostingDTasksConfigurationBuilder(HostBuilderContext conte
         return this;
     }
 
-    IHostingDTasksConfigurationBuilder IDependencyInjectionDTasksConfigurationBuilder<IHostingDTasksConfigurationBuilder>.ConfigureServices(Action<IServiceConfigurationBuilder> configure)
+    IDependencyInjectionDTasksConfigurationBuilder IDependencyInjectionDTasksConfigurationBuilder.ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure)
     {
-        _configureServicesActions.Add(configure);
-        return this;
-    }
+        ThrowHelper.ThrowIfNull(configure);
 
-    IHostingDTasksConfigurationBuilder IDTasksConfigurationBuilder<IHostingDTasksConfigurationBuilder>.ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure)
-    {
         _configureMarshalingActions.Add(configure);
         return this;
     }
 
-    IHostingDTasksConfigurationBuilder IDTasksConfigurationBuilder<IHostingDTasksConfigurationBuilder>.ConfigureState(Action<IStateConfigurationBuilder> configure)
+    IDependencyInjectionDTasksConfigurationBuilder IDependencyInjectionDTasksConfigurationBuilder.ConfigureState(Action<IStateConfigurationBuilder> configure)
     {
+        ThrowHelper.ThrowIfNull(configure);
+
         _configureStateActions.Add(configure);
         return this;
     }
 
-    IHostingDTasksConfigurationBuilder IDTasksConfigurationBuilder<IHostingDTasksConfigurationBuilder>.ConfigureExecution(Action<IExecutionConfigurationBuilder> configure)
+    IDependencyInjectionDTasksConfigurationBuilder IDependencyInjectionDTasksConfigurationBuilder.ConfigureExecution(Action<IExecutionConfigurationBuilder> configure)
     {
+        ThrowHelper.ThrowIfNull(configure);
+
+        _configureExecutionActions.Add(configure);
+        return this;
+    }
+
+    IDependencyInjectionDTasksConfigurationBuilder IDependencyInjectionDTasksConfigurationBuilder.ConfigureServices(Action<IServiceConfigurationBuilder> configure)
+    {
+        ThrowHelper.ThrowIfNull(configure);
+
+        _configureServicesActions.Add(configure);
+        return this;
+    }
+
+    IDTasksConfigurationBuilder IDTasksConfigurationBuilder.ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure)
+    {
+        ThrowHelper.ThrowIfNull(configure);
+
+        _configureMarshalingActions.Add(configure);
+        return this;
+    }
+
+    IDTasksConfigurationBuilder IDTasksConfigurationBuilder.ConfigureState(Action<IStateConfigurationBuilder> configure)
+    {
+        ThrowHelper.ThrowIfNull(configure);
+
+        _configureStateActions.Add(configure);
+        return this;
+    }
+
+    IDTasksConfigurationBuilder IDTasksConfigurationBuilder.ConfigureExecution(Action<IExecutionConfigurationBuilder> configure)
+    {
+        ThrowHelper.ThrowIfNull(configure);
+
         _configureExecutionActions.Add(configure);
         return this;
     }

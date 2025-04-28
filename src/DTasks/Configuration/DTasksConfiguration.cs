@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using DTasks.Configuration.DependencyInjection;
+using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Configuration;
@@ -31,6 +32,7 @@ public sealed class DTasksConfiguration
     public static DTasksConfiguration Create(Action<IDTasksConfigurationBuilder> configure)
     {
         DTasksConfigurationBuilder builder = new();
+        DAsyncFlow.ConfigureMarshaling(builder);
         configure(builder);
 
         return new(builder);

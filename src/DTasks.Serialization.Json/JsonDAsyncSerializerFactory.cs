@@ -1,5 +1,4 @@
 ﻿using System.Collections.Frozen;
-using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DTasks.Infrastructure.Marshaling;
@@ -10,12 +9,6 @@ namespace DTasks.Serialization.Json;
 
 internal sealed class JsonDAsyncSerializerFactory
 {
-    private static readonly ImmutableArray<JsonConverter> s_wellKnownConverters =
-    [
-        new TypeIdJsonConverter(),
-        new DAsyncIdJsonConverter()
-    ];
-
     private readonly IStateMachineInspector _inspector;
     private readonly IDAsyncTypeResolver _typeResolver;
     private readonly FrozenSet<Type> _surrogatableNonGenericTypes;
@@ -57,11 +50,6 @@ internal sealed class JsonDAsyncSerializerFactory
             Type surrogatableConverterType = typeof(SurrogatableConverter<>).MakeGenericType(surrogatableType);
             JsonConverter surrogatableConverter = (JsonConverter)Activator.CreateInstance(surrogatableConverterType, converterConstructorArguments)!;
             surrogatorOptions.Converters.Add(surrogatableConverter);
-        }
-
-        foreach (JsonConverter wellKnownConverter in s_wellKnownConverters)
-        {
-            surrogatorOptions.Converters.Add(wellKnownConverter);
         }
 
         SurrogatableConverterFactory surrogatableConverterFactory = new(_surrogatableGenericTypes, converterConstructorArguments);

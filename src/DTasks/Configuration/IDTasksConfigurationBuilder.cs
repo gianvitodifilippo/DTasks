@@ -1,13 +1,10 @@
 namespace DTasks.Configuration;
 
-public interface IDTasksConfigurationBuilder : IDTasksConfigurationBuilder<IDTasksConfigurationBuilder>;
-
-public interface IDTasksConfigurationBuilder<out TBuilder>
-    where TBuilder : IDTasksConfigurationBuilder<TBuilder>
+public interface IDTasksConfigurationBuilder
 {
-    TBuilder ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure);
+    IDTasksConfigurationBuilder ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure);
 
-    TBuilder ConfigureState(Action<IStateConfigurationBuilder> configure);
+    IDTasksConfigurationBuilder ConfigureState(Action<IStateConfigurationBuilder> configure);
 
-    TBuilder ConfigureExecution(Action<IExecutionConfigurationBuilder> configure);
+    IDTasksConfigurationBuilder ConfigureExecution(Action<IExecutionConfigurationBuilder> configure);
 }

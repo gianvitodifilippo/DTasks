@@ -8,13 +8,16 @@ internal sealed class RedisStorageConfigurationBuilder : IRedisStorageConfigurat
 {
     private IComponentDescriptor<IDatabase>? _databaseDescriptor;
 
-    public ISerializationConfigurationBuilder Configure(ISerializationConfigurationBuilder builder)
+    public TBuilder Configure<TBuilder>(TBuilder builder)
+        where TBuilder : ISerializationConfigurationBuilder
     {
         if (_databaseDescriptor is null)
-            throw new InvalidCastException("Redis storage was not properly configured.");
+            throw new InvalidOperationException("Redis storage was not properly configured.");
 
         var storageDescriptor = _databaseDescriptor.Map(database => new RedisDAsyncStorage(database));
-        return builder.UseStorage(storageDescriptor);
+        builder.UseStorage(storageDescriptor);
+
+        return builder;
     }
 
     IRedisStorageConfigurationBuilder IRedisStorageConfigurationBuilder.UseDatabase(IComponentDescriptor<IDatabase> descriptor)

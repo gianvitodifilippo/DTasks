@@ -3,12 +3,15 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Configuration;
 
-public interface IDependencyInjectionDTasksConfigurationBuilder : IDependencyInjectionDTasksConfigurationBuilder<IDependencyInjectionDTasksConfigurationBuilder>;
-
-public interface IDependencyInjectionDTasksConfigurationBuilder<out TBuilder> : IDTasksConfigurationBuilder<TBuilder>
-    where TBuilder : IDependencyInjectionDTasksConfigurationBuilder<TBuilder>
+public interface IDependencyInjectionDTasksConfigurationBuilder : IDTasksConfigurationBuilder
 {
     IServiceCollection Services { get; }
 
-    TBuilder ConfigureServices(Action<IServiceConfigurationBuilder> configure);
+    new IDependencyInjectionDTasksConfigurationBuilder ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure);
+
+    new IDependencyInjectionDTasksConfigurationBuilder ConfigureState(Action<IStateConfigurationBuilder> configure);
+
+    new IDependencyInjectionDTasksConfigurationBuilder ConfigureExecution(Action<IExecutionConfigurationBuilder> configure);
+
+    IDependencyInjectionDTasksConfigurationBuilder ConfigureServices(Action<IServiceConfigurationBuilder> configure);
 }

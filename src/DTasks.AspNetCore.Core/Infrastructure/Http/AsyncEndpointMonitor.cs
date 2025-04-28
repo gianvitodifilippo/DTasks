@@ -19,7 +19,7 @@ internal sealed class AsyncEndpointMonitor(IDAsyncHeap heap) : IAsyncEndpointMon
         string key = GetEndpointInfoKey(flowId);
         AsyncEndpointInfo info = new()
         {
-            Status = AsyncEndpointStatus.Running
+            Status = "running"
         };
 
         return heap.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
@@ -30,7 +30,7 @@ internal sealed class AsyncEndpointMonitor(IDAsyncHeap heap) : IAsyncEndpointMon
         string key = GetEndpointInfoKey(flowId);
         AsyncEndpointInfo info = new()
         {
-            Status = AsyncEndpointStatus.Succeeded
+            Status = "succeded"
         };
 
         return heap.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
@@ -41,7 +41,7 @@ internal sealed class AsyncEndpointMonitor(IDAsyncHeap heap) : IAsyncEndpointMon
         string key = GetEndpointInfoKey(flowId);
         AsyncEndpointInfo<TResult> info = new()
         {
-            Status = AsyncEndpointStatus.Succeeded,
+            Status = "succeeded",
             Result = result
         };
 
@@ -53,7 +53,7 @@ internal sealed class AsyncEndpointMonitor(IDAsyncHeap heap) : IAsyncEndpointMon
         string key = GetEndpointInfoKey(flowId);
         AsyncEndpointInfo info = new()
         {
-            Status = AsyncEndpointStatus.Faulted
+            Status = "faulted"
         };
 
         return heap.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
@@ -64,7 +64,7 @@ internal sealed class AsyncEndpointMonitor(IDAsyncHeap heap) : IAsyncEndpointMon
         string key = GetEndpointInfoKey(flowId);
         AsyncEndpointInfo info = new()
         {
-            Status = AsyncEndpointStatus.Canceled
+            Status = "canceled"
         };
 
         return heap.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);

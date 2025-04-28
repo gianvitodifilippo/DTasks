@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Extensions.Hosting",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Extensions.DependencyInjection", "..\..\src\DTasks.Extensions.DependencyInjection\DTasks.Extensions.DependencyInjection.csproj", "{B9F795A6-CD81-775A-E24D-CA8ADE08F4B2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Serialization.StackExchangeRedis.DependencyInjection", "..\..\src\DTasks.Serialization.StackExchangeRedis.DependencyInjection\DTasks.Serialization.StackExchangeRedis.DependencyInjection.csproj", "{F7F4CEE7-9020-C955-E363-78E7F3D32882}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -113,6 +115,14 @@ Global
 		{B9F795A6-CD81-775A-E24D-CA8ADE08F4B2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B9F795A6-CD81-775A-E24D-CA8ADE08F4B2}.Release-Tests|Any CPU.ActiveCfg = Release-Tests|Any CPU
 		{B9F795A6-CD81-775A-E24D-CA8ADE08F4B2}.Release-Tests|Any CPU.Build.0 = Release-Tests|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Debug-Tests|Any CPU.ActiveCfg = Debug-Tests|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Debug-Tests|Any CPU.Build.0 = Debug-Tests|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Release-Tests|Any CPU.ActiveCfg = Release-Tests|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Release-Tests|Any CPU.Build.0 = Release-Tests|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -127,6 +137,7 @@ Global
 		{61485AAC-BD48-F922-ECEA-3FF8A6CA1FB7} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{531FD150-04EF-DD1D-8412-CE91875BB77E} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{B9F795A6-CD81-775A-E24D-CA8ADE08F4B2} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C9E33ED1-4711-4947-8FFE-59F1737D263F}

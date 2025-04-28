@@ -1,69 +1,47 @@
+using System.Net.WebSockets;
+using System.Text;
+using System.Text.Json;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using Documents;
+using Documents.DTasks;
 using DTasks;
 using DTasks.AspNetCore;
-using DTasks.Serialization;
-using DTasks.Serialization.Json;
-using DTasks.Serialization.StackExchangeRedis;
+using DTasks.AspNetCore.Infrastructure;
+using DTasks.Configuration;
+using DTasks.Extensions.DependencyInjection.Configuration;
+using DTasks.Infrastructure.Execution;
+using DTasks.Serialization.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using StackExchange.Redis;
-using System.Net.WebSockets;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using DTasks.AspNetCore.Infrastructure;
-using DTasks.Extensions.Hosting;
-using DTasks.Infrastructure.Execution;
-using DTasks.Infrastructure.Marshaling;
-using DTasks.AspNetCore.Infrastructure.Http;
-using DTasks.Infrastructure.State;
-using DTasks.Serialization.Json.Converters;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseDTasks(dTasks => dTasks
-    .Configure(configuration => configuration
-        .ConfigureTypeResolver(typeResolver =>
-        {
-            typeResolver.RegisterDAsyncType<AsyncEndpoints>();
-            AspNetCoreDAsyncHost.RegisterTypeIds(typeResolver);
-        })));
+    .UseAspNetCore(aspNetCore => aspNetCore
+        .ConfigureSerialization(serialization => serialization
+            .UseStackExchangeRedis()))
+    .ConfigureServices(services => services
+        .RegisterDAsyncService(typeof(AsyncEndpoints)))
+    .ConfigureMarshaling(marshaling => marshaling
+        .RegisterDAsyncType(typeof(AsyncEndpoints))
+        .RegisterSurrogatableType(typeof(AsyncEndpoints)))
+    .ConfigureExecution(execution => execution
+        .UseSuspensionHandler(InfrastructureServiceProvider.GetRequiredService<IDAsyncSuspensionHandler>())));
 
 #region In library
 
-JsonMarshalingConfiguration marshalingConfiguration = JsonMarshalingConfiguration.Create();
-
-builder.Services.AddScoped<AsyncEndpoints>();
 builder.Services
-    .AddSingleton(sp => ConnectionMultiplexer.Connect("localhost:6379"))
-    .AddSingleton(sp => sp.GetRequiredService<ConnectionMultiplexer>().GetDatabase());
-builder.Services
-    .AddSingleton(sp =>
-    {
-        IDAsyncTypeResolver typeResolver = sp.GetRequiredService<IDAsyncTypeResolver>();
-        
-        marshalingConfiguration.ConfigureSerializerOptions(options =>
-        {
-            options.Converters.Add(new TypedInstanceJsonConverter<object>(typeResolver));
-            options.Converters.Add(new TypedInstanceJsonConverter<IDAsyncContinuationSurrogate>(typeResolver));
-        });
-        marshalingConfiguration.RegisterSurrogatableType(typeof(AsyncEndpoints));
-
-        return marshalingConfiguration.CreateSerializerFactory(typeResolver);
-    })
-    .AddScoped<DAsyncFlowServices>()
-    .AddScoped<IDAsyncFlowServices>(sp => sp.GetRequiredService<DAsyncFlowServices>())
-    .AddScoped(sp => sp.GetRequiredService<JsonDAsyncSerializerFactory>().CreateSerializer(sp.GetRequiredService<IDAsyncFlowServices>().Surrogator))
-    .AddSingleton<IDAsyncStorage, RedisDAsyncStorage>()
+    .AddScoped<AsyncEndpoints>()
+    .AddSingleton(ConnectionMultiplexer.Connect("localhost:6379").GetDatabase())
+    .AddHttpClient()
     .AddSingleton<RedisDAsyncSuspensionHandler>()
     .AddHostedService(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
     .AddSingleton<IDAsyncSuspensionHandler>(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
+    .AddSingleton<IDAsyncSuspensionHandler>(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
     .AddSingleton<WebSocketHandler>()
-    .AddSingleton<IWebSocketHandler>(sp => sp.GetRequiredService<WebSocketHandler>())
-    .AddScoped<IDAsyncStateManager, BinaryDAsyncStateManager>()
-    .AddSingleton<IDAsyncContinuationFactory, DAsyncContinuationFactory>(); ;
+    .AddSingleton<IWebSocketHandler>(sp => sp.GetRequiredService<WebSocketHandler>());
 #endregion
 
 const string storageConnectionString = "UseDevelopmentStorage=true";
@@ -124,13 +102,13 @@ app.MapPost("/process-document/{documentId}", (
     string documentId,
     CancellationToken cancellationToken) =>
 {
-    AspNetCoreDAsyncHost host = AspNetCoreDAsyncHost.CreateHttpHost(httpContext, "GetDocumentStatus");
+    AspNetCoreDAsyncHost host = AspNetCoreDAsyncHost.CreateAsyncEndpointHost(httpContext);
     DTask<IResult> task = endpoints.ProcessDocument(documentId);
 
     return host.StartAsync(task, cancellationToken);
 });
 
-app.MapGet("/process-document/{operationId}", async (
+app.MapGet("/async/{operationId}", async (
     [FromServices] IDatabase redis,
     string operationId) =>
 {
@@ -138,7 +116,7 @@ app.MapGet("/process-document/{operationId}", async (
     if (value is null)
         return Results.NotFound();
 
-    JsonElement obj = JsonSerializer.Deserialize<JsonElement>(value);
+    JsonElement obj = JsonSerializer.Deserialize<JsonElement>(value).GetProperty("Instance");
     string status = obj.GetProperty("status").GetString()!;
 
     if (status is "succeeded")
@@ -149,7 +127,7 @@ app.MapGet("/process-document/{operationId}", async (
         });
 
     return Results.Ok(new { status });
-}).WithName("GetDocumentStatus");
+}).WithName("DTasksStatus");
 
 // If the client already maps its own WebSocket endpoint, then it needs to inject WebSocketHandler manually (some simplification is needed).
 // Otherwise, we will generate the whole method.

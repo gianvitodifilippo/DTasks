@@ -4,14 +4,16 @@ namespace DTasks.Serialization.Configuration;
 
 public static class JsonSerializationConfigurationBuilderExtensions
 {
-    public static ISerializationConfigurationBuilder UseJsonFormat(this ISerializationConfigurationBuilder builder)
+    public static TBuilder UseJsonFormat<TBuilder>(this TBuilder builder)
+        where TBuilder : ISerializationConfigurationBuilder
     {
         JsonFormatConfigurationBuilder jsonFormatBuilder = new();
 
         return jsonFormatBuilder.Configure(builder);
     }
 
-    public static ISerializationConfigurationBuilder UseJsonFormat(this ISerializationConfigurationBuilder builder, Action<IJsonFormatConfigurationBuilder> configure)
+    public static TBuilder UseJsonFormat<TBuilder>(this TBuilder builder, Action<IJsonFormatConfigurationBuilder> configure)
+        where TBuilder : ISerializationConfigurationBuilder
     {
         JsonFormatConfigurationBuilder jsonFormatBuilder = new();
         configure(jsonFormatBuilder);

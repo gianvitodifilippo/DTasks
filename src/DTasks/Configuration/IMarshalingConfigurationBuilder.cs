@@ -18,7 +18,7 @@ public interface IMarshalingConfigurationBuilder
     IMarshalingConfigurationBuilder RegisterTypeId(Type type);
 }
 
-public static class MarshalingConfigurationBuilderExtensions
+public static class MarshalingConfigurationBuilderExtensions // TODO: Convert to generic methods returning TBuilder
 {
     public static IMarshalingConfigurationBuilder RegisterTypeIds(this IMarshalingConfigurationBuilder builder, IEnumerable<Type> types)
     {

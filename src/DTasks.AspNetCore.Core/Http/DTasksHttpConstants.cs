@@ -8,7 +8,9 @@ internal static class DTasksHttpConstants
     public const string DTasksEndpointPrefix = "async";
 
     [StringSyntax("Route")]
-    public const string DTasksEndpoint = $"{DTasksEndpointPrefix}/{{flowId}}";
+    public const string DTasksEndpoint = $"{DTasksEndpointPrefix}/{{operationId}}";
 
     public const string DTasksStatusEndpoint = DTasksEndpoint;
+
+    public const string DTasksStatusEndpointName = "DTasksStatus";
 }

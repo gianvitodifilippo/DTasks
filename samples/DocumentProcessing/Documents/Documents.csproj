@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\DTasks.AspNetCore\DTasks.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\..\src\DTasks.Serialization.StackExchangeRedis.DependencyInjection\DTasks.Serialization.StackExchangeRedis.DependencyInjection.csproj" />
   </ItemGroup>
 
 </Project>

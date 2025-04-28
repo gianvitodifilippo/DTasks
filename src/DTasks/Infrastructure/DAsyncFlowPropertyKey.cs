@@ -11,6 +11,9 @@ public readonly struct DAsyncFlowPropertyKey<TProperty>(object key)
 
     public override string ToString()
     {
+        if (key.GetType() == typeof(object))
+            return typeof(TProperty).Name;
+
         return $"{key} ({typeof(TProperty).Name}))";
     }
 }

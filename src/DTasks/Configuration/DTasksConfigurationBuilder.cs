@@ -30,32 +30,42 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
 
     public ImmutableArray<Type> SurrogatableTypes => [.. _surrogatableTypes];
 
-    IDTasksConfigurationBuilder IDTasksConfigurationBuilder<IDTasksConfigurationBuilder>.ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure)
+    IDTasksConfigurationBuilder IDTasksConfigurationBuilder.ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure)
     {
+        ThrowHelper.ThrowIfNull(configure);
+
         configure(this);
         return this;
     }
 
-    IDTasksConfigurationBuilder IDTasksConfigurationBuilder<IDTasksConfigurationBuilder>.ConfigureState(Action<IStateConfigurationBuilder> configure)
+    IDTasksConfigurationBuilder IDTasksConfigurationBuilder.ConfigureState(Action<IStateConfigurationBuilder> configure)
     {
+        ThrowHelper.ThrowIfNull(configure);
+
         configure(this);
         return this;
     }
 
-    IDTasksConfigurationBuilder IDTasksConfigurationBuilder<IDTasksConfigurationBuilder>.ConfigureExecution(Action<IExecutionConfigurationBuilder> configure)
+    IDTasksConfigurationBuilder IDTasksConfigurationBuilder.ConfigureExecution(Action<IExecutionConfigurationBuilder> configure)
     {
+        ThrowHelper.ThrowIfNull(configure);
+
         configure(this);
         return this;
     }
 
     IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.AddSurrogator(IComponentDescriptor<IDAsyncSurrogator> descriptor)
     {
+        ThrowHelper.ThrowIfNull(descriptor);
+
         _infrastructureBuilder.AddSurrogator(descriptor);
         return this;
     }
 
     IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterSurrogatableType(Type type)
     {
+        ThrowHelper.ThrowIfNull(type);
+
         _surrogatableTypes.Add(type);
         return this;
     }
@@ -83,24 +93,32 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
 
     IExecutionConfigurationBuilder IExecutionConfigurationBuilder.UseCancellationProvider(IComponentDescriptor<IDAsyncCancellationProvider> descriptor)
     {
+        ThrowHelper.ThrowIfNull(descriptor);
+
         _infrastructureBuilder.UseCancellationProvider(descriptor);
         return this;
     }
 
     IExecutionConfigurationBuilder IExecutionConfigurationBuilder.UseSuspensionHandler(IComponentDescriptor<IDAsyncSuspensionHandler> descriptor)
     {
+        ThrowHelper.ThrowIfNull(descriptor);
+
         _infrastructureBuilder.UseSuspensionHandler(descriptor);
         return this;
     }
 
     IStateConfigurationBuilder IStateConfigurationBuilder.UseStack(IComponentDescriptor<IDAsyncStack> descriptor)
     {
+        ThrowHelper.ThrowIfNull(descriptor);
+
         _infrastructureBuilder.UseStack(descriptor);
         return this;
     }
 
     IStateConfigurationBuilder IStateConfigurationBuilder.UseHeap(IComponentDescriptor<IDAsyncHeap> descriptor)
     {
+        ThrowHelper.ThrowIfNull(descriptor);
+
         _infrastructureBuilder.UseHeap(descriptor);
         return this;
     }

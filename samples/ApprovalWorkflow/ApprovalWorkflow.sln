@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Serialization.Json",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.AspNetCore.Core", "..\..\src\DTasks.AspNetCore.Core\DTasks.AspNetCore.Core.csproj", "{97D66139-F022-19AD-F7CE-37069592DAD8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Serialization.StackExchangeRedis.DependencyInjection", "..\..\src\DTasks.Serialization.StackExchangeRedis.DependencyInjection\DTasks.Serialization.StackExchangeRedis.DependencyInjection.csproj", "{F7F4CEE7-9020-C955-E363-78E7F3D32882}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -133,6 +135,14 @@ Global
 		{97D66139-F022-19AD-F7CE-37069592DAD8}.Release|Any CPU.Build.0 = Release|Any CPU
 		{97D66139-F022-19AD-F7CE-37069592DAD8}.Release-Tests|Any CPU.ActiveCfg = Release-Tests|Any CPU
 		{97D66139-F022-19AD-F7CE-37069592DAD8}.Release-Tests|Any CPU.Build.0 = Release-Tests|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Debug-Tests|Any CPU.ActiveCfg = Debug-Tests|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Debug-Tests|Any CPU.Build.0 = Debug-Tests|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Release-Tests|Any CPU.ActiveCfg = Release-Tests|Any CPU
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882}.Release-Tests|Any CPU.Build.0 = Release-Tests|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -148,6 +158,7 @@ Global
 		{8FEBC525-D031-4CAC-A3E9-68D59D76898E} = {70843178-A5B6-4FB1-A628-0DD2693ECBE3}
 		{63ECF1A4-4B0E-410B-B61A-9CE58E3F453B} = {70843178-A5B6-4FB1-A628-0DD2693ECBE3}
 		{97D66139-F022-19AD-F7CE-37069592DAD8} = {70843178-A5B6-4FB1-A628-0DD2693ECBE3}
+		{F7F4CEE7-9020-C955-E363-78E7F3D32882} = {70843178-A5B6-4FB1-A628-0DD2693ECBE3}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {42F2554F-D18D-4677-97E8-C2D9A8DD8499}

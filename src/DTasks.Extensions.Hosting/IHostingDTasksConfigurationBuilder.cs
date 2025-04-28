@@ -1,16 +1,22 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using DTasks.Extensions.DependencyInjection.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace DTasks.Configuration;
 
-public interface IHostingDTasksConfigurationBuilder : IHostingDTasksConfigurationBuilder<IHostingDTasksConfigurationBuilder>;
-
-public interface IHostingDTasksConfigurationBuilder<out TBuilder> : IDependencyInjectionDTasksConfigurationBuilder<TBuilder>
-    where TBuilder : IHostingDTasksConfigurationBuilder<TBuilder>
+public interface IHostingDTasksConfigurationBuilder : IDependencyInjectionDTasksConfigurationBuilder
 {
-    TBuilder UseServiceProviderOptions(ServiceProviderOptions options);
+    new IDependencyInjectionDTasksConfigurationBuilder ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure);
 
-    TBuilder UseServiceProviderOptions(Action<ServiceProviderOptions> configureOptions);
+    new IDependencyInjectionDTasksConfigurationBuilder ConfigureState(Action<IStateConfigurationBuilder> configure);
 
-    TBuilder UseServiceProviderOptions(Action<HostBuilderContext, ServiceProviderOptions> configureOptions);
+    new IDependencyInjectionDTasksConfigurationBuilder ConfigureExecution(Action<IExecutionConfigurationBuilder> configure);
+
+    new IDependencyInjectionDTasksConfigurationBuilder ConfigureServices(Action<IServiceConfigurationBuilder> configure);
+
+    IHostingDTasksConfigurationBuilder UseServiceProviderOptions(ServiceProviderOptions options);
+
+    IHostingDTasksConfigurationBuilder UseServiceProviderOptions(Action<ServiceProviderOptions> configureOptions);
+
+    IHostingDTasksConfigurationBuilder UseServiceProviderOptions(Action<HostBuilderContext, ServiceProviderOptions> configureOptions);
 }

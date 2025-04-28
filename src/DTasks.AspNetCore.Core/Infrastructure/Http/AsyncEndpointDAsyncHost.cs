@@ -8,7 +8,7 @@ using Microsoft.Extensions.Primitives;
 
 namespace DTasks.AspNetCore.Infrastructure.Http;
 
-internal sealed class AsyncEndpointDAsyncHost(HttpContext httpContext) : AspNetCoreDAsyncHost, IAsyncHttpResultHandler
+internal sealed class AsyncEndpointDAsyncHost(HttpContext httpContext) : AspNetCoreDAsyncHost
 {
     protected override IServiceProvider Services => httpContext.RequestServices;
 
@@ -65,7 +65,7 @@ internal sealed class AsyncEndpointDAsyncHost(HttpContext httpContext) : AspNetC
     protected override Task SuspendOnStartAsync(DAsyncId flowId, CancellationToken cancellationToken)
     {
         var value = new { operationId = flowId.ToString() };
-        return Results.AcceptedAtRoute(DTasksHttpConstants.DTasksEndpoint, value, value).ExecuteAsync(httpContext);
+        return Results.AcceptedAtRoute(DTasksHttpConstants.DTasksStatusEndpointName, value, value).ExecuteAsync(httpContext);
     }
 
     protected override Task SucceedOnStartAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken)
@@ -91,29 +91,6 @@ internal sealed class AsyncEndpointDAsyncHost(HttpContext httpContext) : AspNetC
             return Task.CompletedTask;
 
         throw new NotImplementedException();
-    }
-
-    protected override Task SucceedOnResumeAsync<TResult>(IDAsyncFlowCompletionContext context, TResult result, CancellationToken cancellationToken)
-    {
-        if (result is IResult)
-        {
-            if (result is not IAsyncHttpResult httpResult)
-                throw new InvalidOperationException("Unsupported result type returned from a d-async endpoint. Use DAsyncResults to return from a d-async method.");
-
-            return httpResult.ExecuteAsync(this, context, cancellationToken);
-        }
-
-        return base.SucceedOnResumeAsync(context, result, cancellationToken);
-    }
-
-    Task IAsyncHttpResultHandler.SucceedAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken)
-    {
-        return SucceedOnResumeAsync(context, cancellationToken);
-    }
-
-    Task IAsyncHttpResultHandler.SucceedAsync<TResult>(IDAsyncFlowCompletionContext context, TResult result, CancellationToken cancellationToken)
-    {
-        return SucceedOnResumeAsync(context, result, cancellationToken);
     }
 
     private Task OnNullCallbackHeaderAsync(CancellationToken cancellationToken)
