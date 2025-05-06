@@ -5,7 +5,7 @@ using DTasks.Serialization.Json.Converters;
 
 namespace DTasks.AspNetCore.Configuration;
 
-internal sealed class AspNetCoreConfigurationBuilder : IAspNetCoreConfigurationBuilder
+internal sealed class DTasksAspNetCoreConfigurationBuilder : IDTasksAspNetCoreConfigurationBuilder
 {
     private readonly List<Action<IAspNetCoreSerializationConfigurationBuilder>> _configureSerializationActions = [];
 
@@ -26,7 +26,7 @@ internal sealed class AspNetCoreConfigurationBuilder : IAspNetCoreConfigurationB
             });
     }
 
-    IAspNetCoreConfigurationBuilder IAspNetCoreConfigurationBuilder.ConfigureSerialization(Action<IAspNetCoreSerializationConfigurationBuilder> configure)
+    IDTasksAspNetCoreConfigurationBuilder IDTasksAspNetCoreConfigurationBuilder.ConfigureSerialization(Action<IAspNetCoreSerializationConfigurationBuilder> configure)
     {
         _configureSerializationActions.Add(configure);
         return this;

@@ -68,7 +68,7 @@ public readonly struct Option<TValue> : IEquatable<Option<TValue>>
 
     public static bool operator ==(Option<TValue> left, Option<TValue> right) => left.Equals(right);
 
-    public static bool operator !=(Option<TValue> left, Option<TValue> right) => !(left == right);
+    public static bool operator !=(Option<TValue> left, Option<TValue> right) => !left.Equals(right);
 
     public static Option<TValue> Some(TValue value) => new(value);
 

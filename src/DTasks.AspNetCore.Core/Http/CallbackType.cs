@@ -26,5 +26,5 @@ public readonly struct CallbackType : IEquatable<CallbackType>
 
     public static bool operator ==(CallbackType left, CallbackType right) => left.Equals(right);
 
-    public static bool operator !=(CallbackType left, CallbackType right) => !(left == right);
+    public static bool operator !=(CallbackType left, CallbackType right) => !left.Equals(right);
 }

@@ -78,7 +78,7 @@ public partial class JsonStateMachineSerializerTests
 
     public struct StateMachine1
     {
-        public static readonly TypeId TypeId = new(nameof(StateMachine1));
+        public static readonly TypeId TypeId = TypeId.FromConstant(nameof(StateMachine1));
 
         public Service1? __this;
         public SerializableType1? local1;
@@ -88,7 +88,7 @@ public partial class JsonStateMachineSerializerTests
 
     public struct StateMachine2
     {
-        public static readonly TypeId TypeId = new(nameof(StateMachine2));
+        public static readonly TypeId TypeId = TypeId.FromConstant(nameof(StateMachine2));
 
         public Service2? __this;
         public SerializableType1? local1;

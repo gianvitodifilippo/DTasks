@@ -127,10 +127,10 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
 
         _runnable = runnable;
         _cancellationToken = cancellationToken;
-        _parentId = DAsyncId.NewFlowId();
-        _id = DAsyncId.New();
+        _parentId = DAsyncId.NewFlowId(); // TODO: Move after OnStartAsync
+        _id = DAsyncId.New(); // TODO: Move after OnStartAsync
 
-        Initialize(host);
+        Initialize(host); // TODO: Move after OnStartAsync
         AwaitOnStart();
         
         return new ValueTask(this, _valueTaskSource.Version);

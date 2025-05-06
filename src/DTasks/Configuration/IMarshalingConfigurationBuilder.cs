@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using DTasks.Configuration.DependencyInjection;
 using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.Marshaling.TypeSyntax;
 using DTasks.Inspection;
 using DTasks.Utils;
 
@@ -15,7 +16,9 @@ public interface IMarshalingConfigurationBuilder
 
     IMarshalingConfigurationBuilder RegisterSurrogatableType(Type type);
 
-    IMarshalingConfigurationBuilder RegisterTypeId(Type type);
+    IMarshalingConfigurationBuilder RegisterTypeId(Type type, TypeEncodingStrategy encodingStrategy = TypeEncodingStrategy.FullName);
+
+    IMarshalingConfigurationBuilder RegisterTypeId(Type type, string idValue);
 }
 
 public static class MarshalingConfigurationBuilderExtensions // TODO: Convert to generic methods returning TBuilder

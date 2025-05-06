@@ -9,6 +9,8 @@ internal sealed class SingletonComponentProvider<TComponent>(
     TComponent component) : RootComponentProvider<TComponent>
     where TComponent : notnull
 {
+    public TComponent Component => component;
+    
     protected override DTasksConfiguration Configuration => configuration;
 
     protected override TComponent GetComponent() => component;

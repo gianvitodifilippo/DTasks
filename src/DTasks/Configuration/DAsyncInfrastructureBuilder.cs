@@ -33,6 +33,7 @@ internal sealed class DAsyncInfrastructureBuilder
     private IComponentDescriptor<IDAsyncCancellationProvider> CancellationProviderDescriptor => OrDefault(_cancellationProviderDescriptor, DAsyncCancellationProvider.Default);
 
     private IComponentDescriptor<IDAsyncSuspensionHandler> SuspensionHandlerProvider => OrDefault(_suspensionHandlerDescriptor, DAsyncSuspensionHandler.Default);
+    
     public void UseStack(IComponentDescriptor<IDAsyncStack> descriptor)
     {
         _stackDescriptor = descriptor;
@@ -79,7 +80,7 @@ internal sealed class DAsyncInfrastructureBuilder
         private readonly IComponentProvider<IDAsyncSurrogator> _surrogatorProvider = configuration.CreateProvider(builder.SurrogatorDescriptor);
         private readonly IComponentProvider<IDAsyncCancellationProvider> _cancellationProviderProvider = configuration.CreateProvider(builder.CancellationProviderDescriptor);
         private readonly IComponentProvider<IDAsyncSuspensionHandler> _suspensionHandlerProvider = configuration.CreateProvider(builder.SuspensionHandlerProvider);
-
+        
         public IDAsyncStack GetStack(IDAsyncScope scope) => _stackProvider.GetComponent(scope);
 
         public IDAsyncHeap GetHeap(IDAsyncScope scope) => _heapProvider.GetComponent(scope);

@@ -24,7 +24,7 @@ public partial class DynamicStateMachineInspectorTests
 
         _typeResolver
             .GetTypeId(typeof(ClassAwaiter))
-            .Returns(new TypeId(s_classAwaiterTypeId));
+            .Returns(TypeId.FromConstant(s_classAwaiterTypeId));
 
         _suspenderDescriptor = Substitute.For<ISuspenderDescriptor>();
         _resumerDescriptor = Substitute.For<IResumerDescriptor>();

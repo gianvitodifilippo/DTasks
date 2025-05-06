@@ -15,7 +15,7 @@ public class ApprovalService(IConfiguration configuration) : IDisposable
     // [DAsyncCallback(route: "approvals/{$id}/{$result}", Method = "get")]
     public DTask<ApprovalResult> SendApprovalRequestDAsync(ApprovalRequestDetails details, string approverEmail)
     {
-        return DTask<ApprovalResult>.Factory.Callback(async (id, cancellationToken) =>
+        return DTask<ApprovalResult>.Factory.WebSuspend(async (context, cancellationToken) =>
         {
             var mailMessage = new MailMessage
             {
@@ -29,8 +29,8 @@ public class ApprovalService(IConfiguration configuration) : IDisposable
                             <p>Please review the approval request by visiting the following link:</p>
                             <p><a href='{details.ResourceUri}'>Review request</a></p>
                             <p>
-                                <a href='http://localhost:5033/approvals/{WebUtility.UrlEncode(id.ToString())}/Approve' style='padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; margin-right: 10px;'>Approve</a>
-                                <a href='http://localhost:5033/approvals/{WebUtility.UrlEncode(id.ToString())}/Reject' style='padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px;'>Reject</a>
+                                <a href='http://localhost:5033/approvals/{WebUtility.UrlEncode(context.OperationId.ToString())}/Approve' style='padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; margin-right: 10px;'>Approve</a>
+                                <a href='http://localhost:5033/approvals/{WebUtility.UrlEncode(context.OperationId.ToString())}/Reject' style='padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px;'>Reject</a>
                             </p>
                             <p>Best regards,<br>The Approval System</p>
                         </body>

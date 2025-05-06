@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using DTasks.AspNetCore.Http;
+using DTasks.AspNetCore.Infrastructure.Features;
 using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
 using Microsoft.AspNetCore.Http;
@@ -8,9 +9,17 @@ using Microsoft.Extensions.Primitives;
 
 namespace DTasks.AspNetCore.Infrastructure.Http;
 
-internal sealed class AsyncEndpointDAsyncHost(HttpContext httpContext) : AspNetCoreDAsyncHost
+internal sealed class HttpDAsyncHost(HttpContext httpContext) : AspNetCoreDAsyncHost, IHttpContextFeature
 {
     protected override IServiceProvider Services => httpContext.RequestServices;
+
+    HttpContext IHttpContextFeature.HttpContext => httpContext;
+
+    protected override void OnInitializeCore(IDAsyncFlowInitializationContext context)
+    {
+        // TODO: We should probably surrogate the HttpContext, but not with the default mechanism
+        context.SetFeature<IHttpContextFeature>(this);
+    }
 
     protected override Task OnStartCoreAsync(IDAsyncFlowStartContext context, CancellationToken cancellationToken)
     {
@@ -65,7 +74,7 @@ internal sealed class AsyncEndpointDAsyncHost(HttpContext httpContext) : AspNetC
     protected override Task SuspendOnStartAsync(DAsyncId flowId, CancellationToken cancellationToken)
     {
         var value = new { operationId = flowId.ToString() };
-        return Results.AcceptedAtRoute(DTasksHttpConstants.DTasksStatusEndpointName, value, value).ExecuteAsync(httpContext);
+        return Results.AcceptedAtRoute(DTasksHttpConstants.DTasksGetStatusEndpointName, value, value).ExecuteAsync(httpContext);
     }
 
     protected override Task SucceedOnStartAsync(IDAsyncFlowCompletionContext context, CancellationToken cancellationToken)

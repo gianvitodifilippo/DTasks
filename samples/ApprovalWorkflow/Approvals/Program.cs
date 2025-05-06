@@ -3,6 +3,7 @@ using System.Text.Json;
 using Approvals;
 using Approvals.DTasks;
 using DTasks;
+using DTasks.AspNetCore.Http;
 using DTasks.AspNetCore.Infrastructure;
 using DTasks.Configuration;
 using DTasks.Extensions.DependencyInjection.Configuration;
@@ -43,6 +44,8 @@ builder.Services
 
 var app = builder.Build();
 
+app.MapDTasks();
+
 #region Generated
 
 app.MapPost("/approvals", async (
@@ -56,28 +59,6 @@ app.MapPost("/approvals", async (
 
     await host.StartAsync(task, cancellationToken);
 });
-
-app.MapGet("/async/{operationId}", async (
-    [FromServices] IDatabase redis,
-    string operationId) =>
-{
-    operationId = WebUtility.UrlDecode(operationId);
-    string? value = await redis.StringGetAsync($"{operationId}:info");
-    if (value is null)
-        return Results.NotFound();
-    
-    JsonElement obj = JsonSerializer.Deserialize<JsonElement>(value).GetProperty("Instance");
-    string status = obj.GetProperty("Status").GetString()!;
-
-    if (status is "succeeded")
-        return Results.Ok(new
-        {
-            status,
-            result = obj.GetProperty("Result")
-        });
-
-    return Results.Ok(new { status });
-}).WithName("DTasksStatus");
 
 app.MapGet("/approvals/{id}/{result}", async (
     IServiceProvider services,

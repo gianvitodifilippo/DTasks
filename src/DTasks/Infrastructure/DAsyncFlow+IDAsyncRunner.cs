@@ -12,6 +12,8 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     IDAsyncCancellationManager IDAsyncRunner.Cancellation => this;
 
+    IDAsyncFeatureCollection IDAsyncRunner.Features => this;
+
     private void Start()
     {
         Assert.NotNull(_stateMachine);
@@ -525,26 +527,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         else
         {
             _continuation = Continuations.DelayIndirection;
-            currentStateMachine.Suspend();
-        }
-    }
-
-    void IDAsyncRunnerInternal.Callback(ISuspensionCallback callback)
-    {
-        Assert.NotNull(callback);
-        Assert.Null(_continuation);
-        Assert.Null(_callback);
-
-        IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
-        _callback = callback;
-
-        if (currentStateMachine is null)
-        {
-            RunIndirection(Continuations.Callback);
-        }
-        else
-        {
-            _continuation = Continuations.CallbackIndirection;
             currentStateMachine.Suspend();
         }
     }

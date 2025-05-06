@@ -6,6 +6,8 @@ namespace DTasks.Infrastructure;
 public interface IDAsyncRunner
 {
     IDAsyncCancellationManager Cancellation { get; }
+    
+    IDAsyncFeatureCollection Features { get; }
 
     void Start(IDAsyncStateMachine stateMachine);
 

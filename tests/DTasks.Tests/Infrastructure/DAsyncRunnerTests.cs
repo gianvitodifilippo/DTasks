@@ -143,7 +143,7 @@ public class DAsyncRunnerTests
     {
         // Arrange
         var callback = Substitute.For<ISuspensionCallback>();
-        DTask task = DTask.Factory.Callback(callback);
+        DTask task = DTask.Factory.Suspend(callback);
 
         DAsyncId id = default;
         callback
@@ -164,7 +164,7 @@ public class DAsyncRunnerTests
     {
         // Arrange
         var callback = Substitute.For<ISuspensionCallback>();
-        DTask<int> task = DTask<int>.Factory.Callback(callback);
+        DTask<int> task = DTask<int>.Factory.Suspend(callback);
 
         DAsyncId id = default;
         callback
@@ -181,55 +181,11 @@ public class DAsyncRunnerTests
     }
 
     [Fact]
-    public async Task RunsCallbackWithState()
-    {
-        // Arrange
-        var state = new object();
-        var callback = Substitute.For<ISuspensionCallback<object>>();
-        DTask task = DTask.Factory.Callback(state, callback);
-
-        DAsyncId id = default;
-        callback
-            .When(cb => cb.InvokeAsync(Arg.Any<DAsyncId>(), Arg.Any<object>()))
-            .Do(call => id = call.Arg<DAsyncId>());
-
-        // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
-
-        // Assert
-        await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId), state);
-        await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task RunsCallbackOfResultWithState()
-    {
-        // Arrange
-        var state = new object();
-        var callback = Substitute.For<ISuspensionCallback<object>>();
-        DTask<int> task = DTask<int>.Factory.Callback(state, callback);
-
-        DAsyncId id = default;
-        callback
-            .When(cb => cb.InvokeAsync(Arg.Any<DAsyncId>(), Arg.Any<object>()))
-            .Do(call => id = call.Arg<DAsyncId>());
-
-        // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
-
-        // Assert
-        await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId), state);
-        await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
     public async Task RunsDelegateCallback()
     {
         // Arrange
         var callback = Substitute.For<SuspensionCallback>();
-        DTask task = DTask.Factory.Callback(callback);
+        DTask task = DTask.Factory.Suspend(callback);
 
         DAsyncId id = default;
         callback
@@ -250,7 +206,7 @@ public class DAsyncRunnerTests
     {
         // Arrange
         var callback = Substitute.For<SuspensionCallback>();
-        DTask<int> task = DTask<int>.Factory.Callback(callback);
+        DTask<int> task = DTask<int>.Factory.Suspend(callback);
 
         DAsyncId id = default;
         callback
@@ -272,7 +228,7 @@ public class DAsyncRunnerTests
         // Arrange
         var state = new object();
         var callback = Substitute.For<SuspensionCallback<object>>();
-        DTask task = DTask.Factory.Callback(state, callback);
+        DTask task = DTask.Factory.Suspend(state, callback);
 
         DAsyncId id = default;
         callback
@@ -294,7 +250,7 @@ public class DAsyncRunnerTests
         // Arrange
         var state = new object();
         var callback = Substitute.For<SuspensionCallback<object>>();
-        DTask<int> task = DTask<int>.Factory.Callback(state, callback);
+        DTask<int> task = DTask<int>.Factory.Suspend(state, callback);
 
         DAsyncId id = default;
         callback
@@ -524,7 +480,7 @@ public class DAsyncRunnerTests
 
         static async DTask<int> M1(ISuspensionCallback callback)
         {
-            await DTask.Factory.Callback(callback);
+            await DTask.Factory.Suspend(callback);
             return result;
         }
 
@@ -553,7 +509,7 @@ public class DAsyncRunnerTests
 
         static async DTask<int> M1(ISuspensionCallback callback)
         {
-            return await DTask<int>.Factory.Callback(callback);
+            return await DTask<int>.Factory.Suspend(callback);
         }
 
         DAsyncId id = default;
@@ -642,7 +598,7 @@ public class DAsyncRunnerTests
 
         static async DTask M2(ISuspensionCallback callback)
         {
-            await DTask.Factory.Callback(callback);
+            await DTask.Factory.Suspend(callback);
         }
 
         DAsyncId id1 = default;
@@ -771,7 +727,7 @@ public class DAsyncRunnerTests
 
         static async DTask M2(ISuspensionCallback callback)
         {
-            await DTask.Factory.Callback(callback);
+            await DTask.Factory.Suspend(callback);
         }
 
         DAsyncId id1 = default;

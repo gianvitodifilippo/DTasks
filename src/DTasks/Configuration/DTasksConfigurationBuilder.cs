@@ -70,25 +70,26 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
         return this;
     }
 
-    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterTypeId(Type type)
+    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterTypeId(Type type, TypeEncodingStrategy encodingStrategy)
     {
         ThrowHelper.ThrowIfNull(type);
 
         if (type.ContainsGenericParameters)
             throw new ArgumentException("Open generic types are not supported.", nameof(type));
 
-        if (_typesToIds.TryGetValue(type, out TypeId id))
-            return this;
+        TypeId typeId = TypeId.FromEncodedTypeName(type, encodingStrategy);
+        return RegisterTypeId(typeId, type.UnderlyingSystemType);
+    }
 
-        int count = _typesToIds.Count + 1;
-        id = new(count.ToString()); // Naive
+    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterTypeId(Type type, string idValue)
+    {
+        ThrowHelper.ThrowIfNull(type);
 
-        _typesToIds.Add(type, id);
-        _idsToTypes.Add(id, type);
-
-        Debug.Assert(_typesToIds.Count == count && _idsToTypes.Count == count);
-
-        return this;
+        if (type.ContainsGenericParameters)
+            throw new ArgumentException("Open generic types are not supported.", nameof(type));
+        
+        var typeId = TypeId.FromConstant(idValue);
+        return RegisterTypeId(typeId, type.UnderlyingSystemType);
     }
 
     IExecutionConfigurationBuilder IExecutionConfigurationBuilder.UseCancellationProvider(IComponentDescriptor<IDAsyncCancellationProvider> descriptor)
@@ -120,6 +121,16 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
         ThrowHelper.ThrowIfNull(descriptor);
 
         _infrastructureBuilder.UseHeap(descriptor);
+        return this;
+    }
+
+    private IMarshalingConfigurationBuilder RegisterTypeId(TypeId typeId, Type type)
+    {
+        _typesToIds[type] = typeId;
+        _idsToTypes[typeId] = type;
+        
+        Debug.Assert(_typesToIds.Count == _idsToTypes.Count);
+
         return this;
     }
 }

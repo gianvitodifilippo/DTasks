@@ -17,7 +17,6 @@ internal sealed class HostingDTasksConfigurationBuilder(HostBuilderContext conte
     private ServiceProviderOptions? _serviceProviderOptions;
     private Action<ServiceProviderOptions>? _configureServiceProviderOptions1;
     private Action<HostBuilderContext, ServiceProviderOptions>? _configureServiceProviderOptions2;
-    private object? _serviceProviderOptionsOrConfiguration;
 
     IServiceCollection IDependencyInjectionDTasksConfigurationBuilder.Services => services;
 
@@ -60,21 +59,22 @@ internal sealed class HostingDTasksConfigurationBuilder(HostBuilderContext conte
 
     private ServiceProviderOptions GetServiceProviderOptions()
     {
-        if (_serviceProviderOptionsOrConfiguration is null)
+        if (_serviceProviderOptions is not null)
         {
-            Debug.Assert(_serviceProviderOptions is null && _configureServiceProviderOptions1 is null && _configureServiceProviderOptions2 is null);
-            return new ServiceProviderOptions();
-        }
-
-        if (ReferenceEquals(_serviceProviderOptionsOrConfiguration, _serviceProviderOptions))
+            Debug.Assert(_configureServiceProviderOptions1 is null && _configureServiceProviderOptions2 is null);
             return _serviceProviderOptions;
+        }
 
         ServiceProviderOptions options = new();
-        if (ReferenceEquals(_serviceProviderOptionsOrConfiguration, _configureServiceProviderOptions1))
+        if (_configureServiceProviderOptions1 is not null)
         {
+            Debug.Assert(_configureServiceProviderOptions2 is null);
+            
             _configureServiceProviderOptions1(options);
+            return options;
         }
-        else if (ReferenceEquals(_serviceProviderOptionsOrConfiguration, _configureServiceProviderOptions2))
+        
+        if (_configureServiceProviderOptions2 is not null)
         {
             _configureServiceProviderOptions2(context, options);
         }
@@ -119,7 +119,8 @@ internal sealed class HostingDTasksConfigurationBuilder(HostBuilderContext conte
         ThrowHelper.ThrowIfNull(options);
 
         _serviceProviderOptions = options;
-        _serviceProviderOptionsOrConfiguration = options;
+        _configureServiceProviderOptions1 = null;
+        _configureServiceProviderOptions2 = null;
         return this;
     }
 
@@ -127,8 +128,9 @@ internal sealed class HostingDTasksConfigurationBuilder(HostBuilderContext conte
     {
         ThrowHelper.ThrowIfNull(configureOptions);
 
+        _serviceProviderOptions = null;
         _configureServiceProviderOptions1 = configureOptions;
-        _serviceProviderOptionsOrConfiguration = configureOptions;
+        _configureServiceProviderOptions2 = null;
         return this;
     }
 
@@ -136,8 +138,9 @@ internal sealed class HostingDTasksConfigurationBuilder(HostBuilderContext conte
     {
         ThrowHelper.ThrowIfNull(configureOptions);
 
+        _serviceProviderOptions = null;
+        _configureServiceProviderOptions1 = null;
         _configureServiceProviderOptions2 = configureOptions;
-        _serviceProviderOptionsOrConfiguration = configureOptions;
         return this;
     }
 

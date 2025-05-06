@@ -1,16 +1,14 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace DTasks.AspNetCore.Http;
 
 internal static class DTasksHttpConstants
 {
-    [StringSyntax("Route")]
-    public const string DTasksEndpointPrefix = "async";
+    public const string OperationIdParameterName = "operationId";
+    
+    public const string TypeIdParameterName = "typeId";
 
-    [StringSyntax("Route")]
-    public const string DTasksEndpoint = $"{DTasksEndpointPrefix}/{{operationId}}";
+    public const string DTasksStatusEndpointTemplate = $"/async/{{{OperationIdParameterName}}}/status";
 
-    public const string DTasksStatusEndpoint = DTasksEndpoint;
-
-    public const string DTasksStatusEndpointName = "DTasksStatus";
+    public const string DTasksDefaultResumptionEndpointTemplate = $"/async/{{{OperationIdParameterName}}}/resume/{{{TypeIdParameterName}}}";
+    
+    public const string DTasksGetStatusEndpointName = "DTasks_GetStatus";
 }

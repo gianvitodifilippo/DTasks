@@ -22,7 +22,7 @@ public partial class ServiceContainerBuilderTests
         _mapper = Substitute.For<IServiceMapper>();
         _services = new TestServiceCollection(_mapper);
         _typeResolver = Substitute.For<IDAsyncTypeResolver>();
-        _typeId = new TypeId("typeId");
+        _typeId = TypeId.FromConstant("typeId");
         _serviceKey = "serviceKey";
         _sut = new ServiceContainerBuilder(_services, _typeResolver);
 

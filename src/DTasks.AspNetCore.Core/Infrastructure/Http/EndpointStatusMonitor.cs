@@ -1,17 +1,22 @@
+using DTasks.AspNetCore.State;
 using DTasks.Infrastructure.Marshaling;
-using DTasks.Infrastructure.State;
 using DTasks.Utils;
+using Microsoft.AspNetCore.Http;
 
 namespace DTasks.AspNetCore.Infrastructure.Http;
 
-internal sealed class AsyncEndpointMonitor(IDAsyncHeap heap) : IAsyncEndpointMonitor
+internal sealed class EndpointStatusMonitor(IStateStore stateStore)
 {
-    public async Task<Option<AsyncEndpointInfo>> GetEndpointInfoAsync(DAsyncId flowId, CancellationToken cancellationToken)
+    public async Task ExecuteGetStatusAsync(HttpContext httpContext, DAsyncId flowId)
     {
         string key = GetEndpointInfoKey(flowId);
-        Option<TypedInstance<AsyncEndpointInfo>> infoOption = await heap.LoadAsync<string, TypedInstance<AsyncEndpointInfo>>(key, cancellationToken);
-
-        return infoOption.Map(info => info.Instance);
+        Option<TypedInstance<AsyncEndpointInfo>> infoOption = await stateStore.LoadAsync<string, TypedInstance<AsyncEndpointInfo>>(key, httpContext.RequestAborted);
+            
+        IResult result = infoOption
+            .Map(info => info.Instance)
+            .Fold(Results.Ok, () => Results.NotFound());
+        
+        await result.ExecuteAsync(httpContext);
     }
 
     public Task SetRunningAsync(DAsyncId flowId, CancellationToken cancellationToken)
@@ -22,7 +27,7 @@ internal sealed class AsyncEndpointMonitor(IDAsyncHeap heap) : IAsyncEndpointMon
             Status = "running"
         };
 
-        return heap.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
+        return stateStore.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
     }
 
     public Task SetSucceededAsync(DAsyncId flowId, CancellationToken cancellationToken)
@@ -33,7 +38,7 @@ internal sealed class AsyncEndpointMonitor(IDAsyncHeap heap) : IAsyncEndpointMon
             Status = "succeded"
         };
 
-        return heap.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
+        return stateStore.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
     }
 
     public Task SetSucceededAsync<TResult>(DAsyncId flowId, TResult result, CancellationToken cancellationToken)
@@ -45,7 +50,7 @@ internal sealed class AsyncEndpointMonitor(IDAsyncHeap heap) : IAsyncEndpointMon
             Result = result
         };
 
-        return heap.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
+        return stateStore.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
     }
 
     public Task SetFaultedAsync(DAsyncId flowId, Exception exception, CancellationToken cancellationToken)
@@ -56,7 +61,7 @@ internal sealed class AsyncEndpointMonitor(IDAsyncHeap heap) : IAsyncEndpointMon
             Status = "faulted"
         };
 
-        return heap.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
+        return stateStore.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
     }
 
     public Task SetCanceledAsync(DAsyncId flowId, CancellationToken cancellationToken)
@@ -67,7 +72,7 @@ internal sealed class AsyncEndpointMonitor(IDAsyncHeap heap) : IAsyncEndpointMon
             Status = "canceled"
         };
 
-        return heap.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
+        return stateStore.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
     }
 
     private static string GetEndpointInfoKey(DAsyncId flowId)

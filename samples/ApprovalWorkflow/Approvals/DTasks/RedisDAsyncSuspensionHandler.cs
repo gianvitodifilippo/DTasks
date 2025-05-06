@@ -18,7 +18,6 @@ public class RedisDAsyncSuspensionHandler(
         {
             try
             {
-
                 await Task.Delay(1000, stoppingToken);
 
                 HashEntry[] entries = await redis.HashGetAllAsync(s_reminderKey);
