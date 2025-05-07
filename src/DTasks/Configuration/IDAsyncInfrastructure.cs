@@ -1,4 +1,3 @@
-using DTasks.Infrastructure;
 using DTasks.Infrastructure.Execution;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
@@ -7,13 +6,15 @@ namespace DTasks.Configuration;
 
 internal interface IDAsyncInfrastructure
 {
-    IDAsyncStack GetStack(IDAsyncScope scope);
+    IDAsyncTypeResolver TypeResolver { get; }
 
-    IDAsyncHeap GetHeap(IDAsyncScope scope);
+    IDAsyncHeap Heap { get; }
 
-    IDAsyncSurrogator GetSurrogator(IDAsyncScope scope);
+    IDAsyncSurrogator Surrogator { get; }
 
-    IDAsyncCancellationProvider GetCancellationProvider(IDAsyncScope scope);
+    IDAsyncCancellationProvider CancellationProvider { get; }
 
-    IDAsyncSuspensionHandler GetSuspensionHandler(IDAsyncScope scope);
+    IDAsyncSuspensionHandler SuspensionHandler { get; }
+
+    IDAsyncStack GetStack(IDAsyncFlowScope scope);
 }

@@ -1,5 +1,3 @@
-using DTasks.Configuration.DependencyInjection;
-using DTasks.Infrastructure;
 using DTasks.Infrastructure.Execution;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
@@ -8,87 +6,113 @@ namespace DTasks.Configuration;
 
 internal sealed class DAsyncInfrastructureBuilder
 {
-    private readonly List<IComponentDescriptor<IDAsyncSurrogator>> _surrogatorDescriptors = [];
-    private IComponentDescriptor<IDAsyncStack>? _stackDescriptor;
-    private IComponentDescriptor<IDAsyncHeap>? _heapDescriptor;
-    private IComponentDescriptor<IDAsyncCancellationProvider>? _cancellationProviderDescriptor;
-    private IComponentDescriptor<IDAsyncSuspensionHandler>? _suspensionHandlerDescriptor;
+    private readonly List<RootComponentFactory<IDAsyncSurrogator>> _surrogatorFactories = [];
+    private FlowComponentFactory<IDAsyncStack>? _stackFactory;
+    private RootComponentFactory<IDAsyncHeap>? _heapFactory;
+    private RootComponentFactory<IDAsyncCancellationProvider>? _cancellationProviderFactory;
+    private RootComponentFactory<IDAsyncSuspensionHandler>? _suspensionHandlerFactory;
 
-    public IDAsyncInfrastructure BuildInfrastructure(DTasksConfiguration configuration)
+    public IDAsyncInfrastructure Build(IDAsyncRootScope rootScope)
     {
-        return new DAsyncInfrastructure(this, configuration);
+        return new DAsyncInfrastructure(this, rootScope);
     }
 
-    private IComponentDescriptor<IDAsyncStack> StackDescriptor => EnsureAssigned(_stackDescriptor);
-
-    private IComponentDescriptor<IDAsyncHeap> HeapDescriptor => EnsureAssigned(_heapDescriptor);
-
-    private IComponentDescriptor<IDAsyncSurrogator> SurrogatorDescriptor => _surrogatorDescriptors.Count switch
+    public void UseStack(FlowComponentFactory<IDAsyncStack> factory)
     {
-        0 => ComponentDescriptor.Singleton(DAsyncSurrogator.Default),
-        1 => _surrogatorDescriptors[0],
-        _ => ComponentDescriptor.Aggregate(_surrogatorDescriptors, DAsyncSurrogator.Aggregate)
-    };
-
-    private IComponentDescriptor<IDAsyncCancellationProvider> CancellationProviderDescriptor => OrDefault(_cancellationProviderDescriptor, DAsyncCancellationProvider.Default);
-
-    private IComponentDescriptor<IDAsyncSuspensionHandler> SuspensionHandlerProvider => OrDefault(_suspensionHandlerDescriptor, DAsyncSuspensionHandler.Default);
-    
-    public void UseStack(IComponentDescriptor<IDAsyncStack> descriptor)
-    {
-        _stackDescriptor = descriptor;
+        _stackFactory = factory;
     }
 
-    public void UseHeap(IComponentDescriptor<IDAsyncHeap> descriptor)
+    public void UseHeap(RootComponentFactory<IDAsyncHeap> factory)
     {
-        _heapDescriptor = descriptor;
+        _heapFactory = factory;
     }
 
-    public void AddSurrogator(IComponentDescriptor<IDAsyncSurrogator> descriptor)
+    public void AddSurrogator(RootComponentFactory<IDAsyncSurrogator> factory)
     {
-        _surrogatorDescriptors.Add(descriptor);
+        _surrogatorFactories.Add(factory);
     }
 
-    public void UseCancellationProvider(IComponentDescriptor<IDAsyncCancellationProvider> descriptor)
+    public void UseCancellationProvider(RootComponentFactory<IDAsyncCancellationProvider> factory)
     {
-        _cancellationProviderDescriptor = descriptor;
+        _cancellationProviderFactory = factory;
     }
 
-    public void UseSuspensionHandler(IComponentDescriptor<IDAsyncSuspensionHandler> descriptor)
+    public void UseSuspensionHandler(RootComponentFactory<IDAsyncSuspensionHandler> factory)
     {
-        _suspensionHandlerDescriptor = descriptor;
+        _suspensionHandlerFactory = factory;
     }
 
-    private static IComponentDescriptor<TComponent> EnsureAssigned<TComponent>(IComponentDescriptor<TComponent>? descriptor)
-        where TComponent : notnull
+    private Func<IDAsyncFlowScope, IDAsyncStack> CreateStackFactory(IDAsyncRootScope rootScope)
     {
-        return descriptor ?? throw new InvalidOperationException($"Missing required component of type '{typeof(TComponent).Name}'.");
+        if (_stackFactory is null)
+            throw MissingRequiredComponent(nameof(IDAsyncStack));
+
+        return _stackFactory.GetScopedFactory(rootScope);
     }
 
-    private static IComponentDescriptor<TComponent> OrDefault<TComponent>(IComponentDescriptor<TComponent>? descriptor, TComponent defaultComponent)
-        where TComponent : notnull
+    private IDAsyncHeap CreateHeap(IDAsyncRootScope rootScope)
     {
-        return descriptor ?? ComponentDescriptor.Singleton(defaultComponent);
+        if (_heapFactory is null)
+            throw MissingRequiredComponent(nameof(IDAsyncHeap));
+
+        return _heapFactory.CreateComponent(rootScope);
     }
 
-    private sealed class DAsyncInfrastructure(
-        DAsyncInfrastructureBuilder builder,
-        DTasksConfiguration configuration) : IDAsyncInfrastructure
+    private IDAsyncSurrogator CreateSurrogator(IDAsyncRootScope rootScope)
     {
-        private readonly IComponentProvider<IDAsyncStack> _stackProvider = configuration.CreateProvider(builder.StackDescriptor);
-        private readonly IComponentProvider<IDAsyncHeap> _heapProvider = configuration.CreateProvider(builder.HeapDescriptor);
-        private readonly IComponentProvider<IDAsyncSurrogator> _surrogatorProvider = configuration.CreateProvider(builder.SurrogatorDescriptor);
-        private readonly IComponentProvider<IDAsyncCancellationProvider> _cancellationProviderProvider = configuration.CreateProvider(builder.CancellationProviderDescriptor);
-        private readonly IComponentProvider<IDAsyncSuspensionHandler> _suspensionHandlerProvider = configuration.CreateProvider(builder.SuspensionHandlerProvider);
-        
-        public IDAsyncStack GetStack(IDAsyncScope scope) => _stackProvider.GetComponent(scope);
+        return _surrogatorFactories.Count switch
+        {
+            0 => DAsyncSurrogator.Default,
+            1 => _surrogatorFactories[0].CreateComponent(rootScope),
+            _ => DAsyncSurrogator.Aggregate(_surrogatorFactories.Select(factory => factory.CreateComponent(rootScope)))
+        };
+    }
 
-        public IDAsyncHeap GetHeap(IDAsyncScope scope) => _heapProvider.GetComponent(scope);
+    private IDAsyncCancellationProvider CreateCancellationProvider(IDAsyncRootScope rootScope)
+    {
+        if (_cancellationProviderFactory is null)
+            return DAsyncCancellationProvider.Default;
 
-        public IDAsyncSurrogator GetSurrogator(IDAsyncScope scope) => _surrogatorProvider.GetComponent(scope);
+        return _cancellationProviderFactory.CreateComponent(rootScope);
+    }
 
-        public IDAsyncCancellationProvider GetCancellationProvider(IDAsyncScope scope) => _cancellationProviderProvider.GetComponent(scope);
+    private IDAsyncSuspensionHandler CreateSuspensionHandler(IDAsyncRootScope rootScope)
+    {
+        if (_suspensionHandlerFactory is null)
+            return DAsyncSuspensionHandler.Default;
 
-        public IDAsyncSuspensionHandler GetSuspensionHandler(IDAsyncScope scope) => _suspensionHandlerProvider.GetComponent(scope);
+        return _suspensionHandlerFactory.CreateComponent(rootScope);
+    }
+
+    private static InvalidOperationException MissingRequiredComponent(string componentName)
+    {
+        return new InvalidOperationException($"Required component of type '{componentName}' was not configured.");
+    }
+
+    private sealed class DAsyncInfrastructure : IDAsyncInfrastructure
+    {
+        private readonly Func<IDAsyncFlowScope, IDAsyncStack> _stackFactory;
+
+        public DAsyncInfrastructure(DAsyncInfrastructureBuilder builder, IDAsyncRootScope rootScope)
+        {
+            _stackFactory = builder.CreateStackFactory(rootScope);
+            TypeResolver = rootScope.TypeResolver;
+            Heap = builder.CreateHeap(rootScope);
+            Surrogator = builder.CreateSurrogator(rootScope);
+            CancellationProvider = builder.CreateCancellationProvider(rootScope);
+            SuspensionHandler = builder.CreateSuspensionHandler(rootScope);
+        }
+
+        public IDAsyncTypeResolver TypeResolver { get; }
+
+        public IDAsyncHeap Heap { get; }
+
+        public IDAsyncSurrogator Surrogator { get; }
+
+        public IDAsyncCancellationProvider CancellationProvider { get; }
+
+        public IDAsyncSuspensionHandler SuspensionHandler { get; }
+
+        public IDAsyncStack GetStack(IDAsyncFlowScope scope) => _stackFactory(scope);
     }
 }

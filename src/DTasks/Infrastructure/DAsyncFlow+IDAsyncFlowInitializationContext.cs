@@ -2,13 +2,10 @@
 
 internal sealed partial class DAsyncFlow : IDAsyncFlowInitializationContext
 {
-    void IDAsyncFlowInitializationContext.AddProperty<TProperty>(DAsyncFlowPropertyKey<TProperty> key, TProperty value)
+    void IDAsyncFlowInitializationContext.SetFeature<TFeature>(TFeature? feature)
+        where TFeature : default
     {
-        _properties.Add(key.Key, value);
-    }
-
-    void IDAsyncFlowInitializationContext.SetFeature<TFeature>(TFeature feature)
-    {
-        _properties.Add(MakeFeaturePropertyKey<TFeature>(), feature);
+        _features ??= [];
+        _features.Add(typeof(TFeature), feature);
     }
 }

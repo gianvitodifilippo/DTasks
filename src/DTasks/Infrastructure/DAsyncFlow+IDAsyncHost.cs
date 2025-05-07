@@ -1,11 +1,7 @@
-﻿using DTasks.Configuration;
-
-namespace DTasks.Infrastructure;
+﻿namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow : IDAsyncHost
 {
-    DTasksConfiguration IDAsyncHost.Configuration => Configuration;
-
     void IDAsyncHost.OnInitialize(IDAsyncFlowInitializationContext context) { }
 
     void IDAsyncHost.OnFinalize(IDAsyncFlowFinalizationContext context) { }

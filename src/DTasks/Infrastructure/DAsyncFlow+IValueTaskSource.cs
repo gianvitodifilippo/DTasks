@@ -55,11 +55,6 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
         _cancellationToken = CancellationToken.None;
 
         _host = s_nullHost;
-        _stack = null;
-        _heap = null;
-        _surrogator = null;
-        _cancellationProvider = null;
-        _suspensionHandler = null;
 
         _parentId = default;
         _id = default;
@@ -70,15 +65,16 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
         _tasks.Clear();
         _cancellationInfos.Clear();
         _cancellations.Clear();
+        _features = null;
 
-        _usedPropertyInScopedComponent = false;
-        _properties.Clear();
-        _scopedComponents.Clear();
-
-        if (_returnToCache)
+        if (_returnToPool)
         {
-            _returnToCache = false;
-            ReturnToCache();
+            _returnToPool = false;
+            Dispose();
         }
+
+#if DEBUG
+        _stackTrace = null;
+#endif
     }
 }

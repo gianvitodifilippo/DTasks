@@ -1,13 +1,10 @@
 ﻿using System.ComponentModel;
-using DTasks.Configuration;
 
 namespace DTasks.Infrastructure;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IDAsyncHost
 {
-    DTasksConfiguration Configuration { get; }
-
     void OnInitialize(IDAsyncFlowInitializationContext context);
 
     void OnFinalize(IDAsyncFlowFinalizationContext context);

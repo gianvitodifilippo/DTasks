@@ -22,7 +22,7 @@ internal sealed class DependencyInjectionDTasksConfigurationBuilder(IServiceColl
         ImmutableArray<ServiceDescriptor> dAsyncDescriptors = [.. services.Where(_serviceConfigurationBuilder.IsDAsyncService)];
         FrozenSet<Type> dAsyncTypes = dAsyncDescriptors.Select(descriptor => descriptor.ServiceType).ToFrozenSet();
 
-        DTasksConfiguration configuration = DTasksConfiguration.Create(builder =>
+        DTasksConfiguration configuration = DTasksConfiguration.Build(builder =>
         {
             foreach (var configure in _configureMarshalingActions)
             {

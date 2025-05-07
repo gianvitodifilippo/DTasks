@@ -1,26 +1,21 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using DTasks.Infrastructure.Features;
 
 namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow : IDAsyncFeatureCollection
 {
-    bool IDAsyncFeatureCollection.TryGetFeature<TFeature>([MaybeNullWhen(false)] out TFeature feature)
+    TFeature? IDAsyncFeatureCollection.GetFeature<TFeature>()
+        where TFeature : default
     {
         if (typeof(TFeature) == typeof(IDAsyncSuspensionFeature))
-        {
-            feature = (TFeature)(object)this;
-            return true;
-        }
-        
-        return TryGetProperty(MakeFeaturePropertyKey<TFeature>(), out feature);
-    }
+            return (TFeature?)(object)this;
 
-    private DAsyncFlowPropertyKey<TFeature> MakeFeaturePropertyKey<TFeature>()
-    {
-        return new DAsyncFlowPropertyKey<TFeature>(typeof(FeatureType<TFeature>));
-    }
+        if (_features is null)
+            return default;
 
-    private static class FeatureType<TFeature>;
+        if (_features.TryGetValue(typeof(TFeature), out object? untypedFeature))
+            return untypedFeature is TFeature typedFeature ? typedFeature : default;
+
+        return default;
+    }
 }

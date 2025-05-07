@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using DTasks.Configuration;
 using DTasks.Utils;
@@ -9,7 +8,8 @@ namespace DTasks.Infrastructure;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public abstract class DAsyncHost : IDAsyncHost, IDisposable
 {
-    private DAsyncRunner? _runner = DAsyncRunner.Create();
+    private bool _isDisposed;
+    private DAsyncRunner? _runner;
 
     protected abstract DTasksConfiguration Configuration { get; }
 
@@ -57,8 +57,6 @@ public abstract class DAsyncHost : IDAsyncHost, IDisposable
 
     protected virtual Task OnCancelAsync(IDAsyncFlowCompletionContext context, OperationCanceledException exception, CancellationToken cancellationToken) => Task.CompletedTask;
 
-    DTasksConfiguration IDAsyncHost.Configuration => Configuration;
-
     void IDAsyncHost.OnInitialize(IDAsyncFlowInitializationContext context) => OnInitialize(context);
 
     void IDAsyncHost.OnFinalize(IDAsyncFlowFinalizationContext context) => OnFinalize(context);
@@ -80,6 +78,10 @@ public abstract class DAsyncHost : IDAsyncHost, IDisposable
         if (!disposing)
             return;
 
+        if (_isDisposed)
+            return;
+
+        _isDisposed = true;
         _runner?.Dispose();
         _runner = null;
     }
@@ -93,15 +95,17 @@ public abstract class DAsyncHost : IDAsyncHost, IDisposable
     [MemberNotNull(nameof(_runner))]
     private void CheckDisposed()
     {
-        if (_runner is null)
+        if (_isDisposed)
             throw new ObjectDisposedException(GetType().Name);
+
+        _runner ??= Configuration.CreateRunner();
     }
 
     public static DAsyncHost CreateDefault(Action<IDTasksConfigurationBuilder> configure)
     {
         ThrowHelper.ThrowIfNull(configure);
 
-        return new DefaultDAsyncHost(DTasksConfiguration.Create(configure));
+        return new DefaultDAsyncHost(DTasksConfiguration.Build(configure));
     }
 
     public static DAsyncHost CreateDefault(DTasksConfiguration configuration)

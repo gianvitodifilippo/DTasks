@@ -1,13 +1,16 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using DTasks.Configuration;
+using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 
 namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow
 {
-    // Since _host is initialized in the entrypoints and defaulted only when calling Reset,
-    // the following saves the trouble of asserting it's not null whenever used.
+    // The following saves the trouble of asserting _host and _infrastructure are not null whenever used.
+    private static readonly IDAsyncInfrastructure s_nullInfrastructure = new NullDAsyncInfrastructure();
     private static readonly IDAsyncHost s_nullHost = new NullDAsyncHost();
 
     [DoesNotReturn]
@@ -20,10 +23,7 @@ internal sealed partial class DAsyncFlow
     [ExcludeFromCodeCoverage]
     private sealed class NullDAsyncHost : IDAsyncHost
     {
-        [DoesNotReturn]
         private static TResult Fail<TResult>() => DAsyncFlow.Fail<TResult>(nameof(_host));
-
-        DTasksConfiguration IDAsyncHost.Configuration => Fail<DTasksConfiguration>();
 
         void IDAsyncHost.OnInitialize(IDAsyncFlowInitializationContext context) => Fail<VoidDTaskResult>();
 
@@ -40,5 +40,23 @@ internal sealed partial class DAsyncFlow
         Task IDAsyncHost.OnFailAsync(IDAsyncFlowCompletionContext context, Exception exception, CancellationToken cancellationToken) => Fail<Task>();
 
         Task IDAsyncHost.OnCancelAsync(IDAsyncFlowCompletionContext context, OperationCanceledException exception, CancellationToken cancellationToken) => Fail<Task>();
+    }
+
+    [ExcludeFromCodeCoverage]
+    private sealed class NullDAsyncInfrastructure : IDAsyncInfrastructure
+    {
+        private static TResult Fail<TResult>() => DAsyncFlow.Fail<TResult>(nameof(_infrastructure));
+
+        IDAsyncTypeResolver IDAsyncInfrastructure.TypeResolver => Fail<IDAsyncTypeResolver>();
+
+        IDAsyncHeap IDAsyncInfrastructure.Heap => Fail<IDAsyncHeap>();
+
+        IDAsyncSurrogator IDAsyncInfrastructure.Surrogator => Fail<IDAsyncSurrogator>();
+
+        IDAsyncCancellationProvider IDAsyncInfrastructure.CancellationProvider => Fail<IDAsyncCancellationProvider>();
+
+        IDAsyncSuspensionHandler IDAsyncInfrastructure.SuspensionHandler => Fail<IDAsyncSuspensionHandler>();
+
+        IDAsyncStack IDAsyncInfrastructure.GetStack(IDAsyncFlowScope scope) => Fail<IDAsyncStack>();
     }
 }

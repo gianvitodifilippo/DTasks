@@ -1,10 +1,8 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using DTasks.Configuration.DependencyInjection;
 using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
-using DTasks.Infrastructure.Marshaling.TypeSyntax;
 using DTasks.Inspection;
 using DTasks.Utils;
 
@@ -12,7 +10,7 @@ namespace DTasks.Configuration;
 
 public interface IMarshalingConfigurationBuilder
 {
-    IMarshalingConfigurationBuilder AddSurrogator(IComponentDescriptor<IDAsyncSurrogator> descriptor);
+    IMarshalingConfigurationBuilder AddSurrogator(RootComponentFactory<IDAsyncSurrogator> factory);
 
     IMarshalingConfigurationBuilder RegisterSurrogatableType(Type type);
 

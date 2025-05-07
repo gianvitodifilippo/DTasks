@@ -1,7 +1,7 @@
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using DTasks.Configuration.DependencyInjection;
+using DTasks.Infrastructure;
 using DTasks.Infrastructure.Execution;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
@@ -19,16 +19,14 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
     private readonly Dictionary<Type, TypeId> _typesToIds = [];
     private readonly Dictionary<TypeId, Type> _idsToTypes = [];
 
-    public IDAsyncInfrastructure BuildInfrastructure(DTasksConfiguration configuration)
+    public DTasksConfiguration Build()
     {
-        return _infrastructureBuilder.BuildInfrastructure(configuration);
+        DAsyncFlowPool flowPool = new();
+        DAsyncRootScope rootScope = new(this);
+        IDAsyncInfrastructure infrastructure = _infrastructureBuilder.Build(rootScope);
+
+        return new DTasksConfiguration(flowPool, infrastructure);
     }
-
-    public IDAsyncTypeResolver TypeResolver => new DAsyncTypeResolver(
-        _typesToIds.ToFrozenDictionary(),
-        _idsToTypes.ToFrozenDictionary());
-
-    public ImmutableArray<Type> SurrogatableTypes => [.. _surrogatableTypes];
 
     IDTasksConfigurationBuilder IDTasksConfigurationBuilder.ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure)
     {
@@ -54,11 +52,11 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
         return this;
     }
 
-    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.AddSurrogator(IComponentDescriptor<IDAsyncSurrogator> descriptor)
+    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.AddSurrogator(RootComponentFactory<IDAsyncSurrogator> factory)
     {
-        ThrowHelper.ThrowIfNull(descriptor);
+        ThrowHelper.ThrowIfNull(factory);
 
-        _infrastructureBuilder.AddSurrogator(descriptor);
+        _infrastructureBuilder.AddSurrogator(factory);
         return this;
     }
 
@@ -92,35 +90,35 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
         return RegisterTypeId(typeId, type.UnderlyingSystemType);
     }
 
-    IExecutionConfigurationBuilder IExecutionConfigurationBuilder.UseCancellationProvider(IComponentDescriptor<IDAsyncCancellationProvider> descriptor)
+    IExecutionConfigurationBuilder IExecutionConfigurationBuilder.UseCancellationProvider(RootComponentFactory<IDAsyncCancellationProvider> factory)
     {
-        ThrowHelper.ThrowIfNull(descriptor);
+        ThrowHelper.ThrowIfNull(factory);
 
-        _infrastructureBuilder.UseCancellationProvider(descriptor);
+        _infrastructureBuilder.UseCancellationProvider(factory);
         return this;
     }
 
-    IExecutionConfigurationBuilder IExecutionConfigurationBuilder.UseSuspensionHandler(IComponentDescriptor<IDAsyncSuspensionHandler> descriptor)
+    IExecutionConfigurationBuilder IExecutionConfigurationBuilder.UseSuspensionHandler(RootComponentFactory<IDAsyncSuspensionHandler> factory)
     {
-        ThrowHelper.ThrowIfNull(descriptor);
+        ThrowHelper.ThrowIfNull(factory);
 
-        _infrastructureBuilder.UseSuspensionHandler(descriptor);
+        _infrastructureBuilder.UseSuspensionHandler(factory);
         return this;
     }
 
-    IStateConfigurationBuilder IStateConfigurationBuilder.UseStack(IComponentDescriptor<IDAsyncStack> descriptor)
+    IStateConfigurationBuilder IStateConfigurationBuilder.UseStack(FlowComponentFactory<IDAsyncStack> factory)
     {
-        ThrowHelper.ThrowIfNull(descriptor);
+        ThrowHelper.ThrowIfNull(factory);
 
-        _infrastructureBuilder.UseStack(descriptor);
+        _infrastructureBuilder.UseStack(factory);
         return this;
     }
 
-    IStateConfigurationBuilder IStateConfigurationBuilder.UseHeap(IComponentDescriptor<IDAsyncHeap> descriptor)
+    IStateConfigurationBuilder IStateConfigurationBuilder.UseHeap(RootComponentFactory<IDAsyncHeap> factory)
     {
-        ThrowHelper.ThrowIfNull(descriptor);
+        ThrowHelper.ThrowIfNull(factory);
 
-        _infrastructureBuilder.UseHeap(descriptor);
+        _infrastructureBuilder.UseHeap(factory);
         return this;
     }
 
@@ -132,5 +130,14 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
         Debug.Assert(_typesToIds.Count == _idsToTypes.Count);
 
         return this;
+    }
+
+    private sealed class DAsyncRootScope(DTasksConfigurationBuilder builder) : IDAsyncRootScope
+    {
+        public IDAsyncTypeResolver TypeResolver { get; } = new DAsyncTypeResolver(
+            builder._typesToIds.ToFrozenDictionary(),
+            builder._idsToTypes.ToFrozenDictionary());
+
+        public ImmutableArray<Type> SurrogatableTypes { get; } = [.. builder._surrogatableTypes];
     }
 }
