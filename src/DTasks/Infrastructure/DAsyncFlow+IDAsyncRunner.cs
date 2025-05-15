@@ -163,7 +163,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         Debug.Assert(_branchCount == 0);
 
         _aggregateType = AggregateType.WhenAll;
-        using (DAsyncFlow childFlow = _pool.UnsafeGet(_infrastructure))
+        using (DAsyncFlow childFlow = _pool.UnsafeGet(_host))
         {
             foreach (IDAsyncRunnable branch in branches)
             {
@@ -175,7 +175,10 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
                 childFlow._parent = this;
                 childFlow._parentId = _id;
                 childFlow._id = DAsyncId.New();
-                childFlow.BeginFlow(this);
+                CancellationProvider.RegisterHandler(childFlow);
+                childFlow._flowProperties = _flowProperties;
+                // TODO: We should give the child flow the host provider and flow provider
+                childFlow._flowComponentProvider.BeginScope();
 
                 try
                 {
@@ -242,7 +245,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
         _aggregateType = AggregateType.WhenAllResult;
         _whenAllBranchResults = new Dictionary<int, TResult>();
-        using (DAsyncFlow childFlow = _pool.UnsafeGet(_infrastructure))
+        using (DAsyncFlow childFlow = _pool.UnsafeGet(_host))
         {
             foreach (IDAsyncRunnable branch in branches)
             {
@@ -255,7 +258,10 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
                 childFlow._parentId = _id;
                 childFlow._id = DAsyncId.New();
                 childFlow._branchIndex = _branchCount;
-                childFlow.BeginFlow(this);
+                CancellationProvider.RegisterHandler(childFlow);
+                childFlow._flowProperties = _flowProperties;
+                // TODO: We should give the child flow the host provider and flow provider
+                childFlow._flowComponentProvider.BeginScope();
 
                 try
                 {
@@ -334,7 +340,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
         _aggregateType = AggregateType.WhenAny;
 
-        using (DAsyncFlow childFlow = _pool.UnsafeGet(_infrastructure))
+        using (DAsyncFlow childFlow = _pool.UnsafeGet(_host))
         {
             foreach (IDAsyncRunnable branch in branches)
             {
@@ -346,8 +352,10 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
                 childFlow._parent = this;
                 childFlow._parentId = _id;
                 childFlow._id = DAsyncId.New();
-                childFlow.BeginFlow(this);
-                childFlow._features = _features;
+                CancellationProvider.RegisterHandler(childFlow);
+                childFlow._flowProperties = _flowProperties;
+                // TODO: We should give the child flow the host provider and flow provider
+                childFlow._flowComponentProvider.BeginScope();
 
                 try
                 {
@@ -361,8 +369,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
                 _branchCount++;
             }
-
-            childFlow._features = null;
         }
 
         int branchCount = _branchCount;

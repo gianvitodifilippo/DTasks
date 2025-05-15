@@ -1,55 +1,54 @@
 using DTasks.Configuration;
+using DTasks.Configuration.DependencyInjection;
+using DTasks.Infrastructure;
 using DTasks.Infrastructure.State;
 
 namespace DTasks.Serialization.Configuration;
 
 internal sealed class SerializationConfigurationBuilder : ISerializationConfigurationBuilder
 {
-    private FlowComponentFactory<IStateMachineSerializer>? _stateMachineSerializerFactory;
-    private RootComponentFactory<IDAsyncSerializer>? _serializerFactory;
-    private RootComponentFactory<IDAsyncStorage> _storageFactory = DAsyncStorage.Default;
+    private IComponentDescriptor<IStateMachineSerializer>? _stateMachineSerializerDescriptor;
+    private IComponentDescriptor<IDAsyncSerializer>? _serializerDescriptor;
+    private IComponentDescriptor<IDAsyncStorage> _storageDescriptor = ComponentDescriptor.Singleton(DAsyncStorage.Default);
 
     public TBuilder Configure<TBuilder>(TBuilder builder)
         where TBuilder : IDTasksConfigurationBuilder
     {
-        if (_stateMachineSerializerFactory is null || _serializerFactory is null)
-            throw new InvalidOperationException("Serialization was not properly configured."); // TODO: Dedicated exception type
+        if (_stateMachineSerializerDescriptor is null || _serializerDescriptor is null)
+            throw new InvalidOperationException("Serialization was not properly configured."); // TODO: Dedicated exception type, make message consistent
 
-        FlowComponentFactory<IDAsyncStack> stackFactory = delegate (IDAsyncRootScope rootScope, IDAsyncFlowScope flowScope)
-        {
-            IStateMachineSerializer stateMachineSerializer = _stateMachineSerializerFactory.CreateComponent(rootScope, flowScope);
-            IDAsyncStorage 
+        IComponentDescriptor<IDAsyncStack> stackDescriptor =
+            from stateMachineSerializer in _stateMachineSerializerDescriptor
+            from storage in _storageDescriptor
+            select new BinaryDAsyncStack(stateMachineSerializer, storage);
 
-            new BinaryDAsyncStack(stateMachineSerializer, storage);
-        };
-
-        IComponentFactory<IDAsyncHeap> heapFactory = ComponentFactory.Combine(
-            _serializerFactory,
-            _storageFactory,
-            (serializer, storage) => new BinaryDAsyncHeap(serializer, storage));
+        IComponentDescriptor<IDAsyncHeap> heapDescriptor =
+            from serializer in _serializerDescriptor
+            from storage in _storageDescriptor
+            select new BinaryDAsyncHeap(serializer, storage);
 
         builder.ConfigureState(stateManager => stateManager
-            .UseStack(stackFactory)
-            .UseHeap(heapFactory));
+            .UseStack(stackDescriptor)
+            .UseHeap(heapDescriptor));
 
         return builder;
     }
 
-    ISerializationConfigurationBuilder ISerializationConfigurationBuilder.UseStateMachineSerializer(IComponentFactory<IStateMachineSerializer> descriptor)
+    ISerializationConfigurationBuilder ISerializationConfigurationBuilder.UseStateMachineSerializer(IComponentDescriptor<IStateMachineSerializer> descriptor)
     {
-        _stateMachineSerializerFactory = descriptor;
+        _stateMachineSerializerDescriptor = descriptor;
         return this;
     }
 
-    ISerializationConfigurationBuilder ISerializationConfigurationBuilder.UseSerializer(IComponentFactory<IDAsyncSerializer> descriptor)
+    ISerializationConfigurationBuilder ISerializationConfigurationBuilder.UseSerializer(IComponentDescriptor<IDAsyncSerializer> descriptor)
     {
-        _serializerFactory = descriptor;
+        _serializerDescriptor = descriptor;
         return this;
     }
 
-    ISerializationConfigurationBuilder ISerializationConfigurationBuilder.UseStorage(IComponentFactory<IDAsyncStorage> descriptor)
+    ISerializationConfigurationBuilder ISerializationConfigurationBuilder.UseStorage(IComponentDescriptor<IDAsyncStorage> descriptor)
     {
-        _storageFactory = descriptor;
+        _storageDescriptor = descriptor;
         return this;
     }
 }

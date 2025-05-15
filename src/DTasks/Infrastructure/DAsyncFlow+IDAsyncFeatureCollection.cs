@@ -10,12 +10,17 @@ internal sealed partial class DAsyncFlow : IDAsyncFeatureCollection
         if (typeof(TFeature) == typeof(IDAsyncSuspensionFeature))
             return (TFeature?)(object)this;
 
-        if (_features is null)
+        if (_flowProperties is null)
             return default;
 
-        if (_features.TryGetValue(typeof(TFeature), out object? untypedFeature))
-            return untypedFeature is TFeature typedFeature ? typedFeature : default;
+        if (_flowProperties.TryGetProperty(MakeFeatureKey<TFeature?>(), out TFeature? feature))
+            return feature;
 
         return default;
+    }
+
+    private static DAsyncPropertyKey<TFeature> MakeFeatureKey<TFeature>()
+    {
+        return new DAsyncPropertyKey<TFeature>(typeof(TFeature));
     }
 }

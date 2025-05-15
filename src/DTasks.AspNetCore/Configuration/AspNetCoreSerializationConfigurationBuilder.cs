@@ -16,10 +16,10 @@ internal sealed class AspNetCoreSerializationConfigurationBuilder(ISerialization
         builder
             .UseJsonFormat(json =>
             {
-                json.ConfigureSerializerOptions((options, configuration) =>
+                json.ConfigureSerializerOptions((rootScope, options) =>
                 {
-                    options.Converters.Add(new TypedInstanceJsonConverter<object>(configuration.TypeResolver));
-                    options.Converters.Add(new TypedInstanceJsonConverter<IDAsyncContinuationSurrogate>(configuration.TypeResolver));
+                    options.Converters.Add(new TypedInstanceJsonConverter<object>(rootScope.TypeResolver));
+                    options.Converters.Add(new TypedInstanceJsonConverter<IDAsyncContinuationSurrogate>(rootScope.TypeResolver));
                 });
 
                 foreach (var action in _jsonFormatConfigurationActions)

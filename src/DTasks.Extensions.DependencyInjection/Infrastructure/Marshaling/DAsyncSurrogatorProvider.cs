@@ -7,7 +7,7 @@ internal sealed class DAsyncSurrogatorProvider(IServiceProvider rootProvider)
 {
     public IDAsyncSurrogator GetSurrogator(IServiceProvider provider)
     {
-        return ReferenceEquals(provider, rootProvider)
+        return provider == rootProvider
             ? provider.GetRequiredService<RootDAsyncSurrogator>()
             : provider.GetRequiredService<ChildDAsyncSurrogator>();
     }

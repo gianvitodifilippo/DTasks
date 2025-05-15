@@ -1,46 +1,19 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using DTasks.Configuration;
-using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public abstract class DAsyncHost : IDAsyncHost, IDisposable
 {
-    private bool _isDisposed;
-    private DAsyncRunner? _runner;
-
-    protected abstract DTasksConfiguration Configuration { get; }
-
-    public ValueTask StartAsync(IDAsyncRunnable runnable, CancellationToken cancellationToken = default)
+    protected virtual bool TryGetProperty<TProperty>(DAsyncPropertyKey<TProperty> key, [MaybeNullWhen(false)] out TProperty value)
     {
-        CheckDisposed();
-
-        return _runner.StartAsync(this, runnable, cancellationToken);
+        value = default;
+        return false;
     }
-
-    public ValueTask ResumeAsync(DAsyncId id, CancellationToken cancellationToken = default)
-    {
-        CheckDisposed();
-
-        return _runner.ResumeAsync(this, id, cancellationToken);
-    }
-
-    public ValueTask ResumeAsync<TResult>(DAsyncId id, TResult result, CancellationToken cancellationToken = default)
-    {
-        CheckDisposed();
-
-        return _runner.ResumeAsync(this, id, result, cancellationToken);
-    }
-
-    public ValueTask ResumeAsync(DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
-    {
-        CheckDisposed();
-
-        return _runner.ResumeAsync(this, id, exception, cancellationToken);
-    }
-
+    
+    bool IDAsyncHost.TryGetProperty<TProperty>(DAsyncPropertyKey<TProperty> key, [MaybeNullWhen(false)] out TProperty value) => TryGetProperty(key, out value);
+    
     protected virtual void OnInitialize(IDAsyncFlowInitializationContext context) { }
 
     protected virtual void OnFinalize(IDAsyncFlowFinalizationContext context) { }
@@ -75,48 +48,11 @@ public abstract class DAsyncHost : IDAsyncHost, IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!disposing)
-            return;
-
-        if (_isDisposed)
-            return;
-
-        _isDisposed = true;
-        _runner?.Dispose();
-        _runner = null;
     }
 
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
-    }
-
-    [MemberNotNull(nameof(_runner))]
-    private void CheckDisposed()
-    {
-        if (_isDisposed)
-            throw new ObjectDisposedException(GetType().Name);
-
-        _runner ??= Configuration.CreateRunner();
-    }
-
-    public static DAsyncHost CreateDefault(Action<IDTasksConfigurationBuilder> configure)
-    {
-        ThrowHelper.ThrowIfNull(configure);
-
-        return new DefaultDAsyncHost(DTasksConfiguration.Build(configure));
-    }
-
-    public static DAsyncHost CreateDefault(DTasksConfiguration configuration)
-    {
-        ThrowHelper.ThrowIfNull(configuration);
-
-        return new DefaultDAsyncHost(configuration);
-    }
-
-    private sealed class DefaultDAsyncHost(DTasksConfiguration configuration) : DAsyncHost
-    {
-        protected override DTasksConfiguration Configuration => configuration;
     }
 }

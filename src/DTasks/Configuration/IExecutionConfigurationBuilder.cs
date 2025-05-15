@@ -1,10 +1,11 @@
+using DTasks.Configuration.DependencyInjection;
 using DTasks.Infrastructure.Execution;
 
 namespace DTasks.Configuration;
 
 public interface IExecutionConfigurationBuilder
 {
-    IExecutionConfigurationBuilder UseCancellationProvider(RootComponentFactory<IDAsyncCancellationProvider> factory);
+    IExecutionConfigurationBuilder UseCancellationProvider(IComponentDescriptor<IDAsyncCancellationProvider> descriptor);
 
-    IExecutionConfigurationBuilder UseSuspensionHandler(RootComponentFactory<IDAsyncSuspensionHandler> factory);
+    IExecutionConfigurationBuilder UseSuspensionHandler(IComponentDescriptor<IDAsyncSuspensionHandler> descriptor);
 }

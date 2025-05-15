@@ -15,9 +15,10 @@ internal sealed class HttpDAsyncHost(HttpContext httpContext) : AspNetCoreDAsync
 
     HttpContext IHttpContextFeature.HttpContext => httpContext;
 
-    protected override void OnInitializeCore(IDAsyncFlowInitializationContext context)
+    protected override void OnInitialize(IDAsyncFlowInitializationContext context)
     {
         // TODO: We should probably surrogate the HttpContext, but not with the default mechanism
+        base.OnInitialize(context);
         context.SetFeature<IHttpContextFeature>(this);
     }
 

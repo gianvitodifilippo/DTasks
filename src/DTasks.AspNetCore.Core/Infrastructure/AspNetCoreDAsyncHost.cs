@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using DTasks.AspNetCore.Http;
 using DTasks.AspNetCore.Infrastructure.Http;
-using DTasks.AspNetCore.State;
 using DTasks.Extensions.DependencyInjection.Infrastructure;
 using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
@@ -15,7 +14,7 @@ namespace DTasks.AspNetCore.Infrastructure;
 public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost, IAsyncHttpResultHandler
 {
     private delegate Task ContinuationAction<in T>(IDAsyncContinuation continuation, DAsyncId flowId, T value, CancellationToken cancellationToken);
-    private delegate Task EndpointStatusMonitorAction<in T>(EndpointStatusMonitor monitor, DAsyncId flowId, T value, CancellationToken cancellationToken);
+    private delegate Task EndpointStatusMonitorAction<in T>(IDAsyncHeap heap, DAsyncId flowId, T value, CancellationToken cancellationToken);
 
     private StartFlowState _startFlowState;
 
@@ -33,10 +32,8 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost, IAsyncHttpResul
         DAsyncId flowId = _startFlowState.FlowId;
         Debug.Assert(flowId != default);
 
-        EndpointStatusMonitor endpointStatusMonitor = Services.GetRequiredService<EndpointStatusMonitor>();
-        IStateStore stateStore = Services.GetRequiredService<IStateStore>();
-        
-        await endpointStatusMonitor.SetRunningAsync(flowId, cancellationToken);
+        IDAsyncHeap heap = context.HostInfrastructure.GetHeap();
+        await heap.SetRunningAsync(flowId, cancellationToken);
 
         TypedInstance<object> continuationSurrogate = _startFlowState.ContinuationSurrogate;
         TypedInstance<object>[]? continuationSurrogateArray = _startFlowState.ContinuationSurrogateArray;
@@ -44,13 +41,13 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost, IAsyncHttpResul
         if (continuationSurrogate != default)
         {
             string callbackKey = GetContinuationKey(flowId);
-            await stateStore.SaveAsync(callbackKey, continuationSurrogate, cancellationToken);
+            await heap.SaveAsync(callbackKey, continuationSurrogate, cancellationToken);
         }
         else if (continuationSurrogateArray is not null)
         {
             string continuationKey = GetContinuationKey(flowId);
             TypedInstance<object> aggregateContinuationSurrogate = AggregateDAsyncContinuation.CreateSurrogate(continuationSurrogateArray);
-            await stateStore.SaveAsync(continuationKey, aggregateContinuationSurrogate, cancellationToken);
+            await heap.SaveAsync(continuationKey, aggregateContinuationSurrogate, cancellationToken);
         }
 
         await SuspendOnStartAsync(flowId, cancellationToken);
@@ -197,12 +194,11 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost, IAsyncHttpResul
         CancellationToken cancellationToken)
     {
         DAsyncId flowId = context.FlowId;
-        var endpointStatusMonitor = Services.GetRequiredService<EndpointStatusMonitor>();
-        var stateStore = Services.GetRequiredService<IStateStore>();
-        await monitorAction(endpointStatusMonitor, flowId, value, cancellationToken);
+        IDAsyncHeap heap = context.HostInfrastructure.GetHeap();
+        await monitorAction(heap, flowId, value, cancellationToken);
 
         string continuationKey = GetContinuationKey(flowId);
-        Option<TypedInstance<IDAsyncContinuationSurrogate>> loadResult = await stateStore.LoadAsync<string, TypedInstance<IDAsyncContinuationSurrogate>>(continuationKey, cancellationToken);
+        Option<TypedInstance<IDAsyncContinuationSurrogate>> loadResult = await heap.LoadAsync<string, TypedInstance<IDAsyncContinuationSurrogate>>(continuationKey, cancellationToken);
 
         // TODO: Check before and decide what to do should it be empty
         IDAsyncContinuation continuation = loadResult.Value.Instance.Restore(Services);

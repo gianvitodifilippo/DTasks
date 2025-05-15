@@ -1,7 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using DTasks.AspNetCore.Http;
 using DTasks.AspNetCore.Infrastructure;
+using DTasks.Configuration;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.AspNetCore.Execution;
 
@@ -15,9 +17,10 @@ public sealed class ResumptionEndpoint([StringSyntax("Route")] string pattern) :
             await Results.NotFound().ExecuteAsync(httpContext);
             return;
         }
-        
+
+        var configuration = httpContext.RequestServices.GetRequiredService<DTasksConfiguration>();
         AspNetCoreDAsyncHost host = AspNetCoreDAsyncHost.Create(httpContext.RequestServices);
-        await host.ResumeAsync(id, httpContext.RequestAborted);
+        await configuration.ResumeAsync(host, id, httpContext.RequestAborted);
     }
     
     public bool Equals([NotNullWhen(true)] ResumptionEndpoint? other) => Pattern == other?.Pattern;
@@ -56,8 +59,9 @@ public sealed class ResumptionEndpoint<TResult>([StringSyntax("Route")] string p
             return;
         }
         
+        var configuration = httpContext.RequestServices.GetRequiredService<DTasksConfiguration>();
         AspNetCoreDAsyncHost host = AspNetCoreDAsyncHost.Create(httpContext.RequestServices);
-        await host.ResumeAsync(id, result, httpContext.RequestAborted);
+        await configuration.ResumeAsync(host, id, result, httpContext.RequestAborted);
     }
 
     public bool Equals([NotNullWhen(true)] ResumptionEndpoint<TResult>? other)

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Frozen;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Inspection;
 using DTasks.Serialization.Json.Converters;
@@ -34,7 +35,7 @@ internal sealed class JsonDAsyncSerializerFactory
         return new JsonDAsyncSerializer(_typeResolver, _options);
     }
 
-    public IStateMachineSerializer CreateStateMachineSerializer(IDAsyncSurrogator surrogator)
+    public IStateMachineSerializer CreateStateMachineSerializer(IDAsyncFlowScope flowScope)
     {
         JsonSerializerOptions surrogatorOptions = new(_options);
         JsonSerializerOptions defaultOptions = new(_options);
@@ -43,7 +44,7 @@ internal sealed class JsonDAsyncSerializerFactory
         surrogatorOptions.ReferenceHandler = new StateMachineReferenceHandler(referenceResolver);
         defaultOptions.ReferenceHandler = new StateMachineReferenceHandler(referenceResolver);
 
-        object[] converterConstructorArguments = [surrogator, defaultOptions];
+        object[] converterConstructorArguments = [flowScope.Surrogator, defaultOptions];
 
         foreach (Type surrogatableType in _surrogatableNonGenericTypes)
         {

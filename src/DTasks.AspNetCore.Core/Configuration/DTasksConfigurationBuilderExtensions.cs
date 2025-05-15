@@ -10,7 +10,7 @@ public static class DTasksConfigurationBuilderExtensions
     public static TBuilder AddAspNetCore<TBuilder>(this TBuilder builder)
         where TBuilder : IDependencyInjectionDTasksConfigurationBuilder
     {
-        DTasksAspNetCoreCoreConfigurationBuilder aspNetCoreBuilder = new();
+        DTasksAspNetCoreCoreConfigurationBuilder aspNetCoreBuilder = new(builder);
         
         return aspNetCoreBuilder.Configure(builder);
     }
@@ -18,7 +18,7 @@ public static class DTasksConfigurationBuilderExtensions
     public static TBuilder AddAspNetCore<TBuilder>(this TBuilder builder, Action<IDTasksAspNetCoreCoreConfigurationBuilder> configure)
         where TBuilder : IDependencyInjectionDTasksConfigurationBuilder
     {
-        DTasksAspNetCoreCoreConfigurationBuilder aspNetCoreBuilder = new();
+        DTasksAspNetCoreCoreConfigurationBuilder aspNetCoreBuilder = new(builder);
         configure(aspNetCoreBuilder);
         
         return aspNetCoreBuilder.Configure(builder);

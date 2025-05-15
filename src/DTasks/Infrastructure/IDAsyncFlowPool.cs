@@ -5,9 +5,9 @@ namespace DTasks.Infrastructure;
 internal interface IDAsyncFlowPool
 {
 #if DEBUG
-    DAsyncFlow Get(IDAsyncInfrastructure infrastructure, string? stackTrace);
+    DAsyncFlow Get(IDAsyncHost host, string? stackTrace);
 #else
-    DAsyncFlow Get(IDAsyncInfrastructure infrastructure, bool returnToPool);
+    DAsyncFlow Get(IDAsyncHost host, bool returnToPool);
 #endif
 
     void Return(DAsyncFlow flow);
@@ -15,12 +15,12 @@ internal interface IDAsyncFlowPool
 
 internal static class DAsyncFlowPoolExtensions
 {
-    public static DAsyncFlow UnsafeGet(this IDAsyncFlowPool pool, IDAsyncInfrastructure infrastructure)
+    public static DAsyncFlow UnsafeGet(this IDAsyncFlowPool pool, IDAsyncHost host)
     {
 #if DEBUG
-        return pool.Get(infrastructure, stackTrace: string.Empty);
+        return pool.Get(host, stackTrace: string.Empty);
 #else
-        return pool.Get(infrastructure, returnToPool: false);
+        return pool.Get(host, returnToPool: false);
 #endif
     }
 }

@@ -11,9 +11,15 @@ internal sealed partial class DAsyncFlow
     }
 #endif
 
-    public override void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        GC.SuppressFinalize(this);
         _pool.Return(this);
+        _state = FlowState.Idling;
+        _host = s_nullHost;
+        _returnToPool = false;
+        
+#if DEBUG
+        _stackTrace = null;
+#endif
     }
 }

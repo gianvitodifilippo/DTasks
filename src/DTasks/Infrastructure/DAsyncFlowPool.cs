@@ -1,22 +1,23 @@
-﻿using DTasks.Configuration;
-using Microsoft.Extensions.ObjectPool;
+﻿using Microsoft.Extensions.ObjectPool;
 
 namespace DTasks.Infrastructure;
 
 internal sealed class DAsyncFlowPool : IDAsyncFlowPool
 {
+    private readonly IDAsyncInfrastructure _infrastructure;
     private readonly DefaultObjectPool<DAsyncFlow> _pool;
 
-    public DAsyncFlowPool()
+    public DAsyncFlowPool(IDAsyncInfrastructure infrastructure)
     {
+        _infrastructure = infrastructure;
         _pool = new DefaultObjectPool<DAsyncFlow>(new Policy(this));
     }
 
 #if DEBUG
-    public DAsyncFlow Get(IDAsyncInfrastructure infrastructure, string? stackTrace)
+    public DAsyncFlow Get(IDAsyncHost host, string? stackTrace)
     {
         DAsyncFlow flow = _pool.Get();
-        flow.Initialize(infrastructure, stackTrace);
+        flow.Initialize(host, stackTrace);
 
         return flow;
     }
@@ -34,7 +35,7 @@ internal sealed class DAsyncFlowPool : IDAsyncFlowPool
 
     private sealed class Policy(DAsyncFlowPool pool) : IPooledObjectPolicy<DAsyncFlow>
     {
-        public DAsyncFlow Create() => DAsyncFlow.Create(pool);
+        public DAsyncFlow Create() => DAsyncFlow.Create(pool, pool._infrastructure);
 
         public bool Return(DAsyncFlow obj) => true;
     }

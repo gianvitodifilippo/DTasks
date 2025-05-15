@@ -2,6 +2,10 @@ using DTasks;
 using DTasks.AspNetCore.Execution;
 using DTasks.AspNetCore.Http;
 using DTasks.AspNetCore.Infrastructure.Http;
+using DTasks.Configuration;
+using DTasks.Extensions.DependencyInjection.Infrastructure;
+using DTasks.Infrastructure;
+using DTasks.Infrastructure.State;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,13 +24,19 @@ public static class DTasksAspNetCoreEndpointRouteBuilderExtensions
         suspensionRegister.MapResumptionEndpoints(endpoints);
     }
     
-    private static Task GetStatusAsync(HttpContext httpContext)
+    private static async Task GetStatusAsync(HttpContext httpContext)
     {
         string operationId = (string)httpContext.Request.RouteValues[DTasksHttpConstants.OperationIdParameterName]!;
         if (!DAsyncId.TryParse(operationId, out DAsyncId flowId))
-            return Results.NotFound().ExecuteAsync(httpContext);
+        {
+            await Results.NotFound().ExecuteAsync(httpContext);
+            return;
+        }
 
-        var monitor = httpContext.RequestServices.GetRequiredService<EndpointStatusMonitor>();
-        return monitor.ExecuteGetStatusAsync(httpContext, flowId);
+        var configuration = httpContext.RequestServices.GetRequiredService<DTasksConfiguration>();
+        DAsyncRunner runner = configuration.CreateRunner(ServicedDAsyncHost.CreateDefault(httpContext.RequestServices));
+        IDAsyncHeap heap = runner.Infrastructure.GetHeap();
+        
+        await httpContext.ExecuteGetStatusAsync(flowId, heap);
     }
 }

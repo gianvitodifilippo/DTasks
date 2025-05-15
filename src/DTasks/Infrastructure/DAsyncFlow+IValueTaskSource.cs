@@ -53,8 +53,7 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
         _runnable = null;
         _valueTaskSource.Reset();
         _cancellationToken = CancellationToken.None;
-
-        _host = s_nullHost;
+        _flowComponentProvider.EndScope();
 
         _parentId = default;
         _id = default;
@@ -65,7 +64,11 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
         _tasks.Clear();
         _cancellationInfos.Clear();
         _cancellations.Clear();
-        _features = null;
+
+        if (_clearFlowProperties)
+        {
+            _flowProperties?.Clear();
+        }
 
         if (_returnToPool)
         {

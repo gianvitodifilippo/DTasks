@@ -1,10 +1,13 @@
 using DTasks.AspNetCore.Execution;
+using DTasks.Configuration;
 using Microsoft.Extensions.Options;
 
 namespace DTasks.AspNetCore.Configuration;
 
 public interface IDTasksAspNetCoreCoreConfigurationBuilder
 {
+    IDependencyInjectionDTasksConfigurationBuilder DTasks { get; }
+    
     IDTasksAspNetCoreCoreConfigurationBuilder AddResumptionEndpoint(ResumptionEndpoint endpoint);
     
     IDTasksAspNetCoreCoreConfigurationBuilder AddResumptionEndpoint<TResult>(ResumptionEndpoint<TResult> endpoint);

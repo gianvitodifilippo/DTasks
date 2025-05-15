@@ -1,39 +1,42 @@
-using DTasks.Configuration;
+using System.Diagnostics.CodeAnalysis;
 using DTasks.Extensions.DependencyInjection.Configuration;
 using DTasks.Extensions.DependencyInjection.Infrastructure.Features;
 using DTasks.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
+using DTasks.Utils;
 
 namespace DTasks.Extensions.DependencyInjection.Infrastructure;
 
 public abstract class ServicedDAsyncHost : DAsyncHost, IServiceProviderFeature
 {
-    private DTasksConfiguration? _configuration;
-
     protected abstract IServiceProvider Services { get; }
     
     IServiceProvider IServiceProviderFeature.Services => Services;
 
-    protected sealed override DTasksConfiguration Configuration => _configuration ??= Services.GetRequiredService<DTasksConfiguration>();
-
-    protected virtual void OnInitializeCore(IDAsyncFlowInitializationContext context)
+    protected override bool TryGetProperty<TProperty>(DAsyncPropertyKey<TProperty> key, [MaybeNullWhen(false)] out TProperty value)
     {
+        if (key.Equals(InfrastructureServiceProvider.ServiceProviderKey))
+        {
+            value = (TProperty)Services;
+            return true;
+        }
+
+        return base.TryGetProperty(key, out value);
     }
 
-    protected virtual void OnFinalizeCore(IDAsyncFlowFinalizationContext context)
+    protected override void OnInitialize(IDAsyncFlowInitializationContext context)
     {
-    }
-
-    protected sealed override void OnInitialize(IDAsyncFlowInitializationContext context)
-    {
-        context.AddProperty(InfrastructureServiceProvider.ServiceProviderKey, Services);
         context.SetFeature<IServiceProviderFeature>(this);
-        OnInitializeCore(context);
     }
 
-    protected sealed override void OnFinalize(IDAsyncFlowFinalizationContext context)
+    public static ServicedDAsyncHost CreateDefault(IServiceProvider services)
     {
-        _configuration = null;
-        OnFinalizeCore(context);
+        ThrowHelper.ThrowIfNull(services);
+        
+        return new DefaultServicedDAsyncHost(services);
+    }
+    
+    private sealed class DefaultServicedDAsyncHost(IServiceProvider services) : ServicedDAsyncHost
+    {
+        protected override IServiceProvider Services => services;
     }
 }

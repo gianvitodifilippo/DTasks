@@ -1,25 +1,36 @@
 using DTasks.AspNetCore.Execution;
+using DTasks.AspNetCore.Infrastructure.Execution;
 using DTasks.AspNetCore.Infrastructure.Http;
-using DTasks.AspNetCore.State;
 using DTasks.Configuration;
+using DTasks.Configuration.DependencyInjection;
+using DTasks.Extensions.DependencyInjection.Configuration;
+using DTasks.Infrastructure.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace DTasks.AspNetCore.Configuration;
 
-internal sealed class DTasksAspNetCoreCoreConfigurationBuilder : IDTasksAspNetCoreCoreConfigurationBuilder
+internal sealed class DTasksAspNetCoreCoreConfigurationBuilder(IDependencyInjectionDTasksConfigurationBuilder dTasks) : IDTasksAspNetCoreCoreConfigurationBuilder
 {
     private readonly WebSuspensionRegisterBuilder _suspensionRegisterBuilder = new();
     private readonly List<Action<OptionsBuilder<DTasksAspNetCoreOptions>>> _configureOptionsActions = [];
     private DTasksAspNetCoreOptions? _customOptions;
+
+    IDependencyInjectionDTasksConfigurationBuilder IDTasksAspNetCoreCoreConfigurationBuilder.DTasks => dTasks;
 
     public TBuilder Configure<TBuilder>(TBuilder builder)
         where TBuilder : IDependencyInjectionDTasksConfigurationBuilder
     {
         builder.Services
             .AddSingleton<IDAsyncContinuationFactory, DAsyncContinuationFactory>()
-            .AddSingleton<EndpointStatusMonitor>()
-            .AddSingleton(sp => _suspensionRegisterBuilder.Build(sp.GetRequiredService<DTasksConfiguration>().TypeResolver));
+            .AddHostedService(sp => sp.GetRequiredService<PollingDAsyncSuspensionHandler>())
+            .AddSingleton<PollingDAsyncSuspensionHandler>(sp =>
+            {
+                IReminderStore? store = sp.GetService<IReminderStore>();
+                return store is null
+                    ? new HeapDAsyncSuspensionHandler(sp)
+                    : new StoreDAsyncSuspensionHandler(sp, store);
+            });
 
         if (_customOptions is not null)
         {
@@ -35,6 +46,8 @@ internal sealed class DTasksAspNetCoreCoreConfigurationBuilder : IDTasksAspNetCo
         }
 
         builder
+            .ConfigureExecution(execution => execution
+                .UseSuspensionHandler(InfrastructureServiceProvider.GetRequiredService<PollingDAsyncSuspensionHandler>()))
             .ConfigureMarshaling(marshaling => marshaling
                 .RegisterTypeId(typeof(WebhookDAsyncContinuation.Surrogate))
                 .RegisterTypeId(typeof(WebSocketsDAsyncContinuation.Surrogate)));

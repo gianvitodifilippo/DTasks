@@ -40,11 +40,18 @@ public readonly struct Option<TValue> : IEquatable<Option<TValue>>
             : Option<TOther>.None;
     }
 
-    public TResult Fold<TResult>(Func<TValue, TResult> mapSome, Func<TResult> mapNone)
+    public TResult Match<TResult>(Func<TValue, TResult> mapSome, Func<TResult> mapNone)
     {
         return HasValue
             ? mapSome(_value)
             : mapNone();
+    }
+
+    public TValue UnwrapOrElse(Func<TValue> defaultProvider)
+    {
+        return HasValue
+            ? _value
+            : defaultProvider();
     }
 
     public bool Equals(Option<TValue> other) =>

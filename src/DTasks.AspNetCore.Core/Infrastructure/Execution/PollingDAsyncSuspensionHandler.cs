@@ -1,13 +1,22 @@
-using DTasks.AspNetCore.Infrastructure;
-using DTasks.AspNetCore.State;
+using DTasks.Configuration;
 using DTasks.Infrastructure.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace DTasks.AspNetCore.Execution;
+namespace DTasks.AspNetCore.Infrastructure.Execution;
 
-internal sealed class DefaultDAsyncSuspensionHandler(IServiceProvider services, IStateStore stateStore) : BackgroundService, IDAsyncSuspensionHandler
+internal abstract class PollingDAsyncSuspensionHandler : BackgroundService, IDAsyncSuspensionHandler
 {
+    protected abstract IServiceProvider Services { get; }
+    
+    protected abstract DTasksConfiguration Configuration { get; }
+    
+    protected abstract IAsyncEnumerable<SuspensionReminder> GetRemindersAsync(CancellationToken cancellationToken);
+    
+    protected abstract Task AddReminderAsync(SuspensionReminder reminder, CancellationToken cancellationToken);
+    
+    protected abstract Task DeleteReminderAsync(DAsyncId id, CancellationToken cancellationToken);
+    
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -20,31 +29,31 @@ internal sealed class DefaultDAsyncSuspensionHandler(IServiceProvider services, 
     private async Task PollRemindersAsync(CancellationToken cancellationToken)
     {
         // Naive, evaluate parallel execution
-        IAsyncEnumerable<SuspensionReminder> reminders = stateStore.GetRemindersAsync(cancellationToken);
+        IAsyncEnumerable<SuspensionReminder> reminders = GetRemindersAsync(cancellationToken);
         await foreach (SuspensionReminder reminder in reminders)
         {
             if (reminder.DueDateTime > DateTimeOffset.UtcNow)
                 continue;
 
-            await using AsyncServiceScope scope = services.CreateAsyncScope();
+            await using AsyncServiceScope scope = Services.CreateAsyncScope();
             IServiceProvider scopeServices = scope.ServiceProvider;
                     
             AspNetCoreDAsyncHost host = AspNetCoreDAsyncHost.Create(scopeServices);
-            await host.ResumeAsync(reminder.Id, cancellationToken);
+            await Configuration.ResumeAsync(host, reminder.Id, cancellationToken);
                 
-            await stateStore.DeleteReminderAsync(reminder.Id, cancellationToken);
+            await DeleteReminderAsync(reminder.Id, cancellationToken);
         }
     }
 
     public Task OnYieldAsync(DAsyncId id, CancellationToken cancellationToken)
     {
         SuspensionReminder reminder = new(id, DateTimeOffset.UtcNow);
-        return stateStore.AddReminderAsync(reminder, cancellationToken);
+        return AddReminderAsync(reminder, cancellationToken);
     }
 
     public Task OnDelayAsync(DAsyncId id, TimeSpan delay, CancellationToken cancellationToken)
     {
         SuspensionReminder reminder = new(id, DateTimeOffset.UtcNow.Add(delay));
-        return stateStore.AddReminderAsync(reminder, cancellationToken);
+        return AddReminderAsync(reminder, cancellationToken);
     }
 }
