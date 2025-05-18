@@ -50,7 +50,7 @@ internal static class EndpointStatusMonitorExtensions
             Result = result
         };
 
-        return heap.SaveAsync(key, TypedInstance.Untyped(info), cancellationToken);
+        return heap.SaveAsync(key, TypedInstance.From(info as AsyncEndpointInfo), cancellationToken);
     }
 
     public static Task SetFaultedAsync(this IDAsyncHeap heap, DAsyncId flowId, Exception exception, CancellationToken cancellationToken)

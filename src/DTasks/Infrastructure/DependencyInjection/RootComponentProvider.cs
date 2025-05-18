@@ -31,7 +31,7 @@ internal sealed class RootComponentProvider(IDAsyncInfrastructure infrastructure
             return (TComponent)untypedComponent!;
         
         TComponent component = createComponent(this);
-        if (transient)
+        if (!transient)
         {
             _components.TryAdd(token, component);
         }

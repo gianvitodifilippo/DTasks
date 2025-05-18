@@ -73,6 +73,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     public bool TryWriteChars(Span<char> destination)
     {
+        // TODO: Unify with ToString with the (Try)WriteCharsCore method
         if (CharCount > destination.Length)
             return false;
 
@@ -80,6 +81,19 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
         
         Debug.Assert(result);
         Debug.Assert(charsWritten == CharCount);
+        
+        for (int i = 0; i < charsWritten; i++)
+        {
+            ref char c = ref destination[i];
+            if (c == '/')
+            {
+                c = '_';
+            }
+            else if (c == '+')
+            {
+                c = '-';
+            }
+        }
 
         return result;
     }
@@ -99,7 +113,24 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     public override string ToString()
     {
-        return Convert.ToBase64String(Bytes);
+        return string.Create(CharCount, this, static (chars, self) =>
+        {
+            bool result = Convert.TryToBase64Chars(self.Bytes, chars, out int charsWritten);
+            Debug.Assert(result && charsWritten == CharCount);
+
+            for (int i = 0; i < CharCount; i++)
+            {
+                ref char c = ref chars[i];
+                if (c == '/')
+                {
+                    c = '_';
+                }
+                else if (c == '+')
+                {
+                    c = '-';
+                }
+            }
+        });
     }
 
     public static bool operator ==(DAsyncId left, DAsyncId right) => left.Equals(right);
@@ -204,13 +235,40 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     private static bool TryParseCore(ReadOnlySpan<char> value, out DAsyncId id)
     {
+        if (value.Length != CharCount)
+        {
+            id = default;
+            return false;
+        }
+        
+        Span<char> chars = stackalloc char[CharCount];
+        for (int i = 0; i < CharCount; i++)
+        {
+            ref readonly char c = ref value[i];
+            switch (c)
+            {
+                case '_':
+                    chars[i] = '/';
+                    break;
+                
+                case '-':
+                    chars[i] = '+';
+                    break;
+                
+                default:
+                    chars[i] = c;
+                    break;
+            }
+        }
+        
         Span<byte> bytes = stackalloc byte[ByteCount];
-        if (!Convert.TryFromBase64Chars(value, bytes, out int bytesWritten) || bytesWritten != ByteCount)
+        if (!Convert.TryFromBase64Chars(chars, bytes, out int bytesWritten))
         {
             id = default;
             return false;
         }
 
+        Debug.Assert(bytesWritten == ByteCount);
         return TryReadBytesCore(bytes, out id);
     }
 

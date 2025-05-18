@@ -36,7 +36,7 @@ internal sealed class HostComponentProvider(
             return (TComponent)untypedComponent!;
         
         TComponent component = createComponent(this);
-        if (transient)
+        if (!transient)
         {
             _components.TryAdd(token, component);
         }
@@ -52,6 +52,11 @@ internal sealed class HostComponentProvider(
     IDAsyncHeap IDAsyncHostInfrastructure.GetHeap()
     {
         return infrastructure.GetHeap(this);
+    }
+
+    public void Reset()
+    {
+        _components.Clear();
     }
 
     [DoesNotReturn]

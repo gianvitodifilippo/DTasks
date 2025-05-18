@@ -26,18 +26,31 @@ internal sealed class JsonFormatConfigurationBuilder : IJsonFormatConfigurationB
     public TBuilder Configure<TBuilder>(TBuilder builder)
         where TBuilder : ISerializationConfigurationBuilder
     {
-        IComponentDescriptor<JsonDAsyncSerializerFactory> serializerFactoryDescriptor =
-            from rootScope in ComponentDescriptors.Root
-            from inspector in _inspectorDescriptor
-            select CreateSerializerFactory(rootScope, inspector);
+        // IComponentDescriptor<JsonDAsyncSerializerFactory> serializerFactoryDescriptor =
+        //     from rootScope in ComponentDescriptors.Root
+        //     from inspector in _inspectorDescriptor
+        //     select CreateSerializerFactory(rootScope, inspector);
+        //
+        // IComponentDescriptor<IDAsyncSerializer> serializerDescriptor = serializerFactoryDescriptor
+        //     .Map(factory => factory.CreateSerializer());
+        //
+        // IComponentDescriptor<IStateMachineSerializer> stateMachineSerializerDescriptor =
+        //     from flowScope in ComponentDescriptors.Flow
+        //     from serializerFactory in serializerFactoryDescriptor
+        //     select serializerFactory.CreateStateMachineSerializer(flowScope);
 
-        IComponentDescriptor<IDAsyncSerializer> serializerDescriptor = serializerFactoryDescriptor
-            .Map(factory => factory.CreateSerializer());
+        IComponentDescriptor<JsonDAsyncSerializerFactory> serializerFactoryDescriptor = ComponentDescriptors.Root
+            .Bind(rootScope => _inspectorDescriptor
+                .Bind(inspector => ComponentDescriptor.Permanent(provider => CreateSerializerFactory(
+                    provider.GetComponent(rootScope),
+                    provider.GetComponent(inspector)))));
         
-        IComponentDescriptor<IStateMachineSerializer> stateMachineSerializerDescriptor =
-            from flowScope in ComponentDescriptors.Flow
-            from serializerFactory in serializerFactoryDescriptor
-            select serializerFactory.CreateStateMachineSerializer(flowScope);
+        IComponentDescriptor<IDAsyncSerializer> serializerDescriptor = serializerFactoryDescriptor
+            .Bind(factory => ComponentDescriptor.Permanent(provider => provider.GetComponent(factory).CreateSerializer()));
+
+        IComponentDescriptor<IStateMachineSerializer> stateMachineSerializerDescriptor = ComponentDescriptors.Flow
+            .Bind(flowScope => serializerFactoryDescriptor
+                .Bind(factory => ComponentDescriptor.Permanent(provider => provider.GetComponent(factory).CreateStateMachineSerializer(provider.GetComponent(flowScope)))));
 
         builder
             .UseSerializer(serializerDescriptor)

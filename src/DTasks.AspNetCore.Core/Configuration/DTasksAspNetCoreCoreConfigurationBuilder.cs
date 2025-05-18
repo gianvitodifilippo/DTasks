@@ -22,7 +22,9 @@ internal sealed class DTasksAspNetCoreCoreConfigurationBuilder(IDependencyInject
         where TBuilder : IDependencyInjectionDTasksConfigurationBuilder
     {
         builder.Services
+            .AddHttpClient()
             .AddSingleton<IDAsyncContinuationFactory, DAsyncContinuationFactory>()
+            .AddSingleton(sp => _suspensionRegisterBuilder.Build(sp.GetRequiredService<DTasksConfiguration>().Infrastructure.TypeResolver))
             .AddHostedService(sp => sp.GetRequiredService<PollingDAsyncSuspensionHandler>())
             .AddSingleton<PollingDAsyncSuspensionHandler>(sp =>
             {
@@ -55,31 +57,31 @@ internal sealed class DTasksAspNetCoreCoreConfigurationBuilder(IDependencyInject
         return builder;
     }
 
-    public IDTasksAspNetCoreCoreConfigurationBuilder AddResumptionEndpoint(ResumptionEndpoint endpoint)
+    IDTasksAspNetCoreCoreConfigurationBuilder IDTasksAspNetCoreCoreConfigurationBuilder.AddResumptionEndpoint(ResumptionEndpoint endpoint)
     {
         _suspensionRegisterBuilder.AddResumptionEndpoint(endpoint);
         return this;
     }
 
-    public IDTasksAspNetCoreCoreConfigurationBuilder AddResumptionEndpoint<TResult>(ResumptionEndpoint<TResult> endpoint)
+    IDTasksAspNetCoreCoreConfigurationBuilder IDTasksAspNetCoreCoreConfigurationBuilder.AddResumptionEndpoint<TResult>(ResumptionEndpoint<TResult> endpoint)
     {
         _suspensionRegisterBuilder.AddResumptionEndpoint(endpoint);
         return this;
     }
 
-    public IDTasksAspNetCoreCoreConfigurationBuilder AddDefaultResumptionEndpoint<TResult>()
+    IDTasksAspNetCoreCoreConfigurationBuilder IDTasksAspNetCoreCoreConfigurationBuilder.AddDefaultResumptionEndpoint<TResult>()
     {
         _suspensionRegisterBuilder.AddDefaultResumptionEndpoint<TResult>();
         return this;
     }
 
-    public IDTasksAspNetCoreCoreConfigurationBuilder UseDTasksOptions(DTasksAspNetCoreOptions options)
+    IDTasksAspNetCoreCoreConfigurationBuilder IDTasksAspNetCoreCoreConfigurationBuilder.UseDTasksOptions(DTasksAspNetCoreOptions options)
     {
         _customOptions = options;
         return this;
     }
 
-    public IDTasksAspNetCoreCoreConfigurationBuilder ConfigureDTasksOptions(Action<OptionsBuilder<DTasksAspNetCoreOptions>> configure)
+    IDTasksAspNetCoreCoreConfigurationBuilder IDTasksAspNetCoreCoreConfigurationBuilder.ConfigureDTasksOptions(Action<OptionsBuilder<DTasksAspNetCoreOptions>> configure)
     {
         _configureOptionsActions.Add(configure);
         return this;

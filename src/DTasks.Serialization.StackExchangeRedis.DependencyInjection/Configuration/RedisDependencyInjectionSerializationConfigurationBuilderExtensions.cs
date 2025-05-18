@@ -1,4 +1,6 @@
+using DTasks.Configuration.DependencyInjection;
 using DTasks.Extensions.DependencyInjection.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 
 namespace DTasks.Serialization.Configuration;
@@ -9,6 +11,8 @@ public static class RedisDependencyInjectionSerializationConfigurationBuilderExt
         where TBuilder : ISerializationConfigurationBuilder
     {
         return builder.UseStackExchangeRedis(redis => redis
-            .UseDatabase(InfrastructureServiceProvider.GetRequiredService<IDatabase>()));
+            .UseDatabase(InfrastructureServiceProvider.Descriptor.MapAsTransient(sp => sp
+                .GetRequiredService<ConnectionMultiplexer>()
+                .GetDatabase())));
     }
 }

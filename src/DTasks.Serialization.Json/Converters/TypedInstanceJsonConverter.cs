@@ -55,7 +55,14 @@ public sealed class TypedInstanceJsonConverter<TValue>(IDAsyncTypeResolver typeR
         }
 
         writer.WritePropertyName(ValuePropertyName);
-        JsonSerializer.Serialize(writer, value.Instance, options);
+        if (value.Type is not null)
+        {
+            JsonSerializer.Serialize(writer, value.Instance, value.Type, options);
+        }
+        else
+        {
+            JsonSerializer.Serialize(writer, value.Instance, options);
+        }
 
         writer.WriteEndObject();
     }

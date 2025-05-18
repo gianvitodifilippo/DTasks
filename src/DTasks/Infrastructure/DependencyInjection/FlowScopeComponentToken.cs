@@ -15,8 +15,25 @@ internal sealed class FlowScopeComponentToken : InfrastructureComponentToken<IDA
         return provider.FlowScope;
     }
 
+    public override InfrastructureComponentToken<IDAsyncFlowScope> AsRoot()
+    {
+        return new FlowScopeComponentToken();
+    }
+
+    public override InfrastructureComponentToken<IDAsyncFlowScope> AsHost()
+    {
+        return new FlowScopeComponentToken();
+    }
+
+    public override InfrastructureComponentToken<IDAsyncFlowScope> AsFlow()
+    {
+        return new FlowScopeComponentToken();
+    }
+
     public override InfrastructureComponentToken<TResult> Bind<TResult>(IComponentProviderBuilder builder, IComponentDescriptor<TResult> resolvedResultDescriptor)
     {
-        return builder.GetTokenInFlowScope(resolvedResultDescriptor);
+        return builder
+            .GetTokenInFlowScope(resolvedResultDescriptor)
+            .AsFlow();
     }
 }

@@ -3,6 +3,7 @@ using DTasks.Configuration;
 using DTasks.Infrastructure.State;
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace DTasks.AspNetCore.Infrastructure.Execution;
 
@@ -12,6 +13,7 @@ internal sealed class HeapDAsyncSuspensionHandler : PollingDAsyncSuspensionHandl
     
     private readonly AspNetCoreDAsyncHost _host;
     private readonly IDAsyncHeap _heap;
+    private readonly ILogger<HeapDAsyncSuspensionHandler> _logger;
     
     public HeapDAsyncSuspensionHandler(IServiceProvider services)
     {
@@ -19,11 +21,14 @@ internal sealed class HeapDAsyncSuspensionHandler : PollingDAsyncSuspensionHandl
         Configuration = services.GetRequiredService<DTasksConfiguration>();
         _host = AspNetCoreDAsyncHost.Create(services);
         _heap = Configuration.CreateHostInfrastructure(_host).GetHeap();
+        _logger = services.GetRequiredService<ILogger<HeapDAsyncSuspensionHandler>>();
     }
 
     protected override IServiceProvider Services { get; }
 
     protected override DTasksConfiguration Configuration { get; }
+
+    protected override ILogger<PollingDAsyncSuspensionHandler> Logger => _logger;
 
     protected override async IAsyncEnumerable<SuspensionReminder> GetRemindersAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {

@@ -2,6 +2,7 @@ using DTasks.Configuration;
 using DTasks.Infrastructure.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace DTasks.AspNetCore.Infrastructure.Execution;
 
@@ -10,6 +11,8 @@ internal abstract class PollingDAsyncSuspensionHandler : BackgroundService, IDAs
     protected abstract IServiceProvider Services { get; }
     
     protected abstract DTasksConfiguration Configuration { get; }
+    
+    protected abstract ILogger<PollingDAsyncSuspensionHandler> Logger { get; }
     
     protected abstract IAsyncEnumerable<SuspensionReminder> GetRemindersAsync(CancellationToken cancellationToken);
     
@@ -22,7 +25,14 @@ internal abstract class PollingDAsyncSuspensionHandler : BackgroundService, IDAs
         while (!stoppingToken.IsCancellationRequested)
         {
             await Task.Delay(1000, stoppingToken); // TODO: Make configurable
-            await PollRemindersAsync(stoppingToken);
+            try
+            {
+                await PollRemindersAsync(stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error while polling reminders.");
+            }
         }
     }
 

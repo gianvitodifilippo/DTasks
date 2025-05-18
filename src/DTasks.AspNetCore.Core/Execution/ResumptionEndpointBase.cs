@@ -55,6 +55,9 @@ public abstract class ResumptionEndpointBase : IResumptionEndpoint
 
     public string MakeCallbackPath(DAsyncId operationId)
     {
+        if (operationId == default)
+            throw new ArgumentException("Invalid operation id.", nameof(operationId));
+        
         return string.Create(_callbackPathLength, (this, operationId), static (span, state) =>
         {
             (ResumptionEndpointBase self, DAsyncId operationId) = state;

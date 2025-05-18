@@ -11,8 +11,25 @@ internal sealed class FlowComponentToken<TComponent>(
         return provider.GetFlowComponent(this, createComponent, transient);
     }
 
+    public override InfrastructureComponentToken<TComponent> AsRoot()
+    {
+        return new FlowComponentToken<TComponent>(createComponent, transient);
+    }
+
+    public override InfrastructureComponentToken<TComponent> AsHost()
+    {
+        return new FlowComponentToken<TComponent>(createComponent, transient);
+    }
+
+    public override InfrastructureComponentToken<TComponent> AsFlow()
+    {
+        return new FlowComponentToken<TComponent>(createComponent, transient);
+    }
+
     public override InfrastructureComponentToken<TResult> Bind<TResult>(IComponentProviderBuilder builder, IComponentDescriptor<TResult> resolvedResultDescriptor)
     {
-        return builder.GetTokenInFlowScope(resolvedResultDescriptor);
+        return builder
+            .GetTokenInFlowScope(resolvedResultDescriptor)
+            .AsFlow();
     }
 }

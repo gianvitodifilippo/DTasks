@@ -6,6 +6,11 @@ namespace DTasks.Infrastructure;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public readonly struct DAsyncPropertyKey<TProperty>(object? value = null) : IEquatable<DAsyncPropertyKey<TProperty>>
 {
+    public DAsyncPropertyKey()
+        : this(null)
+    {
+    }
+    
     internal object Value { get; } = value ?? new();
 
     public bool Equals(DAsyncPropertyKey<TProperty> other) => Value.Equals(other.Value);

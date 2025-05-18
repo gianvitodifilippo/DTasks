@@ -10,8 +10,6 @@ namespace DTasks.Infrastructure.Marshaling;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public readonly struct TypeId : IEquatable<TypeId>
 {
-    private const int StackAllocThreshold = 128;
-    
     private readonly string _value;
 
     private TypeId(string value) => _value = value;

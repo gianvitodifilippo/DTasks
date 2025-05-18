@@ -50,9 +50,13 @@ public sealed class ResumptionEndpoint<TResult>([StringSyntax("Route")] string p
             await Results.NotFound().ExecuteAsync(httpContext);
             return;
         }
+
+        ResumptionResult<TResult>? resumptionResult = await httpContext.Request.ReadFromJsonAsync<ResumptionResult<TResult>>(httpContext.RequestAborted);
+        TResult? result = resumptionResult is null
+            ? default
+            : resumptionResult.Value;
         
-        TResult? result = await httpContext.Request.ReadFromJsonAsync<TResult>(httpContext.RequestAborted);
-        if (result is null && !_allowNull)
+        if (resumptionResult is null || result is null && !_allowNull)
         {
             // TODO: Message
             await Results.BadRequest().ExecuteAsync(httpContext);

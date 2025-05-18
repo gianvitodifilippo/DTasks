@@ -15,8 +15,25 @@ internal sealed class RootScopeComponentToken : InfrastructureComponentToken<IDA
         return provider.RootScope;
     }
 
+    public override InfrastructureComponentToken<IDAsyncRootScope> AsRoot()
+    {
+        return new RootScopeComponentToken();
+    }
+
+    public override InfrastructureComponentToken<IDAsyncRootScope> AsHost()
+    {
+        return new RootScopeComponentToken();
+    }
+
+    public override InfrastructureComponentToken<IDAsyncRootScope> AsFlow()
+    {
+        return new RootScopeComponentToken();
+    }
+
     public override InfrastructureComponentToken<TResult> Bind<TResult>(IComponentProviderBuilder builder, IComponentDescriptor<TResult> resolvedResultDescriptor)
     {
-        return builder.GetTokenInRootScope(resolvedResultDescriptor);
+        return builder
+            .GetTokenInRootScope(resolvedResultDescriptor)
+            .AsRoot();
     }
 }

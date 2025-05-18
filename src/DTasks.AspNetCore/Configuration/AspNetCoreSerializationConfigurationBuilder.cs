@@ -20,6 +20,7 @@ internal sealed class AspNetCoreSerializationConfigurationBuilder(ISerialization
                 {
                     options.Converters.Add(new TypedInstanceJsonConverter<object>(rootScope.TypeResolver));
                     options.Converters.Add(new TypedInstanceJsonConverter<IDAsyncContinuationSurrogate>(rootScope.TypeResolver));
+                    options.Converters.Add(new TypedInstanceJsonConverter<AsyncEndpointInfo>(rootScope.TypeResolver));
                 });
 
                 foreach (var action in _jsonFormatConfigurationActions)
