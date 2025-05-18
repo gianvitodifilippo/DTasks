@@ -11,8 +11,8 @@ namespace DTasks;
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
 public readonly struct DAsyncId : IEquatable<DAsyncId>
 {
-    private const int ByteCount = 3 * sizeof(uint);
-    private const int CharCount = ByteCount * 8 / 6;
+    internal const int ByteCount = 3 * sizeof(uint);
+    internal const int CharCount = ByteCount * 8 / 6;
     private const byte ReservedBitsMask = 0b_11110000;
     private const byte ReservedBitsInvertedMask = ~ReservedBitsMask & byte.MaxValue;
     private const byte FlowIdMask = 0b_10000000;

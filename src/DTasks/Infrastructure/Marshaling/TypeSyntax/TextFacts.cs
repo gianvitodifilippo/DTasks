@@ -11,7 +11,8 @@ internal static class TextFacts
         @"(?:-(?<script>[a-zA-Z]{4}))?" +
         @"(?:-(?<region>[a-zA-Z]{2}|\d{3}))?" +
         @"(?:-(?<variant>(\d[a-zA-Z0-9]{3}|[a-zA-Z0-9]{5,8})))?$",
-        RegexOptions.Compiled);
+        RegexOptions.None,
+        TimeSpan.FromMilliseconds(500));
 
     public static bool IsValidCulture(ReadOnlySpan<char> value, [NotNullWhen(true)] out string? culture)
     {

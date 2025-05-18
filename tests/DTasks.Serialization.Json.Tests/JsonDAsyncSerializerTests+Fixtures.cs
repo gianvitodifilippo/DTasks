@@ -1,10 +1,12 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json.Serialization;
 using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Utils;
+using Xunit.Sdk;
 
 namespace DTasks.Serialization.Json;
 
@@ -231,10 +233,19 @@ public partial class JsonStateMachineSerializerTests
                 local4 = int1
             };
 
+            byte[] parentId1Bytes = new byte[DAsyncId.ByteCount];
+            byte[] parentId2Bytes = new byte[DAsyncId.ByteCount];
+            
+            bool result1 = parentId1.TryWriteBytes(parentId1Bytes);
+            bool result2 = parentId2.TryWriteBytes(parentId2Bytes);
+
+            if (!result1 || !result2)
+                throw FailException.ForFailure("Could not write DAsyncId to byte array");
+
             string stateMachine1Json = $$"""
                 {
                   "$typeId": "{{StateMachine1.TypeId}}",
-                  "$parentId": "{{parentId1}}",
+                  "$parentId": "{{Convert.ToBase64String(parentId1Bytes)}}",
                   "__this": {
                     "@dtasks.tid": null,
                     "surrogate": "{{surrogate1}}"
@@ -251,7 +262,7 @@ public partial class JsonStateMachineSerializerTests
             string stateMachine2Json = $$"""
                 {
                   "$typeId": "{{StateMachine2.TypeId}}",
-                  "$parentId": "{{parentId2}}",
+                  "$parentId": "{{Convert.ToBase64String(parentId2Bytes)}}",
                   "__this": {
                     "@dtasks.tid": null,
                     "surrogate": "{{surrogate2}}"
