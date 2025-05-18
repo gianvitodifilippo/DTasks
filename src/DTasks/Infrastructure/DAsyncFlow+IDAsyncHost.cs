@@ -1,10 +1,10 @@
-﻿using DTasks.Configuration;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow : IDAsyncHost
 {
-    DTasksConfiguration IDAsyncHost.Configuration => Configuration;
+    bool IDAsyncHost.TryGetProperty<TProperty>(DAsyncPropertyKey<TProperty> key, [MaybeNullWhen(false)] out TProperty value) => _host.TryGetProperty(key, out value);
 
     void IDAsyncHost.OnInitialize(IDAsyncFlowInitializationContext context) { }
 

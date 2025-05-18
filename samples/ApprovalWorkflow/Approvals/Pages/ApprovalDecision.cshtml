@@ -1,0 +1,36 @@
+@page
+@model Approvals.Pages.ApprovalPage
+
+@{
+    Layout = null;
+    ViewData["Title"] = "Approval decision";
+}
+
+<h2>Approval decision</h2>
+<p id="result"></p>
+
+<script type="text/javascript">
+    document.getElementById("result").innerText = "Sending decision...";
+    const callbackPath = "@Model.CallbackPath";
+    
+    const request = {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            value: @Model.Result
+        })
+    }
+
+    fetch(callbackPath, request)
+        .then(response => {
+            if (response.ok) {
+                document.getElementById("result").innerText = "Your decision was submitted successfully.";
+            }
+            else {
+                document.getElementById("result").innerText = "There was an error processing your decision. Status: " + response.statusText;
+            }
+        })
+        .catch(e => document.getElementById("result").innerText = JSON.stringify(e));
+</script>

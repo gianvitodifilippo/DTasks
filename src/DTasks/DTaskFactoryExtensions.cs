@@ -4,47 +4,35 @@ namespace DTasks;
 
 public static class DTaskFactoryExtensions
 {
-    public static DTask Callback<TCallback>(this DTaskFactory _, TCallback callback)
+    public static DTask Suspend<TCallback>(this DTaskFactory _, TCallback callback)
         where TCallback : ISuspensionCallback
     {
-        return new CallbackDTask<VoidDTaskResult, TCallback>(callback);
+        return new SuspensionDTask<TCallback, VoidDTaskResult>(callback);
     }
 
-    public static DTask Callback<TState, TCallback>(this DTaskFactory _, TState state, TCallback callback)
-        where TCallback : ISuspensionCallback<TState>
-    {
-        return new CallbackDTask<VoidDTaskResult, TState, TCallback>(state, callback);
-    }
-
-    public static DTask<TResult> Callback<TResult, TCallback>(this DTaskFactory<TResult> _, TCallback callback)
+    public static DTask<TResult> Suspend<TCallback, TResult>(this DTaskFactory<TResult> _, TCallback callback)
         where TCallback : ISuspensionCallback
     {
-        return new CallbackDTask<TResult, TCallback>(callback);
+        return new SuspensionDTask<TCallback, TResult>(callback);
     }
 
-    public static DTask<TResult> Callback<TResult, TState, TCallback>(this DTaskFactory<TResult> _, TState state, TCallback callback)
-        where TCallback : ISuspensionCallback<TState>
+    public static DTask Suspend(this DTaskFactory _, SuspensionCallback callback)
     {
-        return new CallbackDTask<TResult, TState, TCallback>(state, callback);
+        return new DelegateSuspensionDTask<VoidDTaskResult>(callback);
     }
 
-    public static DTask Callback(this DTaskFactory _, SuspensionCallback callback)
+    public static DTask Suspend<TState>(this DTaskFactory _, TState state, SuspensionCallback<TState> callback)
     {
-        return new DelegateCallbackDTask<VoidDTaskResult>(callback);
+        return new DelegateSuspensionDTask<TState, VoidDTaskResult>(state, callback);
     }
 
-    public static DTask Callback<TState>(this DTaskFactory _, TState state, SuspensionCallback<TState> callback)
+    public static DTask<TResult> Suspend<TResult>(this DTaskFactory<TResult> _, SuspensionCallback callback)
     {
-        return new DelegateCallbackDTask<VoidDTaskResult, TState>(state, callback);
+        return new DelegateSuspensionDTask<TResult>(callback);
     }
 
-    public static DTask<TResult> Callback<TResult>(this DTaskFactory<TResult> _, SuspensionCallback callback)
+    public static DTask<TResult> Suspend<TResult, TState>(this DTaskFactory<TResult> _, TState state, SuspensionCallback<TState> callback)
     {
-        return new DelegateCallbackDTask<TResult>(callback);
-    }
-
-    public static DTask<TResult> Callback<TResult, TState>(this DTaskFactory<TResult> _, TState state, SuspensionCallback<TState> callback)
-    {
-        return new DelegateCallbackDTask<TResult, TState>(state, callback);
+        return new DelegateSuspensionDTask<TState, TResult>(state, callback);
     }
 }

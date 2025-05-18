@@ -1,15 +1,14 @@
 using System.Net.WebSockets;
 using System.Text;
-using System.Text.Json;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using Documents;
-using Documents.DTasks;
 using DTasks;
 using DTasks.AspNetCore;
 using DTasks.AspNetCore.Infrastructure;
 using DTasks.Configuration;
+using DTasks.Extensions.DependencyInjection;
 using DTasks.Extensions.DependencyInjection.Configuration;
 using DTasks.Infrastructure.Execution;
 using DTasks.Serialization.Configuration;
@@ -22,26 +21,25 @@ builder.Host.UseDTasks(dTasks => dTasks
     .UseAspNetCore(aspNetCore => aspNetCore
         .ConfigureSerialization(serialization => serialization
             .UseStackExchangeRedis()))
+#region TODO: In library
     .ConfigureServices(services => services
         .RegisterDAsyncService(typeof(AsyncEndpoints)))
     .ConfigureMarshaling(marshaling => marshaling
         .RegisterDAsyncType(typeof(AsyncEndpoints))
-        .RegisterSurrogatableType(typeof(AsyncEndpoints)))
-    .ConfigureExecution(execution => execution
-        .UseSuspensionHandler(InfrastructureServiceProvider.GetRequiredService<IDAsyncSuspensionHandler>())));
+        .RegisterSurrogatableType(typeof(AsyncEndpoints))));
+#endregion
 
-#region In library
+builder.Services
+    .AddSingleton(ConnectionMultiplexer.Connect("localhost:6379"));
+
+#region TODO: In library
 
 builder.Services
     .AddScoped<AsyncEndpoints>()
-    .AddSingleton(ConnectionMultiplexer.Connect("localhost:6379").GetDatabase())
     .AddHttpClient()
-    .AddSingleton<RedisDAsyncSuspensionHandler>()
-    .AddHostedService(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
-    .AddSingleton<IDAsyncSuspensionHandler>(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
-    .AddSingleton<IDAsyncSuspensionHandler>(sp => sp.GetRequiredService<RedisDAsyncSuspensionHandler>())
     .AddSingleton<WebSocketHandler>()
     .AddSingleton<IWebSocketHandler>(sp => sp.GetRequiredService<WebSocketHandler>());
+
 #endregion
 
 const string storageConnectionString = "UseDevelopmentStorage=true";
@@ -95,39 +93,20 @@ app.MapPost("/upload-request", (BlobContainerClient containerClient) =>
     });
 });
 
-#region Generated
+#region TODO: In library
+
 app.MapPost("/process-document/{documentId}", (
     HttpContext httpContext,
     [FromServices] AsyncEndpoints endpoints,
+    [FromServices] DTasksConfiguration configuration,
     string documentId,
     CancellationToken cancellationToken) =>
 {
     AspNetCoreDAsyncHost host = AspNetCoreDAsyncHost.CreateAsyncEndpointHost(httpContext);
     DTask<IResult> task = endpoints.ProcessDocument(documentId);
 
-    return host.StartAsync(task, cancellationToken);
+    return configuration.StartAsync(host, task, cancellationToken);
 });
-
-app.MapGet("/async/{operationId}", async (
-    [FromServices] IDatabase redis,
-    string operationId) =>
-{
-    string? value = await redis.StringGetAsync(operationId);
-    if (value is null)
-        return Results.NotFound();
-
-    JsonElement obj = JsonSerializer.Deserialize<JsonElement>(value).GetProperty("Instance");
-    string status = obj.GetProperty("status").GetString()!;
-
-    if (status is "succeeded")
-        return Results.Ok(new
-        {
-            status,
-            value = obj.GetProperty("value")
-        });
-
-    return Results.Ok(new { status });
-}).WithName("DTasksStatus");
 
 // If the client already maps its own WebSocket endpoint, then it needs to inject WebSocketHandler manually (some simplification is needed).
 // Otherwise, we will generate the whole method.
@@ -156,6 +135,9 @@ app.Map("/ws", async (HttpContext context, [FromServices] WebSocketHandler handl
         }
     }
 });
+
 #endregion
+
+app.MapDTasks();
 
 app.Run();

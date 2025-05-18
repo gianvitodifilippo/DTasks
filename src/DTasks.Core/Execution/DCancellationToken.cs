@@ -39,5 +39,5 @@ public readonly struct DCancellationToken : IEquatable<DCancellationToken>
 
     public static bool operator ==(DCancellationToken left, DCancellationToken right) => left.Equals(right);
 
-    public static bool operator !=(DCancellationToken left, DCancellationToken right) => !(left == right);
+    public static bool operator !=(DCancellationToken left, DCancellationToken right) => !left.Equals(right);
 }

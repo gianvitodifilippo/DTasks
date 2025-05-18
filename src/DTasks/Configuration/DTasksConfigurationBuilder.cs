@@ -1,7 +1,8 @@
 using System.Collections.Frozen;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using DTasks.Configuration.DependencyInjection;
+using DTasks.Infrastructure;
+using DTasks.Infrastructure.DependencyInjection;
 using DTasks.Infrastructure.Execution;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
@@ -14,21 +15,44 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
     IExecutionConfigurationBuilder,
     IStateConfigurationBuilder
 {
-    private readonly DAsyncInfrastructureBuilder _infrastructureBuilder = new();
+    private IComponentDescriptor<IDAsyncHeap>? _heapDescriptor;
+    private IComponentDescriptor<IDAsyncStack>? _stackDescriptor;
+    private readonly List<IComponentDescriptor<IDAsyncSurrogator>> _surrogatorDescriptors = [];
+    private IComponentDescriptor<IDAsyncCancellationProvider>? _cancellationProviderDescriptor;
+    private IComponentDescriptor<IDAsyncSuspensionHandler>? _suspensionHandlerDescriptor;
+    private readonly Dictionary<object, object?> _properties = [];
     private readonly HashSet<Type> _surrogatableTypes = [];
     private readonly Dictionary<Type, TypeId> _typesToIds = [];
     private readonly Dictionary<TypeId, Type> _idsToTypes = [];
-
-    public IDAsyncInfrastructure BuildInfrastructure(DTasksConfiguration configuration)
-    {
-        return _infrastructureBuilder.BuildInfrastructure(configuration);
-    }
+    
+    public FrozenDictionary<object, object?> Properties => _properties.ToFrozenDictionary();
 
     public IDAsyncTypeResolver TypeResolver => new DAsyncTypeResolver(
         _typesToIds.ToFrozenDictionary(),
         _idsToTypes.ToFrozenDictionary());
+    
+    public FrozenSet<Type> SurrogatableTypes => _surrogatableTypes.ToFrozenSet();
+    
+    public DTasksConfiguration Build()
+    {
+        DAsyncInfrastructureBuilder infrastructureBuilder = new();
+        infrastructureBuilder.UseHeap(_heapDescriptor);
+        infrastructureBuilder.UseStack(_stackDescriptor);
+        infrastructureBuilder.UseSurrogators(_surrogatorDescriptors);
+        infrastructureBuilder.UseCancellationProvider(_cancellationProviderDescriptor);
+        infrastructureBuilder.UseSuspensionHandler(_suspensionHandlerDescriptor);
+        
+        IDAsyncInfrastructure infrastructure = infrastructureBuilder.Build(this);
+        DAsyncFlowPool flowPool = new(infrastructure);
 
-    public ImmutableArray<Type> SurrogatableTypes => [.. _surrogatableTypes];
+        return new DTasksConfiguration(flowPool, infrastructure);
+    }
+
+    IDTasksConfigurationBuilder IDTasksConfigurationBuilder.SetProperty<TProperty>(DAsyncPropertyKey<TProperty> key, TProperty value)
+    {
+        _properties.SetProperty(key, value);
+        return this;
+    }
 
     IDTasksConfigurationBuilder IDTasksConfigurationBuilder.ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure)
     {
@@ -58,7 +82,7 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
     {
         ThrowHelper.ThrowIfNull(descriptor);
 
-        _infrastructureBuilder.AddSurrogator(descriptor);
+        _surrogatorDescriptors.Add(descriptor);
         return this;
     }
 
@@ -70,32 +94,33 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
         return this;
     }
 
-    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterTypeId(Type type)
+    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterTypeId(Type type, TypeEncodingStrategy encodingStrategy)
     {
         ThrowHelper.ThrowIfNull(type);
 
         if (type.ContainsGenericParameters)
             throw new ArgumentException("Open generic types are not supported.", nameof(type));
 
-        if (_typesToIds.TryGetValue(type, out TypeId id))
-            return this;
+        TypeId typeId = TypeId.FromEncodedTypeName(type, encodingStrategy);
+        return RegisterTypeId(typeId, type.UnderlyingSystemType);
+    }
 
-        int count = _typesToIds.Count + 1;
-        id = new(count.ToString()); // Naive
+    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterTypeId(Type type, string idValue)
+    {
+        ThrowHelper.ThrowIfNull(type);
 
-        _typesToIds.Add(type, id);
-        _idsToTypes.Add(id, type);
-
-        Debug.Assert(_typesToIds.Count == count && _idsToTypes.Count == count);
-
-        return this;
+        if (type.ContainsGenericParameters)
+            throw new ArgumentException("Open generic types are not supported.", nameof(type));
+        
+        var typeId = TypeId.FromConstant(idValue);
+        return RegisterTypeId(typeId, type.UnderlyingSystemType);
     }
 
     IExecutionConfigurationBuilder IExecutionConfigurationBuilder.UseCancellationProvider(IComponentDescriptor<IDAsyncCancellationProvider> descriptor)
     {
         ThrowHelper.ThrowIfNull(descriptor);
 
-        _infrastructureBuilder.UseCancellationProvider(descriptor);
+        _cancellationProviderDescriptor = descriptor;
         return this;
     }
 
@@ -103,7 +128,7 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
     {
         ThrowHelper.ThrowIfNull(descriptor);
 
-        _infrastructureBuilder.UseSuspensionHandler(descriptor);
+        _suspensionHandlerDescriptor = descriptor;
         return this;
     }
 
@@ -111,7 +136,7 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
     {
         ThrowHelper.ThrowIfNull(descriptor);
 
-        _infrastructureBuilder.UseStack(descriptor);
+        _stackDescriptor = descriptor;
         return this;
     }
 
@@ -119,7 +144,17 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
     {
         ThrowHelper.ThrowIfNull(descriptor);
 
-        _infrastructureBuilder.UseHeap(descriptor);
+        _heapDescriptor = descriptor;
+        return this;
+    }
+
+    private IMarshalingConfigurationBuilder RegisterTypeId(TypeId typeId, Type type)
+    {
+        _typesToIds[type] = typeId;
+        _idsToTypes[typeId] = type;
+        
+        Debug.Assert(_typesToIds.Count == _idsToTypes.Count);
+
         return this;
     }
 }

@@ -46,39 +46,44 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
         Assert.Null(_resultOrException);
         Debug.Assert(_branchIndex == -1);
 
-        CancellationProvider.UnregisterHandler(this);
+        _cancellationProvider?.UnregisterHandler(this);
         _host.OnFinalize(this);
 
         _state = FlowState.Pending;
         _runnable = null;
         _valueTaskSource.Reset();
         _cancellationToken = CancellationToken.None;
-
-        _host = s_nullHost;
-        _stack = null;
-        _heap = null;
-        _surrogator = null;
-        _cancellationProvider = null;
-        _suspensionHandler = null;
+        _flowComponentProvider.EndScope();
 
         _parentId = default;
         _id = default;
         _stateMachine = null;
         _parent = null;
 
+        _heap = null;
+        _stack = null;
+        _surrogator = null;
+        _cancellationProvider = null;
+        _suspensionHandler = null;
+
         _surrogates.Clear();
         _tasks.Clear();
         _cancellationInfos.Clear();
         _cancellations.Clear();
 
-        _usedPropertyInScopedComponent = false;
-        _properties.Clear();
-        _scopedComponents.Clear();
-
-        if (_returnToCache)
+        if (_clearFlowProperties)
         {
-            _returnToCache = false;
-            ReturnToCache();
+            _flowProperties?.Clear();
         }
+
+        if (_returnToPool)
+        {
+            _returnToPool = false;
+            Dispose();
+        }
+
+#if DEBUG
+        _stackTrace = null;
+#endif
     }
 }

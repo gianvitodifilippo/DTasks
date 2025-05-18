@@ -1,20 +1,14 @@
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-
 namespace DTasks.Configuration.DependencyInjection;
 
-[DebuggerDisplay("{ToString(),nq}")]
-internal sealed class UnitComponentDescriptor<TComponent>(TComponent component) : IComponentDescriptor<TComponent>
-    where TComponent : notnull
+internal sealed class UnitComponentDescriptor<TComponent>(IComponentToken<TComponent> token) : IComponentDescriptor<TComponent>
 {
-    public TReturn Build<TReturn>(IDAsyncInfrastructureBuilder<TComponent, TReturn> builder)
+    public void Accept(IComponentDescriptorVisitor<TComponent> visitor)
     {
-        return builder.Unit(component);
+        visitor.VisitUnit(token);
     }
 
-    [ExcludeFromCodeCoverage]
-    public override string ToString()
+    public TReturn Accept<TReturn>(IComponentDescriptorVisitor<TComponent, TReturn> visitor)
     {
-        return $"Unit({typeof(TComponent).Name}))";
+        return visitor.VisitUnit(token);
     }
 }

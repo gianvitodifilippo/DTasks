@@ -26,6 +26,11 @@ public abstract class DAsyncSurrogator : IDAsyncSurrogator
         ;
 #endif
 
+    public static IDAsyncSurrogator Aggregate(ImmutableArray<IDAsyncSurrogator> surrogators)
+    {
+        return new AggregateDAsyncSurrogator(surrogators);
+    }
+
     public static IDAsyncSurrogator Aggregate(IEnumerable<IDAsyncSurrogator> surrogators)
     {
         return new AggregateDAsyncSurrogator([.. surrogators]);

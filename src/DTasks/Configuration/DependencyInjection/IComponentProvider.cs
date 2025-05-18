@@ -1,12 +1,6 @@
-using DTasks.Infrastructure;
-
 namespace DTasks.Configuration.DependencyInjection;
 
-internal interface IComponentProvider<out TComponent>
-    where TComponent : notnull
+public interface IComponentProvider
 {
-    TComponent GetComponent(IDAsyncScope scope);
-
-    IComponentProvider<TResult> Bind<TResult>(IComponentDescriptor<TResult> resultDescriptor, DescriptorResolver<TResult, TComponent> resolveResult)
-        where TResult : notnull;
+    TComponent GetComponent<TComponent>(IComponentToken<TComponent> token);
 }

@@ -12,6 +12,8 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     IDAsyncCancellationManager IDAsyncRunner.Cancellation => this;
 
+    IDAsyncFeatureCollection IDAsyncRunner.Features => this;
+
     private void Start()
     {
         Assert.NotNull(_stateMachine);
@@ -161,7 +163,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         Debug.Assert(_branchCount == 0);
 
         _aggregateType = AggregateType.WhenAll;
-        using (DAsyncFlow childFlow = RentFromCache(returnToCache: false))
+        using (DAsyncFlow childFlow = _pool.UnsafeGet(_host))
         {
             foreach (IDAsyncRunnable branch in branches)
             {
@@ -173,7 +175,10 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
                 childFlow._parent = this;
                 childFlow._parentId = _id;
                 childFlow._id = DAsyncId.New();
-                childFlow.Initialize(this);
+                CancellationProvider.RegisterHandler(childFlow);
+                childFlow._flowProperties = _flowProperties;
+                // TODO: We should give the child flow the host provider and flow provider
+                childFlow._flowComponentProvider.BeginScope();
 
                 try
                 {
@@ -240,7 +245,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
         _aggregateType = AggregateType.WhenAllResult;
         _whenAllBranchResults = new Dictionary<int, TResult>();
-        using (DAsyncFlow childFlow = RentFromCache(returnToCache: false))
+        using (DAsyncFlow childFlow = _pool.UnsafeGet(_host))
         {
             foreach (IDAsyncRunnable branch in branches)
             {
@@ -253,7 +258,10 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
                 childFlow._parentId = _id;
                 childFlow._id = DAsyncId.New();
                 childFlow._branchIndex = _branchCount;
-                childFlow.Initialize(this);
+                CancellationProvider.RegisterHandler(childFlow);
+                childFlow._flowProperties = _flowProperties;
+                // TODO: We should give the child flow the host provider and flow provider
+                childFlow._flowComponentProvider.BeginScope();
 
                 try
                 {
@@ -332,12 +340,8 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
         _aggregateType = AggregateType.WhenAny;
 
-        using (DAsyncFlow childFlow = RentFromCache(returnToCache: false))
+        using (DAsyncFlow childFlow = _pool.UnsafeGet(_host))
         {
-            var oldProperties = childFlow._properties;
-            var oldComponents = childFlow._components;
-            var oldScopedComponents = childFlow._scopedComponents;
-
             foreach (IDAsyncRunnable branch in branches)
             {
                 IDAsyncRunnable runnable = branch is DTask task && _surrogates.TryGetValue(task, out DTaskSurrogate? surrogate)
@@ -348,10 +352,10 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
                 childFlow._parent = this;
                 childFlow._parentId = _id;
                 childFlow._id = DAsyncId.New();
-                childFlow.Initialize(this);
-                childFlow._properties = new(_properties);
-                childFlow._components = new(_components);
-                childFlow._scopedComponents = new(_scopedComponents);
+                CancellationProvider.RegisterHandler(childFlow);
+                childFlow._flowProperties = _flowProperties;
+                // TODO: We should give the child flow the host provider and flow provider
+                childFlow._flowComponentProvider.BeginScope();
 
                 try
                 {
@@ -365,10 +369,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
                 _branchCount++;
             }
-
-            childFlow._properties = oldProperties;
-            childFlow._components = oldComponents;
-            childFlow._scopedComponents = oldScopedComponents;
         }
 
         int branchCount = _branchCount;
@@ -525,26 +525,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         else
         {
             _continuation = Continuations.DelayIndirection;
-            currentStateMachine.Suspend();
-        }
-    }
-
-    void IDAsyncRunnerInternal.Callback(ISuspensionCallback callback)
-    {
-        Assert.NotNull(callback);
-        Assert.Null(_continuation);
-        Assert.Null(_callback);
-
-        IDAsyncStateMachine? currentStateMachine = Consume(ref _stateMachine);
-        _callback = callback;
-
-        if (currentStateMachine is null)
-        {
-            RunIndirection(Continuations.Callback);
-        }
-        else
-        {
-            _continuation = Continuations.CallbackIndirection;
             currentStateMachine.Suspend();
         }
     }

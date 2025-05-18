@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace DTasks.AspNetCore.Infrastructure.Http;
 
-public interface IDAsyncContinuationFactory
+internal interface IDAsyncContinuationFactory
 {
     bool TryCreateSurrogate(CallbackType callbackType, IHeaderDictionary headers, out TypedInstance<object> surrogate);
 }

@@ -1,13 +1,13 @@
 ﻿using System.ComponentModel;
-using DTasks.Configuration;
+using System.Diagnostics.CodeAnalysis;
 
 namespace DTasks.Infrastructure;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IDAsyncHost
 {
-    DTasksConfiguration Configuration { get; }
-
+    bool TryGetProperty<TProperty>(DAsyncPropertyKey<TProperty> key, [MaybeNullWhen(false)] out TProperty value);
+    
     void OnInitialize(IDAsyncFlowInitializationContext context);
 
     void OnFinalize(IDAsyncFlowFinalizationContext context);

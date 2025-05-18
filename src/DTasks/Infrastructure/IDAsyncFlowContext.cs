@@ -1,20 +1,36 @@
 using System.ComponentModel;
-using DTasks.Infrastructure.Execution;
-using DTasks.Infrastructure.Marshaling;
-using DTasks.Infrastructure.State;
+using System.Diagnostics.CodeAnalysis;
+using DTasks.Configuration;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IDAsyncFlowContext
 {
-    IDAsyncStack Stack { get; }
+    IDAsyncHostInfrastructure HostInfrastructure { get; }
+    
+    bool TryGetProperty<TProperty>(DAsyncPropertyKey<TProperty> key, [MaybeNullWhen(false)] out TProperty value);
+}
 
-    IDAsyncHeap Heap { get; }
+[EditorBrowsable(EditorBrowsableState.Never)]
+public static class DAsyncFlowContextExtensions
+{
+    public static TProperty? GetProperty<TProperty>(this IDAsyncFlowContext context, DAsyncPropertyKey<TProperty> key)
+    {
+        ThrowHelper.ThrowIfNull(context);
 
-    IDAsyncSurrogator Surrogator { get; }
-
-    IDAsyncCancellationProvider CancellationProvider { get; }
-
-    IDAsyncSuspensionHandler SuspensionHandler { get; }
+        _ = context.TryGetProperty(key, out TProperty? value);
+        return value;
+    }
+    
+    public static TProperty GetRequiredProperty<TProperty>(this IDAsyncFlowContext context, DAsyncPropertyKey<TProperty> key)
+    {
+        ThrowHelper.ThrowIfNull(context);
+        
+        if (!context.TryGetProperty(key, out TProperty? value))
+            throw new KeyNotFoundException($"Key '{key}' was not found in context.");
+        
+        return value;
+    }
 }

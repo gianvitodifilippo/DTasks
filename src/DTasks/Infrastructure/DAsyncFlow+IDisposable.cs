@@ -7,12 +7,20 @@ internal sealed partial class DAsyncFlow
 #if DEBUG
     ~DAsyncFlow()
     {
-        if (_state is FlowState.Idling)
-            return;
-
         Debug.WriteLine($"An instance of {nameof(DAsyncRunner)} was not disposed. Created at:{Environment.NewLine}{_stackTrace}");
     }
 #endif
 
-    public override void Dispose() => ReturnToCache();
+    protected override void Dispose(bool disposing)
+    {
+        _pool.Return(this);
+        _state = FlowState.Idling;
+        _host = s_nullHost;
+        _hostComponentProvider.Reset();
+        _returnToPool = false;
+        
+#if DEBUG
+        _stackTrace = null;
+#endif
+    }
 }

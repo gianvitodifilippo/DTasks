@@ -25,9 +25,9 @@ public class DAsyncRunnerTests
 
         var stateManagerDescriptor =
             from flow in ComponentDescriptors.Flow
-            select new FakeDAsyncStateManager(_storage, flow.Configuration.TypeResolver, flow.Surrogator);
+            select new FakeDAsyncStateManager(_storage, flow.Parent.Parent.TypeResolver, flow.Surrogator);
 
-        DTasksConfiguration configuration = DTasksConfiguration.Create(configuration => configuration
+        DTasksConfiguration configuration = DTasksConfiguration.Build(configuration => configuration
             .ConfigureState(state => state
                 .UseStack(stateManagerDescriptor)
                 .UseHeap(stateManagerDescriptor))
@@ -35,9 +35,8 @@ public class DAsyncRunnerTests
                 .UseSuspensionHandler(ComponentDescriptor.Singleton(_suspensionHandler))));
 
         _host = Substitute.For<IDAsyncHost>();
-        _host.Configuration.Returns(configuration);
 
-        _sut = DAsyncRunner.Create();
+        _sut = configuration.CreateRunner(_host);
     }
 
     [Fact]
@@ -47,7 +46,7 @@ public class DAsyncRunnerTests
         DTask task = DTask.CompletedDTask;
 
         // Act
-        await _sut.StartAsync(_host, task);
+        await _sut.StartAsync(task);
 
         // Assert
         await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), Arg.Any<CancellationToken>());
@@ -61,7 +60,7 @@ public class DAsyncRunnerTests
         DTask<int> task = DTask.FromResult(result);
 
         // Act
-        await _sut.StartAsync(_host, task);
+        await _sut.StartAsync(task);
 
         // Assert
         await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>());
@@ -75,7 +74,7 @@ public class DAsyncRunnerTests
         DTask task = DTask.FromException(exception);
 
         // Act
-        await _sut.StartAsync(_host, task);
+        await _sut.StartAsync(task);
 
         // Assert
         await _host.Received(1).OnFailAsync(Arg.Any<IDAsyncFlowCompletionContext>(), exception, Arg.Any<CancellationToken>());
@@ -89,7 +88,7 @@ public class DAsyncRunnerTests
         DTask<int> task = DTask<int>.FromException(exception);
 
         // Act
-        await _sut.StartAsync(_host, task);
+        await _sut.StartAsync(task);
 
         // Assert
         await _host.Received(1).OnFailAsync(Arg.Any<IDAsyncFlowCompletionContext>(), exception, Arg.Any<CancellationToken>());
@@ -107,8 +106,8 @@ public class DAsyncRunnerTests
             .Do(call => id = call.Arg<DAsyncId>());
 
         // Act
-        await _sut.StartAsync(_host, runnable);
-        await _sut.ResumeAsync(_host, id);
+        await _sut.StartAsync(runnable);
+        await _sut.ResumeAsync(id);
 
         // Assert
         await _suspensionHandler.Received(1).OnYieldAsync(Arg.Is(NonReservedId), Arg.Any<CancellationToken>());
@@ -129,8 +128,8 @@ public class DAsyncRunnerTests
             .Do(call => id = call.Arg<DAsyncId>());
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id);
 
         // Assert
         await _suspensionHandler.Received(1)
@@ -143,7 +142,7 @@ public class DAsyncRunnerTests
     {
         // Arrange
         var callback = Substitute.For<ISuspensionCallback>();
-        DTask task = DTask.Factory.Callback(callback);
+        DTask task = DTask.Factory.Suspend(callback);
 
         DAsyncId id = default;
         callback
@@ -151,8 +150,8 @@ public class DAsyncRunnerTests
             .Do(call => id = call.Arg<DAsyncId>());
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id);
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId));
@@ -164,7 +163,7 @@ public class DAsyncRunnerTests
     {
         // Arrange
         var callback = Substitute.For<ISuspensionCallback>();
-        DTask<int> task = DTask<int>.Factory.Callback(callback);
+        DTask<int> task = DTask<int>.Factory.Suspend(callback);
 
         DAsyncId id = default;
         callback
@@ -172,55 +171,11 @@ public class DAsyncRunnerTests
             .Do(call => id = call.Arg<DAsyncId>());
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id);
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId));
-        await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task RunsCallbackWithState()
-    {
-        // Arrange
-        var state = new object();
-        var callback = Substitute.For<ISuspensionCallback<object>>();
-        DTask task = DTask.Factory.Callback(state, callback);
-
-        DAsyncId id = default;
-        callback
-            .When(cb => cb.InvokeAsync(Arg.Any<DAsyncId>(), Arg.Any<object>()))
-            .Do(call => id = call.Arg<DAsyncId>());
-
-        // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
-
-        // Assert
-        await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId), state);
-        await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task RunsCallbackOfResultWithState()
-    {
-        // Arrange
-        var state = new object();
-        var callback = Substitute.For<ISuspensionCallback<object>>();
-        DTask<int> task = DTask<int>.Factory.Callback(state, callback);
-
-        DAsyncId id = default;
-        callback
-            .When(cb => cb.InvokeAsync(Arg.Any<DAsyncId>(), Arg.Any<object>()))
-            .Do(call => id = call.Arg<DAsyncId>());
-
-        // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
-
-        // Assert
-        await callback.Received(1).InvokeAsync(Arg.Is(NonReservedId), state);
         await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), Arg.Any<CancellationToken>());
     }
 
@@ -229,7 +184,7 @@ public class DAsyncRunnerTests
     {
         // Arrange
         var callback = Substitute.For<SuspensionCallback>();
-        DTask task = DTask.Factory.Callback(callback);
+        DTask task = DTask.Factory.Suspend(callback);
 
         DAsyncId id = default;
         callback
@@ -237,8 +192,8 @@ public class DAsyncRunnerTests
             .Do(call => id = call.Arg<DAsyncId>());
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id);
 
         // Assert
         await callback.Received(1).Invoke(Arg.Is(NonReservedId));
@@ -250,7 +205,7 @@ public class DAsyncRunnerTests
     {
         // Arrange
         var callback = Substitute.For<SuspensionCallback>();
-        DTask<int> task = DTask<int>.Factory.Callback(callback);
+        DTask<int> task = DTask<int>.Factory.Suspend(callback);
 
         DAsyncId id = default;
         callback
@@ -258,8 +213,8 @@ public class DAsyncRunnerTests
             .Do(call => id = call.Arg<DAsyncId>());
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id);
 
         // Assert
         await callback.Received(1).Invoke(Arg.Is(NonReservedId));
@@ -272,7 +227,7 @@ public class DAsyncRunnerTests
         // Arrange
         var state = new object();
         var callback = Substitute.For<SuspensionCallback<object>>();
-        DTask task = DTask.Factory.Callback(state, callback);
+        DTask task = DTask.Factory.Suspend(state, callback);
 
         DAsyncId id = default;
         callback
@@ -280,8 +235,8 @@ public class DAsyncRunnerTests
             .Do(call => id = call.Arg<DAsyncId>());
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id);
 
         // Assert
         await callback.Received(1).Invoke(Arg.Is(NonReservedId), state);
@@ -294,7 +249,7 @@ public class DAsyncRunnerTests
         // Arrange
         var state = new object();
         var callback = Substitute.For<SuspensionCallback<object>>();
-        DTask<int> task = DTask<int>.Factory.Callback(state, callback);
+        DTask<int> task = DTask<int>.Factory.Suspend(state, callback);
 
         DAsyncId id = default;
         callback
@@ -302,8 +257,8 @@ public class DAsyncRunnerTests
             .Do(call => id = call.Arg<DAsyncId>());
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id);
 
         // Assert
         await callback.Received(1).Invoke(Arg.Is(NonReservedId), state);
@@ -324,7 +279,7 @@ public class DAsyncRunnerTests
         DTask<int> task = M1();
 
         // Act
-        await _sut.StartAsync(_host, task);
+        await _sut.StartAsync(task);
 
         // Assert
         await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>());
@@ -345,7 +300,7 @@ public class DAsyncRunnerTests
         DTask<int> task = M1();
 
         // Act
-        await _sut.StartAsync(_host, task);
+        await _sut.StartAsync(task);
 
         // Assert
         await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>());
@@ -366,7 +321,7 @@ public class DAsyncRunnerTests
         DTask<int> task = M1();
 
         // Act
-        await _sut.StartAsync(_host, task);
+        await _sut.StartAsync(task);
 
         // Assert
         await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>());
@@ -384,7 +339,7 @@ public class DAsyncRunnerTests
         DTask task = M1();
 
         // Act
-        await _sut.StartAsync(_host, task);
+        await _sut.StartAsync(task);
 
         // Assert
         await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), Arg.Any<CancellationToken>());
@@ -404,7 +359,7 @@ public class DAsyncRunnerTests
         DTask<int> task = M1();
 
         // Act
-        await _sut.StartAsync(_host, task);
+        await _sut.StartAsync(task);
 
         // Assert
         await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>());
@@ -424,7 +379,7 @@ public class DAsyncRunnerTests
         DTask task = M1(exception);
 
         // Act
-        await _sut.StartAsync(_host, task);
+        await _sut.StartAsync(task);
 
         // Assert
         await _host.Received(1).OnFailAsync(Arg.Any<IDAsyncFlowCompletionContext>(), exception, Arg.Any<CancellationToken>());
@@ -450,7 +405,7 @@ public class DAsyncRunnerTests
         DTask<int> task = M1();
 
         // Act
-        await _sut.StartAsync(_host, task);
+        await _sut.StartAsync(task);
 
         // Assert
         await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result + 1, Arg.Any<CancellationToken>());
@@ -476,8 +431,8 @@ public class DAsyncRunnerTests
         DTask task = M1();
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id);
 
         // Assert
         await _suspensionHandler.Received(1).OnYieldAsync(Arg.Is(NonReservedId), Arg.Any<CancellationToken>());
@@ -506,8 +461,8 @@ public class DAsyncRunnerTests
         DTask task = M1(delay);
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id);
 
         // Assert
         await _suspensionHandler.Received(1)
@@ -524,7 +479,7 @@ public class DAsyncRunnerTests
 
         static async DTask<int> M1(ISuspensionCallback callback)
         {
-            await DTask.Factory.Callback(callback);
+            await DTask.Factory.Suspend(callback);
             return result;
         }
 
@@ -536,8 +491,8 @@ public class DAsyncRunnerTests
         DTask task = M1(callback);
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id);
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
@@ -553,7 +508,7 @@ public class DAsyncRunnerTests
 
         static async DTask<int> M1(ISuspensionCallback callback)
         {
-            return await DTask<int>.Factory.Callback(callback);
+            return await DTask<int>.Factory.Suspend(callback);
         }
 
         DAsyncId id = default;
@@ -564,8 +519,8 @@ public class DAsyncRunnerTests
         DTask task = M1(callback);
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id, result);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id, result);
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
@@ -607,9 +562,9 @@ public class DAsyncRunnerTests
         DTask task = M1();
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, hostYieldId1);
-        await _sut.ResumeAsync(_host, hostYieldId2);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(hostYieldId1);
+        await _sut.ResumeAsync(hostYieldId2);
 
         // Assert
         DAsyncId id1 = _storage.Ids[0];
@@ -642,7 +597,7 @@ public class DAsyncRunnerTests
 
         static async DTask M2(ISuspensionCallback callback)
         {
-            await DTask.Factory.Callback(callback);
+            await DTask.Factory.Suspend(callback);
         }
 
         DAsyncId id1 = default;
@@ -661,10 +616,10 @@ public class DAsyncRunnerTests
         DTask task = M1(callback);
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id1);
-        await _sut.ResumeAsync(_host, id2);
-        await _sut.ResumeAsync(_host, id3);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id1);
+        await _sut.ResumeAsync(id2);
+        await _sut.ResumeAsync(id3);
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
@@ -738,11 +693,11 @@ public class DAsyncRunnerTests
         DTask task = M1();
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id2);
-        await _sut.ResumeAsync(_host, id1);
-        await _sut.ResumeAsync(_host, id3);
-        await _sut.ResumeAsync(_host, id4);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id2);
+        await _sut.ResumeAsync(id1);
+        await _sut.ResumeAsync(id3);
+        await _sut.ResumeAsync(id4);
 
         // Assert
         task.Status.Should().Be(DTaskStatus.Suspended);
@@ -771,7 +726,7 @@ public class DAsyncRunnerTests
 
         static async DTask M2(ISuspensionCallback callback)
         {
-            await DTask.Factory.Callback(callback);
+            await DTask.Factory.Suspend(callback);
         }
 
         DAsyncId id1 = default;
@@ -786,9 +741,9 @@ public class DAsyncRunnerTests
         DTask task = M1(callback);
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id1);
-        await _sut.ResumeAsync(_host, id2);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id1);
+        await _sut.ResumeAsync(id2);
 
         // Assert
         await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
@@ -869,11 +824,11 @@ public class DAsyncRunnerTests
         DTask task = M1();
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id2);
-        await _sut.ResumeAsync(_host, id1);
-        await _sut.ResumeAsync(_host, id3);
-        await _sut.ResumeAsync(_host, id4);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id2);
+        await _sut.ResumeAsync(id1);
+        await _sut.ResumeAsync(id3);
+        await _sut.ResumeAsync(id4);
 
         // Assert
         await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), true, Arg.Any<CancellationToken>());
@@ -952,11 +907,11 @@ public class DAsyncRunnerTests
         DTask task = M1();
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id2);
-        await _sut.ResumeAsync(_host, id1);
-        await _sut.ResumeAsync(_host, id3);
-        await _sut.ResumeAsync(_host, id4);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id2);
+        await _sut.ResumeAsync(id1);
+        await _sut.ResumeAsync(id3);
+        await _sut.ResumeAsync(id4);
 
         // Assert
         await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), true, Arg.Any<CancellationToken>());
@@ -1025,11 +980,11 @@ public class DAsyncRunnerTests
         DTask task = M1();
 
         // Act
-        await _sut.StartAsync(_host, task);
-        await _sut.ResumeAsync(_host, id2);
-        await _sut.ResumeAsync(_host, id1);
-        await _sut.ResumeAsync(_host, id3);
-        await _sut.ResumeAsync(_host, id4);
+        await _sut.StartAsync(task);
+        await _sut.ResumeAsync(id2);
+        await _sut.ResumeAsync(id1);
+        await _sut.ResumeAsync(id3);
+        await _sut.ResumeAsync(id4);
 
         // Assert
     }

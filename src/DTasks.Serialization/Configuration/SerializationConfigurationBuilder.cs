@@ -1,5 +1,6 @@
 using DTasks.Configuration;
 using DTasks.Configuration.DependencyInjection;
+using DTasks.Infrastructure;
 using DTasks.Infrastructure.State;
 
 namespace DTasks.Serialization.Configuration;
@@ -14,17 +15,23 @@ internal sealed class SerializationConfigurationBuilder : ISerializationConfigur
         where TBuilder : IDTasksConfigurationBuilder
     {
         if (_stateMachineSerializerDescriptor is null || _serializerDescriptor is null)
-            throw new InvalidOperationException("Serialization was not properly configured."); // TODO: Dedicated exception type
+            throw new InvalidOperationException("Serialization was not properly configured."); // TODO: Dedicated exception type, make message consistent
 
-        IComponentDescriptor<IDAsyncStack> stackDescriptor = ComponentDescriptor.Combine(
-            _stateMachineSerializerDescriptor,
-            _storageDescriptor,
-            (stateMachineSerializer, storage) => new BinaryDAsyncStack(stateMachineSerializer, storage));
+        // IComponentDescriptor<IDAsyncStack> stackDescriptor =
+        //     from stateMachineSerializer in _stateMachineSerializerDescriptor
+        //     from storage in _storageDescriptor
+        //     select new BinaryDAsyncStack(stateMachineSerializer, storage);
+        //
+        IComponentDescriptor<IDAsyncHeap> heapDescriptor =
+            from serializer in _serializerDescriptor
+            from storage in _storageDescriptor
+            select new BinaryDAsyncHeap(serializer, storage);
 
-        IComponentDescriptor<IDAsyncHeap> heapDescriptor = ComponentDescriptor.Combine(
-            _serializerDescriptor,
-            _storageDescriptor,
-            (serializer, storage) => new BinaryDAsyncHeap(serializer, storage));
+        IComponentDescriptor<IDAsyncStack> stackDescriptor = _stateMachineSerializerDescriptor
+            .Bind(serializer => _storageDescriptor
+                .Bind(storage => ComponentDescriptor.Permanent(provider => new BinaryDAsyncStack(
+                    provider.GetComponent(serializer),
+                    provider.GetComponent(storage)))));
 
         builder.ConfigureState(stateManager => stateManager
             .UseStack(stackDescriptor)

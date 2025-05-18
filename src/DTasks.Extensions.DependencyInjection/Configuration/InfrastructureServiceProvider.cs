@@ -6,19 +6,23 @@ namespace DTasks.Extensions.DependencyInjection.Configuration;
 
 public static class InfrastructureServiceProvider
 {
-    internal static readonly DAsyncFlowPropertyKey<IServiceProvider> ServiceProviderKey = new();
+    internal static readonly DAsyncPropertyKey<IServiceProvider> ServiceProviderKey = new();
 
-    public static readonly IComponentDescriptor<IServiceProvider> Descriptor = ComponentDescriptor.Scoped(flow => flow.GetProperty(ServiceProviderKey));
+    public static readonly IComponentDescriptor<IServiceProvider> Descriptor = ComponentDescriptor.Host(host => host.GetRequiredProperty(ServiceProviderKey));
 
     public static IComponentDescriptor<TService> GetRequiredService<TService>()
         where TService : notnull
     {
-        return Descriptor.Map(services => services.GetRequiredService<TService>());
+        return ComponentDescriptor.Host(host => host
+            .GetRequiredProperty(ServiceProviderKey)
+            .GetRequiredService<TService>());
     }
 
     public static IComponentDescriptor<TService> GetRequiredKeyedService<TService>(object serviceKey)
         where TService : notnull
     {
-        return Descriptor.Map(services => services.GetRequiredKeyedService<TService>(serviceKey));
+        return ComponentDescriptor.Host(host => host
+            .GetRequiredProperty(ServiceProviderKey)
+            .GetRequiredKeyedService<TService>(serviceKey));
     }
 }

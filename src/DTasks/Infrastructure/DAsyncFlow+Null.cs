@@ -1,13 +1,15 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using DTasks.Configuration;
+using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 
 namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow
 {
-    // Since _host is initialized in the entrypoints and defaulted only when calling Reset,
-    // the following saves the trouble of asserting it's not null whenever used.
+    // The following saves the trouble of asserting _host is not null whenever used.
     private static readonly IDAsyncHost s_nullHost = new NullDAsyncHost();
 
     [DoesNotReturn]
@@ -23,7 +25,11 @@ internal sealed partial class DAsyncFlow
         [DoesNotReturn]
         private static TResult Fail<TResult>() => DAsyncFlow.Fail<TResult>(nameof(_host));
 
-        DTasksConfiguration IDAsyncHost.Configuration => Fail<DTasksConfiguration>();
+        bool IDAsyncHost.TryGetProperty<TProperty>(DAsyncPropertyKey<TProperty> key, [MaybeNullWhen(false)] out TProperty value)
+        {
+            value = default;
+            return Fail<bool>();
+        }
 
         void IDAsyncHost.OnInitialize(IDAsyncFlowInitializationContext context) => Fail<VoidDTaskResult>();
 

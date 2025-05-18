@@ -4,8 +4,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Sources;
-using DTasks.Configuration;
 using DTasks.Execution;
+using DTasks.Infrastructure.DependencyInjection;
 using DTasks.Infrastructure.Execution;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
@@ -20,17 +20,22 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private CancellationToken _cancellationToken;
     private object? _resultOrException;
 
+    private readonly IDAsyncFlowPool _pool;
+    private readonly IDAsyncInfrastructure _infrastructure;
+    private bool _returnToPool;
+
+#if DEBUG
+    private string? _stackTrace;
+#endif
+
+    private readonly HostComponentProvider _hostComponentProvider;
+    private readonly FlowComponentProvider _flowComponentProvider;
     private IDAsyncHost _host;
     private IDAsyncStack? _stack;
     private IDAsyncHeap? _heap;
     private IDAsyncSurrogator? _surrogator;
     private IDAsyncCancellationProvider? _cancellationProvider;
     private IDAsyncSuspensionHandler? _suspensionHandler;
-
-    private bool _returnToCache;
-#if DEBUG
-    private string? _stackTrace;
-#endif
 
     private TaskAwaiter _voidTa;
     private ValueTaskAwaiter _voidVta;
@@ -64,40 +69,39 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private readonly ConcurrentDictionary<DCancellationTokenSource, CancellationInfo> _cancellationInfos;
     private readonly ConcurrentDictionary<DCancellationId, DCancellationTokenSource> _cancellations;
 
-    private Dictionary<object, object?> _properties;
-    private Dictionary<object, object> _components;
-    private Dictionary<object, object> _scopedComponents;
-    private bool _isCreatingComponent;
-    private bool _usedPropertyInScopedComponent;
+    private bool _clearFlowProperties;
+    private Dictionary<object, object?>? _flowProperties;
 
-    private DAsyncFlow()
+    private DAsyncFlow(IDAsyncFlowPool pool, IDAsyncInfrastructure infrastructure)
     {
+        _pool = pool;
+        _infrastructure = infrastructure;
+        _hostComponentProvider = infrastructure.RootProvider.CreateHostProvider(this);
+        _flowComponentProvider = _hostComponentProvider.CreateFlowProvider(this);
         _state = FlowState.Idling;
         _builder = AsyncTaskMethodBuilder.Create();
         _host = s_nullHost;
         _taskSurrogateConverter = new DTaskSurrogateConverter(this);
+        // TODO: Lazily initialize these
         _surrogates = [];
         _tasks = [];
         _cancellationInfos = [];
         _cancellations = [];
-        _properties = [];
-        _components = [];
-        _scopedComponents = [];
     }
 
-    private DTasksConfiguration Configuration => _host.Configuration;
+    protected override IDAsyncHostInfrastructure InfrastructureCore => _hostComponentProvider;
 
-    private IDAsyncTypeResolver TypeResolver => Configuration.TypeResolver;
+    private IDAsyncTypeResolver TypeResolver => _infrastructure.TypeResolver;
 
-    private IDAsyncStack Stack => GetComponent(ref _stack, static (infrastructure, scope) => infrastructure.GetStack(scope));
+    private IDAsyncStack Stack => _stack ??= _infrastructure.GetStack(_flowComponentProvider);
 
-    private IDAsyncHeap Heap => GetComponent(ref _heap, static (infrastructure, scope) => infrastructure.GetHeap(scope));
+    private IDAsyncHeap Heap => _heap ??= _infrastructure.GetHeap(_flowComponentProvider);
 
-    private IDAsyncSurrogator Surrogator => GetComponent(ref _surrogator, static (infrastructure, scope) => infrastructure.GetSurrogator(scope));
+    private IDAsyncSurrogator Surrogator => _surrogator ??= _infrastructure.GetSurrogator(_flowComponentProvider);
 
-    private IDAsyncCancellationProvider CancellationProvider => GetComponent(ref _cancellationProvider, static (infrastructure, scope) => infrastructure.GetCancellationProvider(scope));
+    private IDAsyncCancellationProvider CancellationProvider => _cancellationProvider ??= _infrastructure.GetCancellationProvider(_flowComponentProvider);
 
-    private IDAsyncSuspensionHandler SuspensionHandler => GetComponent(ref _suspensionHandler, static (infrastructure, scope) => infrastructure.GetSuspensionHandler(scope));
+    private IDAsyncSuspensionHandler SuspensionHandler => _suspensionHandler ??= _infrastructure.GetSuspensionHandler(_flowComponentProvider);
 
     [MemberNotNullWhen(true, nameof(_parent))]
     private bool IsRunningAggregates => _parent is not null;
@@ -112,31 +116,60 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         }
     }
 
-    private void Initialize(IDAsyncHost host)
+#if DEBUG
+    public void Initialize(IDAsyncHost host, string? stackTrace)
     {
+        _state = FlowState.Pending;
         _host = host;
-        
-        host.OnInitialize(this);
-        CancellationProvider.RegisterHandler(this);
+        _stackTrace = stackTrace;
+        _returnToPool = stackTrace is null;
+    }
+#else
+    public void Initialize(IDAsyncHost host, bool returnToPool)
+    {
+        _state = FlowState.Pending;
+        _host = host;
+        _returnToPool = returnToPool;
+    }
+#endif
+
+    public new ValueTask StartAsync(IDAsyncRunnable runnable, CancellationToken cancellationToken)
+    {
+        return StartCoreAsync(runnable, cancellationToken);
     }
 
-    protected override ValueTask StartCoreAsync(IDAsyncHost host, IDAsyncRunnable runnable, CancellationToken cancellationToken)
+    public new ValueTask ResumeAsync(DAsyncId id, CancellationToken cancellationToken)
+    {
+        return ResumeCoreAsync(id, cancellationToken);
+    }
+
+    public new ValueTask ResumeAsync<TResult>(DAsyncId id, TResult result, CancellationToken cancellationToken)
+    {
+        return ResumeCoreAsync(id, result, cancellationToken);
+    }
+
+    public new ValueTask ResumeAsync(DAsyncId id, Exception exception, CancellationToken cancellationToken)
+    {
+        return ResumeCoreAsync(id, exception, cancellationToken);
+    }
+
+    protected override ValueTask StartCoreAsync(IDAsyncRunnable runnable, CancellationToken cancellationToken)
     {
         if (_state is not FlowState.Pending)
             throw new InvalidOperationException($"Detected invalid usage of {nameof(DAsyncFlow)}");
 
         _runnable = runnable;
         _cancellationToken = cancellationToken;
-        _parentId = DAsyncId.NewFlowId();
-        _id = DAsyncId.New();
+        _parentId = DAsyncId.NewFlowId(); // TODO: Move after OnStartAsync
+        _id = DAsyncId.New(); // TODO: Move after OnStartAsync
 
-        Initialize(host);
+        InitializeFlow(); // TODO: Move after OnStartAsync
         AwaitOnStart();
         
         return new ValueTask(this, _valueTaskSource.Version);
     }
 
-    protected override ValueTask ResumeCoreAsync(IDAsyncHost host, DAsyncId id, CancellationToken cancellationToken)
+    protected override ValueTask ResumeCoreAsync(DAsyncId id, CancellationToken cancellationToken)
     {
         if (_state is not FlowState.Pending)
             throw new InvalidOperationException($"Detected invalid usage of {nameof(DAsyncFlow)}");
@@ -144,13 +177,13 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         _state = FlowState.Running;
         _cancellationToken = cancellationToken;
 
-        Initialize(host);
+        InitializeFlow();
         Resume(id);
         
         return new ValueTask(this, _valueTaskSource.Version);
     }
 
-    protected override ValueTask ResumeCoreAsync<TResult>(IDAsyncHost host, DAsyncId id, TResult result, CancellationToken cancellationToken)
+    protected override ValueTask ResumeCoreAsync<TResult>(DAsyncId id, TResult result, CancellationToken cancellationToken)
     {
         if (_state is not FlowState.Pending)
             throw new InvalidOperationException($"Detected invalid usage of {nameof(DAsyncFlow)}");
@@ -158,13 +191,13 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         _state = FlowState.Running;
         _cancellationToken = cancellationToken;
         
-        Initialize(host);
+        InitializeFlow();
         Resume(id, result);
 
         return new ValueTask(this, _valueTaskSource.Version);
     }
 
-    protected override ValueTask ResumeCoreAsync(IDAsyncHost host, DAsyncId id, Exception exception, CancellationToken cancellationToken)
+    protected override ValueTask ResumeCoreAsync(DAsyncId id, Exception exception, CancellationToken cancellationToken)
     {
         if (_state is not FlowState.Pending)
             throw new InvalidOperationException($"Detected invalid usage of {nameof(DAsyncFlow)}");
@@ -172,10 +205,18 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         _state = FlowState.Running;
         _cancellationToken = cancellationToken;
 
-        Initialize(host);
+        InitializeFlow();
         Resume(id, exception);
         
         return new ValueTask(this, _valueTaskSource.Version);
+    }
+
+    private void InitializeFlow()
+    {
+        _clearFlowProperties = true;
+        _flowComponentProvider.BeginScope();
+        _host.OnInitialize(this);
+        CancellationProvider.RegisterHandler(this);
     }
 
     [DebuggerStepThrough]
@@ -186,30 +227,14 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         return result;
     }
 
-    private TComponent GetComponent<TComponent>([NotNull] ref TComponent? component, Func<IDAsyncInfrastructure, IDAsyncScope, TComponent> factory)
-        where TComponent : notnull
+    public static DAsyncFlow Create(IDAsyncFlowPool pool, IDAsyncInfrastructure infrastructure)
     {
-        if (component is not null)
-            return component;
-
-        _isCreatingComponent = true;
-        component = factory(Configuration.Infrastructure, this);
-        _isCreatingComponent = false;
-
-        return component;
-    }
+        DAsyncFlow flow = new(pool, infrastructure);
 
 #if DEBUG
-    public static DAsyncFlow Create(string stackTrace)
-    {
-        DAsyncFlow flow = RentFromCache(returnToCache: false);
-
         GC.ReRegisterForFinalize(flow);
-        flow._stackTrace = stackTrace;
+#endif
 
         return flow;
     }
-#else
-    public static DAsyncFlow Create() => RentFromCache(returnToCache: false);
-#endif
 }

@@ -1,12 +1,12 @@
 namespace DTasks.AspNetCore.Infrastructure.Http;
 
-internal class AsyncEndpointInfo
+public class AsyncEndpointInfo // TODO: Make internal. This is only needed for the sample until we implement async endpoints
 {
     // public AsyncEndpointStatus Status { get; set; }
     public string? Status { get; set; }
 }
 
-internal class AsyncEndpointInfo<TResult> : AsyncEndpointInfo
+public class AsyncEndpointInfo<TResult> : AsyncEndpointInfo
 {
     public TResult? Result { get; set; }
 }

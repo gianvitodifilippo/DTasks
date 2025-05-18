@@ -4,6 +4,7 @@ using DTasks.AspNetCore.Infrastructure.Http;
 using DTasks.Extensions.DependencyInjection.Infrastructure;
 using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 using DTasks.Utils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,7 +14,7 @@ namespace DTasks.AspNetCore.Infrastructure;
 public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost, IAsyncHttpResultHandler
 {
     private delegate Task ContinuationAction<in T>(IDAsyncContinuation continuation, DAsyncId flowId, T value, CancellationToken cancellationToken);
-    private delegate Task EndpointMonitorAction<in T>(IAsyncEndpointMonitor monitor, DAsyncId flowId, T value, CancellationToken cancellationToken);
+    private delegate Task EndpointStatusMonitorAction<in T>(IDAsyncHeap heap, DAsyncId flowId, T value, CancellationToken cancellationToken);
 
     private StartFlowState _startFlowState;
 
@@ -31,8 +32,8 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost, IAsyncHttpResul
         DAsyncId flowId = _startFlowState.FlowId;
         Debug.Assert(flowId != default);
 
-        var endpointMonitor = new AsyncEndpointMonitor(context.Heap);
-        await endpointMonitor.SetRunningAsync(flowId, cancellationToken);
+        IDAsyncHeap heap = context.HostInfrastructure.GetHeap();
+        await heap.SetRunningAsync(flowId, cancellationToken);
 
         TypedInstance<object> continuationSurrogate = _startFlowState.ContinuationSurrogate;
         TypedInstance<object>[]? continuationSurrogateArray = _startFlowState.ContinuationSurrogateArray;
@@ -40,13 +41,13 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost, IAsyncHttpResul
         if (continuationSurrogate != default)
         {
             string callbackKey = GetContinuationKey(flowId);
-            await context.Heap.SaveAsync(callbackKey, continuationSurrogate, cancellationToken);
+            await heap.SaveAsync(callbackKey, continuationSurrogate, cancellationToken);
         }
         else if (continuationSurrogateArray is not null)
         {
             string continuationKey = GetContinuationKey(flowId);
             TypedInstance<object> aggregateContinuationSurrogate = AggregateDAsyncContinuation.CreateSurrogate(continuationSurrogateArray);
-            await context.Heap.SaveAsync(continuationKey, aggregateContinuationSurrogate, cancellationToken);
+            await heap.SaveAsync(continuationKey, aggregateContinuationSurrogate, cancellationToken);
         }
 
         await SuspendOnStartAsync(flowId, cancellationToken);
@@ -188,17 +189,16 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost, IAsyncHttpResul
     private async Task CompleteOnResumeAsync<T>(
         IDAsyncFlowCompletionContext context,
         T value,
-        EndpointMonitorAction<T> endpointMonitorAction,
+        EndpointStatusMonitorAction<T> monitorAction,
         ContinuationAction<T> continuationAction,
         CancellationToken cancellationToken)
     {
         DAsyncId flowId = context.FlowId;
-
-        var endpointMonitor = new AsyncEndpointMonitor(context.Heap);
-        await endpointMonitorAction(endpointMonitor, flowId, value, cancellationToken);
+        IDAsyncHeap heap = context.HostInfrastructure.GetHeap();
+        await monitorAction(heap, flowId, value, cancellationToken);
 
         string continuationKey = GetContinuationKey(flowId);
-        Option<TypedInstance<IDAsyncContinuationSurrogate>> loadResult = await context.Heap.LoadAsync<string, TypedInstance<IDAsyncContinuationSurrogate>>(continuationKey, cancellationToken);
+        Option<TypedInstance<IDAsyncContinuationSurrogate>> loadResult = await heap.LoadAsync<string, TypedInstance<IDAsyncContinuationSurrogate>>(continuationKey, cancellationToken);
 
         // TODO: Check before and decide what to do should it be empty
         IDAsyncContinuation continuation = loadResult.Value.Instance.Restore(Services);
@@ -239,7 +239,7 @@ public abstract class AspNetCoreDAsyncHost : ServicedDAsyncHost, IAsyncHttpResul
     {
         ArgumentNullException.ThrowIfNull(httpContext);
 
-        return new AsyncEndpointDAsyncHost(httpContext);
+        return new HttpDAsyncHost(httpContext);
     }
 
     private readonly struct VoidResult;

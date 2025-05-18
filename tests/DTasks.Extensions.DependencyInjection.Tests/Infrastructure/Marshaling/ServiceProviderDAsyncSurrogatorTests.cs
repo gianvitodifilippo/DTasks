@@ -5,8 +5,8 @@ namespace DTasks.Extensions.DependencyInjection.Infrastructure.Marshaling;
 
 public class ServiceProviderDAsyncSurrogatorTests
 {
-    private static readonly TypeId s_surrogateTypeId = new("surrogate");
-    private static readonly TypeId s_serviceTypeId = new("service");
+    private static readonly TypeId s_surrogateTypeId = TypeId.FromConstant("surrogate");
+    private static readonly TypeId s_serviceTypeId = TypeId.FromConstant("service");
 
     private readonly IKeyedServiceProvider _provider;
     private readonly IDAsyncServiceRegister _register;

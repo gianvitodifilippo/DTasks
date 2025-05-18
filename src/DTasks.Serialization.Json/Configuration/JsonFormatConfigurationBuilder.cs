@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using DTasks.Configuration;
 using DTasks.Configuration.DependencyInjection;
+using DTasks.Infrastructure;
 using DTasks.Inspection;
 using DTasks.Inspection.Dynamic;
 using DTasks.Serialization.Configuration;
@@ -14,50 +15,42 @@ namespace DTasks.Serialization.Json.Configuration;
 
 internal sealed class JsonFormatConfigurationBuilder : IJsonFormatConfigurationBuilder
 {
-    private readonly List<Action<JsonSerializerOptions, DTasksConfiguration>> _optionsConfigurationActions = [];
+    private readonly List<Action<IDAsyncRootScope, JsonSerializerOptions>> _optionsConfigurationActions = [];
 
-    private IComponentDescriptor<IStateMachineInspector> _inspectorDescriptor = ComponentDescriptor.Singleton(
-        static configuration => DynamicStateMachineInspector.Create(
+    private IComponentDescriptor<IStateMachineInspector> _inspectorDescriptor = ComponentDescriptor.Root(
+        static rootScope => DynamicStateMachineInspector.Create(
             typeof(IStateMachineSuspender<>),
             typeof(IStateMachineResumer),
-            configuration.TypeResolver));
+            rootScope.TypeResolver));
 
     public TBuilder Configure<TBuilder>(TBuilder builder)
         where TBuilder : ISerializationConfigurationBuilder
     {
-        var serializerFactoryDescriptor = _inspectorDescriptor.Map((configuration, inspector) =>
-        {
-            JsonSerializerOptions serializerOptions = new();
-            foreach (var configure in _optionsConfigurationActions)
-            {
-                configure(serializerOptions, configuration);
-            }
+        // IComponentDescriptor<JsonDAsyncSerializerFactory> serializerFactoryDescriptor =
+        //     from rootScope in ComponentDescriptors.Root
+        //     from inspector in _inspectorDescriptor
+        //     select CreateSerializerFactory(rootScope, inspector);
+        //
+        // IComponentDescriptor<IDAsyncSerializer> serializerDescriptor = serializerFactoryDescriptor
+        //     .Map(factory => factory.CreateSerializer());
+        //
+        // IComponentDescriptor<IStateMachineSerializer> stateMachineSerializerDescriptor =
+        //     from flowScope in ComponentDescriptors.Flow
+        //     from serializerFactory in serializerFactoryDescriptor
+        //     select serializerFactory.CreateStateMachineSerializer(flowScope);
 
-            serializerOptions.AllowOutOfOrderMetadataProperties = false;
-            serializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
+        IComponentDescriptor<JsonDAsyncSerializerFactory> serializerFactoryDescriptor = ComponentDescriptors.Root
+            .Bind(rootScope => _inspectorDescriptor
+                .Bind(inspector => ComponentDescriptor.Permanent(provider => CreateSerializerFactory(
+                    provider.GetComponent(rootScope),
+                    provider.GetComponent(inspector)))));
+        
+        IComponentDescriptor<IDAsyncSerializer> serializerDescriptor = serializerFactoryDescriptor
+            .Bind(factory => ComponentDescriptor.Permanent(provider => provider.GetComponent(factory).CreateSerializer()));
 
-            ImmutableArray<Type> surrogatableTypes = configuration.SurrogatableTypes;
-            FrozenSet<Type> surrogatableNonGenericTypes = surrogatableTypes
-                .Where(type => !type.IsGenericType)
-                .ToFrozenSet();
-            FrozenSet<Type> surrogatableGenericTypes = surrogatableTypes
-                .Where(type => type.IsGenericType)
-                .ToFrozenSet();
-
-            serializerOptions.Converters.Add(new TypeIdJsonConverter());
-            serializerOptions.Converters.Add(new DAsyncIdJsonConverter());
-
-            return new JsonDAsyncSerializerFactory(
-                inspector,
-                configuration.TypeResolver,
-                surrogatableNonGenericTypes,
-                surrogatableGenericTypes,
-                serializerOptions);
-        });
-
-        var serializerDescriptor = serializerFactoryDescriptor.Map(factory => factory.CreateSerializer());
-        var stateMachineSerializerDescriptor = serializerFactoryDescriptor
-            .Map((flow, serializerFactory) => serializerFactory.CreateStateMachineSerializer(flow.Surrogator));
+        IComponentDescriptor<IStateMachineSerializer> stateMachineSerializerDescriptor = ComponentDescriptors.Flow
+            .Bind(flowScope => serializerFactoryDescriptor
+                .Bind(factory => ComponentDescriptor.Permanent(provider => provider.GetComponent(factory).CreateStateMachineSerializer(provider.GetComponent(flowScope)))));
 
         builder
             .UseSerializer(serializerDescriptor)
@@ -70,11 +63,11 @@ internal sealed class JsonFormatConfigurationBuilder : IJsonFormatConfigurationB
     {
         ThrowHelper.ThrowIfNull(configure);
 
-        _optionsConfigurationActions.Add((options, configuration) => configure(options));
+        _optionsConfigurationActions.Add((_, options) => configure(options));
         return this;
     }
 
-    IJsonFormatConfigurationBuilder IJsonFormatConfigurationBuilder.ConfigureSerializerOptions(Action<JsonSerializerOptions, DTasksConfiguration> configure)
+    IJsonFormatConfigurationBuilder IJsonFormatConfigurationBuilder.ConfigureSerializerOptions(Action<IDAsyncRootScope, JsonSerializerOptions> configure)
     {
         ThrowHelper.ThrowIfNull(configure);
 
@@ -88,5 +81,35 @@ internal sealed class JsonFormatConfigurationBuilder : IJsonFormatConfigurationB
 
         _inspectorDescriptor = descriptor;
         return this;
+    }
+
+    private JsonDAsyncSerializerFactory CreateSerializerFactory(IDAsyncRootScope rootScope, IStateMachineInspector inspector)
+    {
+        JsonSerializerOptions serializerOptions = new();
+        foreach (var configure in _optionsConfigurationActions)
+        {
+            configure(rootScope, serializerOptions);
+        }
+
+        serializerOptions.AllowOutOfOrderMetadataProperties = false;
+        serializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
+
+        FrozenSet<Type> surrogatableTypes = rootScope.SurrogatableTypes;
+        FrozenSet<Type> surrogatableNonGenericTypes = surrogatableTypes
+            .Where(type => !type.IsGenericType)
+            .ToFrozenSet();
+        FrozenSet<Type> surrogatableGenericTypes = surrogatableTypes
+            .Where(type => type.IsGenericType)
+            .ToFrozenSet();
+
+        serializerOptions.Converters.Add(new TypeIdJsonConverter());
+        serializerOptions.Converters.Add(new DAsyncIdJsonConverter());
+
+        return new JsonDAsyncSerializerFactory(
+            inspector,
+            rootScope.TypeResolver,
+            surrogatableNonGenericTypes,
+            surrogatableGenericTypes,
+            serializerOptions);
     }
 }

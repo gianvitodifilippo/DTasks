@@ -4,637 +4,177 @@ using DTasks.Utils;
 
 namespace DTasks.Configuration.DependencyInjection;
 
+[EditorBrowsable(EditorBrowsableState.Never)]
 public static class ComponentDescriptor
 {
     public static IComponentDescriptor<TComponent> Singleton<TComponent>(TComponent component)
-        where TComponent : notnull
     {
-        ThrowHelper.ThrowIfNull(component);
-
-        return Unit(component);
+        return Permanent(_ => component);
     }
 
-    public static IComponentDescriptor<TComponent> Singleton<TComponent>(ConfiguredImplementationFactory<TComponent> createComponent)
-        where TComponent : notnull
+    public static IComponentDescriptor<TComponent> Root<TComponent>(Func<IDAsyncRootScope, TComponent> createComponent)
     {
-        ThrowHelper.ThrowIfNull(createComponent);
-
-        return SingletonCore(createComponent);
+        return ComponentDescriptors.Root.Map(createComponent);
     }
 
-    public static IComponentDescriptor<TComponent> Scoped<TComponent>(FlowImplementationFactory<TComponent> createComponent)
-        where TComponent : notnull
+    public static IComponentDescriptor<TComponent> RootTransient<TComponent>(Func<IDAsyncRootScope, TComponent> createComponent)
     {
-        ThrowHelper.ThrowIfNull(createComponent);
-
-        return ScopedCore(createComponent);
+        return ComponentDescriptors.Root.MapAsTransient(createComponent);
     }
 
-    public static IComponentDescriptor<TComponent> Transient<TComponent>(ImplementationFactory<TComponent> createComponent)
-        where TComponent : notnull
+    public static IComponentDescriptor<TComponent> Host<TComponent>(Func<IDAsyncHostScope, TComponent> createComponent)
     {
-        ThrowHelper.ThrowIfNull(createComponent);
-
-        return RootTransient(createComponent);
+        return ComponentDescriptors.Host.Map(createComponent);
     }
 
-    public static IComponentDescriptor<TComponent> Transient<TComponent>(ConfiguredImplementationFactory<TComponent> createComponent)
-        where TComponent : notnull
+    public static IComponentDescriptor<TComponent> HostTransient<TComponent>(Func<IDAsyncHostScope, TComponent> createComponent)
     {
-        ThrowHelper.ThrowIfNull(createComponent);
-
-        return RootTransient(createComponent);
+        return ComponentDescriptors.Host.MapAsTransient(createComponent);
     }
 
-    public static IComponentDescriptor<TComponent> Transient<TComponent>(FlowImplementationFactory<TComponent> createComponent)
-        where TComponent : notnull
+    public static IComponentDescriptor<TComponent> Flow<TComponent>(Func<IDAsyncFlowScope, TComponent> createComponent)
     {
-        ThrowHelper.ThrowIfNull(createComponent);
-
-        return FlowTransient(createComponent);
+        return ComponentDescriptors.Flow.Map(createComponent);
     }
 
-    public static IComponentDescriptor<TResult> Aggregate<TComponent, TResult>(
-        IEnumerable<IComponentDescriptor<TComponent>> descriptors,
-        Func<IEnumerable<TComponent>, TResult> aggregate)
-        where TComponent : notnull
-        where TResult : notnull
+    public static IComponentDescriptor<TComponent> FlowTransient<TComponent>(Func<IDAsyncFlowScope, TComponent> createComponent)
     {
-        ThrowHelper.ThrowIfNull(descriptors);
-        ThrowHelper.ThrowIfNull(aggregate);
-
-        IComponentDescriptor<List<TComponent>> seed = Unit<List<TComponent>>([]);
-        return descriptors
-            .Aggregate(seed, (accumulated, descriptor) => accumulated
-                .Bind(list => descriptor
-                    .Map<TComponent, List<TComponent>>(component => [.. list, component])))
-            .Map(aggregate);
+        return ComponentDescriptors.Flow.MapAsTransient(createComponent);
     }
-
-    #region Map/MapAsTransient/FlatMap
 
     public static IComponentDescriptor<TResult> Map<TComponent, TResult>(
         this IComponentDescriptor<TComponent> descriptor,
         Func<TComponent, TResult> map)
-        where TComponent : notnull
-        where TResult : notnull
     {
         ThrowHelper.ThrowIfNull(descriptor);
         ThrowHelper.ThrowIfNull(map);
 
-        return descriptor.Bind(dependency => Unit(map(dependency)));
+        return descriptor
+            .Bind(token => Permanent(provider => map(provider.GetComponent(token))));
     }
-
-    public static IComponentDescriptor<TResult> Map<TComponent, TResult>(
-        this IComponentDescriptor<TComponent> descriptor,
-        Func<DTasksConfiguration, TComponent, TResult> map)
-        where TComponent : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor);
-        ThrowHelper.ThrowIfNull(map);
-
-        return descriptor.Bind(dependency => SingletonCore(config => map(config, dependency)));
-    }
-
-    public static IComponentDescriptor<TResult> Map<TComponent, TResult>(
-        this IComponentDescriptor<TComponent> descriptor,
-        Func<IDAsyncFlow, TComponent, TResult> map)
-        where TComponent : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor);
-        ThrowHelper.ThrowIfNull(map);
-
-        return descriptor.Bind(dependency => ScopedCore(flow => map(flow, dependency)));
-    }
-
+    
     public static IComponentDescriptor<TResult> MapAsTransient<TComponent, TResult>(
         this IComponentDescriptor<TComponent> descriptor,
         Func<TComponent, TResult> map)
-        where TComponent : notnull
-        where TResult : notnull
     {
         ThrowHelper.ThrowIfNull(descriptor);
         ThrowHelper.ThrowIfNull(map);
 
-        return descriptor.Bind(dependency => RootTransient(() => map(dependency)));
+        return descriptor
+            .Bind(token => Transient(provider => map(provider.GetComponent(token))));
     }
-
-    public static IComponentDescriptor<TResult> MapAsTransient<TComponent, TResult>(
-        this IComponentDescriptor<TComponent> descriptor,
-        Func<DTasksConfiguration, TComponent, TResult> map)
-        where TComponent : notnull
-        where TResult : notnull
+    
+    public static IComponentDescriptor<TResult> Combine<TComponent1, TComponent2, TResult>(
+        IComponentDescriptor<TComponent1> descriptor1,
+        IComponentDescriptor<TComponent2> descriptor2,
+        Func<TComponent1, TComponent2, TResult> map)
     {
-        ThrowHelper.ThrowIfNull(descriptor);
+        ThrowHelper.ThrowIfNull(descriptor1);
+        ThrowHelper.ThrowIfNull(descriptor2);
         ThrowHelper.ThrowIfNull(map);
 
-        return descriptor.Bind(dependency => RootTransient(config => map(config, dependency)));
+        return descriptor1
+            .Bind(token1 => descriptor2
+                .Bind(token2 => Permanent(provider => map(
+                    provider.GetComponent(token1),
+                    provider.GetComponent(token2)))));
     }
-
-    public static IComponentDescriptor<TResult> MapAsTransient<TComponent, TResult>(
-        this IComponentDescriptor<TComponent> descriptor,
-        Func<IDAsyncFlow, TComponent, TResult> map)
-        where TComponent : notnull
-        where TResult : notnull
+    
+    public static IComponentDescriptor<TResult> CombineAsTransient<TComponent1, TComponent2, TResult>(
+        IComponentDescriptor<TComponent1> descriptor1,
+        IComponentDescriptor<TComponent2> descriptor2,
+        Func<TComponent1, TComponent2, TResult> map)
     {
-        ThrowHelper.ThrowIfNull(descriptor);
+        ThrowHelper.ThrowIfNull(descriptor1);
+        ThrowHelper.ThrowIfNull(descriptor2);
         ThrowHelper.ThrowIfNull(map);
 
-        return descriptor.Bind(dependency => FlowTransient(flow => map(flow, dependency)));
+        return descriptor1
+            .Bind(token1 => descriptor2
+                .Bind(token2 => Transient(provider => map(
+                    provider.GetComponent(token1),
+                    provider.GetComponent(token2)))));
     }
-
-    public static IComponentDescriptor<TResult> FlatMap<TComponent, TResult>(
-        this IComponentDescriptor<TComponent> descriptor,
-        DescriptorResolver<TResult, TComponent> resolve)
-        where TComponent : notnull
-        where TResult : notnull
+    
+    #region Primitive methods
+    
+    public static IComponentDescriptor<TComponent> Unit<TComponent>(IComponentToken<TComponent> token)
     {
-        ThrowHelper.ThrowIfNull(descriptor);
+        ThrowHelper.ThrowIfNull(token);
+        
+        return new UnitComponentDescriptor<TComponent>(token);
+    }
+    
+    public static IComponentDescriptor<TComponent> Describe<TComponent>(Func<IComponentProvider, TComponent> createComponent, bool transient)
+    {
+        ThrowHelper.ThrowIfNull(createComponent);
+        
+        return new DescribeComponentDescriptor<TComponent>(createComponent, transient);
+    }
+    
+    public static IComponentDescriptor<TComponent> Permanent<TComponent>(Func<IComponentProvider, TComponent> createComponent)
+    {
+        ThrowHelper.ThrowIfNull(createComponent);
+
+        return new DescribeComponentDescriptor<TComponent>(createComponent, transient: false);
+    }
+    
+    public static IComponentDescriptor<TComponent> Transient<TComponent>(Func<IComponentProvider, TComponent> createComponent)
+    {
+        ThrowHelper.ThrowIfNull(createComponent);
+
+        return new DescribeComponentDescriptor<TComponent>(createComponent, transient: true);
+    }
+    
+    public static IComponentDescriptor<TComponent> Bind<TComponent, TDependency>(
+        this IComponentDescriptor<TDependency> dependencyDescriptor,
+        ComponentDescriptorResolver<TComponent, TDependency> resolve)
+    {
+        ThrowHelper.ThrowIfNull(dependencyDescriptor);
         ThrowHelper.ThrowIfNull(resolve);
 
-        return descriptor.Bind(resolve);
-    }
-
-    #endregion
-
-    #region Combine/CombineAsTransient
-
-    public static IComponentDescriptor<TResult> Combine<TComponent1, TComponent2, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        Func<TComponent1, TComponent2, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => Unit(
-                    combine(component1, component2))));
-    }
-
-    public static IComponentDescriptor<TResult> Combine<TComponent1, TComponent2, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        Func<DTasksConfiguration, TComponent1, TComponent2, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => SingletonCore(
-                    config => combine(config, component1, component2))));
-    }
-
-    public static IComponentDescriptor<TResult> Combine<TComponent1, TComponent2, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        Func<IDAsyncFlow, TComponent1, TComponent2, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => ScopedCore(
-                    flow => combine(flow, component1, component2))));
-    }
-
-    public static IComponentDescriptor<TResult> CombineAsTransient<TComponent1, TComponent2, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        Func<TComponent1, TComponent2, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => RootTransient(
-                    () => combine(component1, component2))));
-    }
-
-    public static IComponentDescriptor<TResult> CombineAsTransient<TComponent1, TComponent2, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        Func<DTasksConfiguration, TComponent1, TComponent2, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => RootTransient(
-                    config => combine(config, component1, component2))));
-    }
-
-    public static IComponentDescriptor<TResult> CombineAsTransient<TComponent1, TComponent2, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        Func<IDAsyncFlow, TComponent1, TComponent2, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => FlowTransient(
-                    flow => combine(flow, component1, component2))));
-    }
-
-    public static IComponentDescriptor<TResult> Combine<TComponent1, TComponent2, TComponent3, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        IComponentDescriptor<TComponent3> descriptor3,
-        Func<TComponent1, TComponent2, TComponent3, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TComponent3 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(descriptor3);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => descriptor3
-                    .Bind(component3 => Unit(
-                        combine(component1, component2, component3)))));
-    }
-
-    public static IComponentDescriptor<TResult> Combine<TComponent1, TComponent2, TComponent3, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        IComponentDescriptor<TComponent3> descriptor3,
-        Func<DTasksConfiguration, TComponent1, TComponent2, TComponent3, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TComponent3 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(descriptor3);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => descriptor3
-                    .Bind(component3 => SingletonCore(
-                        config => combine(config, component1, component2, component3)))));
-    }
-
-    public static IComponentDescriptor<TResult> Combine<TComponent1, TComponent2, TComponent3, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        IComponentDescriptor<TComponent3> descriptor3,
-        Func<IDAsyncFlow, TComponent1, TComponent2, TComponent3, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TComponent3 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(descriptor3);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => descriptor3
-                    .Bind(component3 => ScopedCore(
-                        flow => combine(flow, component1, component2, component3)))));
-    }
-
-    public static IComponentDescriptor<TResult> CombineAsTransient<TComponent1, TComponent2, TComponent3, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        IComponentDescriptor<TComponent3> descriptor3,
-        Func<TComponent1, TComponent2, TComponent3, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TComponent3 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(descriptor3);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => descriptor3
-                    .Bind(component3 => RootTransient(
-                        () => combine(component1, component2, component3)))));
-    }
-
-    public static IComponentDescriptor<TResult> CombineAsTransient<TComponent1, TComponent2, TComponent3, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        IComponentDescriptor<TComponent3> descriptor3,
-        Func<DTasksConfiguration, TComponent1, TComponent2, TComponent3, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TComponent3 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(descriptor3);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => descriptor3
-                    .Bind(component3 => RootTransient(
-                        config => combine(config, component1, component2, component3)))));
-    }
-
-    public static IComponentDescriptor<TResult> CombineAsTransient<TComponent1, TComponent2, TComponent3, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        IComponentDescriptor<TComponent3> descriptor3,
-        Func<IDAsyncFlow, TComponent1, TComponent2, TComponent3, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TComponent3 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(descriptor3);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => descriptor3
-                    .Bind(component3 => FlowTransient(flow => combine(flow, component1, component2, component3)))));
-    }
-
-    public static IComponentDescriptor<TResult> Combine<TComponent1, TComponent2, TComponent3, TComponent4, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        IComponentDescriptor<TComponent3> descriptor3,
-        IComponentDescriptor<TComponent4> descriptor4,
-        Func<TComponent1, TComponent2, TComponent3, TComponent4, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TComponent3 : notnull
-        where TComponent4 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(descriptor3);
-        ThrowHelper.ThrowIfNull(descriptor4);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => descriptor3
-                    .Bind(component3 => descriptor4
-                        .Bind(component4 => Unit(
-                            combine(component1, component2, component3, component4))))));
-    }
-
-    public static IComponentDescriptor<TResult> Combine<TComponent1, TComponent2, TComponent3, TComponent4, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        IComponentDescriptor<TComponent3> descriptor3,
-        IComponentDescriptor<TComponent4> descriptor4,
-        Func<DTasksConfiguration, TComponent1, TComponent2, TComponent3, TComponent4, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TComponent3 : notnull
-        where TComponent4 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(descriptor3);
-        ThrowHelper.ThrowIfNull(descriptor4);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => descriptor3
-                    .Bind(component3 => descriptor4
-                        .Bind(component4 => SingletonCore(
-                            config => combine(config, component1, component2, component3, component4))))));
-    }
-
-    public static IComponentDescriptor<TResult> Combine<TComponent1, TComponent2, TComponent3, TComponent4, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        IComponentDescriptor<TComponent3> descriptor3,
-        IComponentDescriptor<TComponent4> descriptor4,
-        Func<IDAsyncFlow, TComponent1, TComponent2, TComponent3, TComponent4, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TComponent3 : notnull
-        where TComponent4 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(descriptor3);
-        ThrowHelper.ThrowIfNull(descriptor4);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => descriptor3
-                    .Bind(component3 => descriptor4
-                        .Bind(component4 => ScopedCore(
-                            flow => combine(flow, component1, component2, component3, component4))))));
-    }
-
-    public static IComponentDescriptor<TResult> CombineAsTransient<TComponent1, TComponent2, TComponent3, TComponent4, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        IComponentDescriptor<TComponent3> descriptor3,
-        IComponentDescriptor<TComponent4> descriptor4,
-        Func<TComponent1, TComponent2, TComponent3, TComponent4, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TComponent3 : notnull
-        where TComponent4 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(descriptor3);
-        ThrowHelper.ThrowIfNull(descriptor4);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => descriptor3
-                    .Bind(component3 => descriptor4
-                        .Bind(component4 => RootTransient(
-                            () => combine(component1, component2, component3, component4))))));
-    }
-
-    public static IComponentDescriptor<TResult> CombineAsTransient<TComponent1, TComponent2, TComponent3, TComponent4, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        IComponentDescriptor<TComponent3> descriptor3,
-        IComponentDescriptor<TComponent4> descriptor4,
-        Func<DTasksConfiguration, TComponent1, TComponent2, TComponent3, TComponent4, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TComponent3 : notnull
-        where TComponent4 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(descriptor3);
-        ThrowHelper.ThrowIfNull(descriptor4);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => descriptor3
-                    .Bind(component3 => descriptor4
-                        .Bind(component4 => RootTransient(
-                            config => combine(config, component1, component2, component3, component4))))));
-    }
-
-    public static IComponentDescriptor<TResult> CombineAsTransient<TComponent1, TComponent2, TComponent3, TComponent4, TResult>(
-        IComponentDescriptor<TComponent1> descriptor1,
-        IComponentDescriptor<TComponent2> descriptor2,
-        IComponentDescriptor<TComponent3> descriptor3,
-        IComponentDescriptor<TComponent4> descriptor4,
-        Func<IDAsyncFlow, TComponent1, TComponent2, TComponent3, TComponent4, TResult> combine)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TComponent3 : notnull
-        where TComponent4 : notnull
-        where TResult : notnull
-    {
-        ThrowHelper.ThrowIfNull(descriptor1);
-        ThrowHelper.ThrowIfNull(descriptor2);
-        ThrowHelper.ThrowIfNull(descriptor3);
-        ThrowHelper.ThrowIfNull(descriptor4);
-        ThrowHelper.ThrowIfNull(combine);
-
-        return descriptor1
-            .Bind(component1 => descriptor2
-                .Bind(component2 => descriptor3
-                    .Bind(component3 => descriptor4
-                        .Bind(component4 => FlowTransient(
-                            flow => combine(flow, component1, component2, component3, component4))))));
+        return new BoundComponentDescriptor<TComponent, TDependency>(dependencyDescriptor, resolve);
     }
 
     #endregion
 
     #region LINQ methods
-
-    [EditorBrowsable(EditorBrowsableState.Never)]
+    
     public static IComponentDescriptor<TResult> Select<TComponent, TResult>(
         this IComponentDescriptor<TComponent> descriptor,
         Func<TComponent, TResult> selector)
-        where TComponent : notnull
-        where TResult : notnull
     {
         ThrowHelper.ThrowIfNull(descriptor);
         ThrowHelper.ThrowIfNull(selector);
 
-        return descriptor.Bind(component => Unit(selector(component)));
+        return descriptor
+            .Bind(token => Permanent(provider => selector(provider.GetComponent(token))));
     }
-
-    [EditorBrowsable(EditorBrowsableState.Never)]
+    
     public static IComponentDescriptor<TResult> SelectMany<TComponent1, TComponent2, TResult>(
         this IComponentDescriptor<TComponent1> descriptor1,
-        Func<TComponent1, IComponentDescriptor<TComponent2>> descriptor2Selector,
-        Func<TComponent1, TComponent2, TResult> resultSelector)
-        where TComponent1 : notnull
-        where TComponent2 : notnull
-        where TResult : notnull
+        Func<IComponentToken<TComponent1>, IComponentDescriptor<TComponent2>> descriptor2Selector,
+        Func<TComponent1, TComponent2, TResult> selector)
     {
         ThrowHelper.ThrowIfNull(descriptor1);
         ThrowHelper.ThrowIfNull(descriptor2Selector);
-        ThrowHelper.ThrowIfNull(resultSelector);
+        ThrowHelper.ThrowIfNull(selector);
 
         return descriptor1
-            .Bind(component1 => descriptor2Selector(component1)
-                .Bind(component2 => Unit(resultSelector(component1, component2))));
+            .Bind(token1 => descriptor2Selector(token1)
+                .Bind(token2 => Permanent(provider => selector(
+                    provider.GetComponent(token1),
+                    provider.GetComponent(token2)))));
     }
 
     #endregion
 
-    private static UnitComponentDescriptor<TComponent> Unit<TComponent>(TComponent component)
-        where TComponent : notnull
+    public static class Tokens
     {
-        return new UnitComponentDescriptor<TComponent>(component);
+        public static readonly IComponentToken<IDAsyncRootScope> Root = new Token<IDAsyncRootScope>();
+        public static readonly IComponentToken<IDAsyncHostScope> Host = new Token<IDAsyncHostScope>();
+        public static readonly IComponentToken<IDAsyncFlowScope> Flow = new Token<IDAsyncFlowScope>();
     }
 
-    private static SingletonComponentDescriptor<TComponent> SingletonCore<TComponent>(ConfiguredImplementationFactory<TComponent> createComponent)
-        where TComponent : notnull
-    {
-        return new SingletonComponentDescriptor<TComponent>(createComponent);
-    }
-
-    private static ScopedComponentDescriptor<TComponent> ScopedCore<TComponent>(FlowImplementationFactory<TComponent> createComponent)
-        where TComponent : notnull
-    {
-        return new ScopedComponentDescriptor<TComponent>(createComponent);
-    }
-
-    private static RootTransientComponentDescriptor<TComponent> RootTransient<TComponent>(ConfiguredImplementationFactory<TComponent> createComponent)
-        where TComponent : notnull
-    {
-        return new RootTransientComponentDescriptor<TComponent>(createComponent);
-    }
-
-    private static RootTransientComponentDescriptor<TComponent> RootTransient<TComponent>(ImplementationFactory<TComponent> createComponent)
-        where TComponent : notnull
-    {
-        return new RootTransientComponentDescriptor<TComponent>(config => createComponent());
-    }
-
-    private static FlowTransientComponentDescriptor<TComponent> FlowTransient<TComponent>(FlowImplementationFactory<TComponent> createComponent)
-        where TComponent : notnull
-    {
-        return new FlowTransientComponentDescriptor<TComponent>(createComponent);
-    }
-
-    private static BoundComponentDescriptor<TComponent, TDependency> Bind<TComponent, TDependency>(
-        this IComponentDescriptor<TDependency> dependencyDescriptor,
-        DescriptorResolver<TComponent, TDependency> resolve)
-        where TComponent : notnull
-        where TDependency : notnull
-    {
-        return new BoundComponentDescriptor<TComponent, TDependency>(dependencyDescriptor, resolve);
-    }
+    private sealed class Token<TComponent> : IComponentToken<TComponent>;
 }

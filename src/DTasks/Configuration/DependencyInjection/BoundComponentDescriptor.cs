@@ -1,23 +1,16 @@
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-
 namespace DTasks.Configuration.DependencyInjection;
 
-[DebuggerDisplay("{ToString(),nq}")]
 internal sealed class BoundComponentDescriptor<TComponent, TDependency>(
     IComponentDescriptor<TDependency> dependencyDescriptor,
-    DescriptorResolver<TComponent, TDependency> resolve) : IComponentDescriptor<TComponent>
-    where TComponent : notnull
-    where TDependency : notnull
+    ComponentDescriptorResolver<TComponent, TDependency> resolve) : IComponentDescriptor<TComponent>
 {
-    public TReturn Build<TReturn>(IDAsyncInfrastructureBuilder<TComponent, TReturn> builder)
+    public void Accept(IComponentDescriptorVisitor<TComponent> visitor)
     {
-        return builder.Bind(dependencyDescriptor, resolve);
+        visitor.VisitBound(dependencyDescriptor, resolve);
     }
 
-    [ExcludeFromCodeCoverage]
-    public override string ToString()
+    public TReturn Accept<TReturn>(IComponentDescriptorVisitor<TComponent, TReturn> visitor)
     {
-        return $"Binding({dependencyDescriptor} -> {typeof(TComponent).Name}))";
+        return visitor.VisitBound(dependencyDescriptor, resolve);
     }
 }

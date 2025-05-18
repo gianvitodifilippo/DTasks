@@ -1,13 +1,10 @@
-using System.Collections.Immutable;
 using DTasks.Infrastructure;
-using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Configuration.DependencyInjection;
 
 public static class ComponentDescriptors
 {
-    public static readonly IComponentDescriptor<DTasksConfiguration> Configuration = ComponentDescriptor.Singleton(config => config);
-    public static readonly IComponentDescriptor<IDAsyncFlow> Flow = ComponentDescriptor.Scoped(flow => flow);
-    public static readonly IComponentDescriptor<IDAsyncTypeResolver> TypeResolver = ComponentDescriptor.Singleton(config => config.TypeResolver);
-    public static readonly IComponentDescriptor<ImmutableArray<Type>> SurrogatableTypes = ComponentDescriptor.Singleton(config => config.SurrogatableTypes);
+    public static readonly IComponentDescriptor<IDAsyncRootScope> Root = ComponentDescriptor.Unit(ComponentDescriptor.Tokens.Root);
+    public static readonly IComponentDescriptor<IDAsyncHostScope> Host = ComponentDescriptor.Unit(ComponentDescriptor.Tokens.Host);
+    public static readonly IComponentDescriptor<IDAsyncFlowScope> Flow = ComponentDescriptor.Unit(ComponentDescriptor.Tokens.Flow);
 }

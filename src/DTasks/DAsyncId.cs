@@ -7,12 +7,12 @@ using DTasks.Utils;
 
 namespace DTasks;
 
-[EditorBrowsable(EditorBrowsableState.Never)]
 [StructLayout(LayoutKind.Sequential)]
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
 public readonly struct DAsyncId : IEquatable<DAsyncId>
 {
-    private const int ByteCount = 3 * sizeof(uint);
+    internal const int ByteCount = 3 * sizeof(uint);
+    internal const int CharCount = ByteCount * 8 / 6;
     private const byte ReservedBitsMask = 0b_11110000;
     private const byte ReservedBitsInvertedMask = ~ReservedBitsMask & byte.MaxValue;
     private const byte FlowIdMask = 0b_10000000;
@@ -32,6 +32,15 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
         Debug.Assert(bytes.Length == ByteCount);
 
         this = Unsafe.ReadUnaligned<DAsyncId>(ref MemoryMarshal.GetReference(bytes));
+    }
+
+    private ReadOnlySpan<byte> Bytes
+    {
+        get
+        {
+            ref byte head = ref Unsafe.As<DAsyncId, byte>(ref Unsafe.AsRef(in this));
+            return MemoryMarshal.CreateReadOnlySpan(ref head, ByteCount);
+        }
     }
 
     internal bool IsDefault => this == default;
@@ -62,6 +71,33 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
         return true;
     }
 
+    public bool TryWriteChars(Span<char> destination)
+    {
+        // TODO: Unify with ToString with the (Try)WriteCharsCore method
+        if (CharCount > destination.Length)
+            return false;
+
+        bool result = Convert.TryToBase64Chars(Bytes, destination, out int charsWritten);
+        
+        Debug.Assert(result);
+        Debug.Assert(charsWritten == CharCount);
+        
+        for (int i = 0; i < charsWritten; i++)
+        {
+            ref char c = ref destination[i];
+            if (c == '/')
+            {
+                c = '_';
+            }
+            else if (c == '+')
+            {
+                c = '-';
+            }
+        }
+
+        return result;
+    }
+
     public bool Equals(DAsyncId other) =>
         _a == other._a &&
         _b == other._b &&
@@ -77,10 +113,24 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     public override string ToString()
     {
-        ref byte head = ref Unsafe.As<DAsyncId, byte>(ref Unsafe.AsRef(in this));
-        ReadOnlySpan<byte> bytes = MemoryMarshal.CreateReadOnlySpan(ref head, ByteCount);
+        return string.Create(CharCount, this, static (chars, self) =>
+        {
+            bool result = Convert.TryToBase64Chars(self.Bytes, chars, out int charsWritten);
+            Debug.Assert(result && charsWritten == CharCount);
 
-        return Convert.ToBase64String(bytes);
+            for (int i = 0; i < CharCount; i++)
+            {
+                ref char c = ref chars[i];
+                if (c == '/')
+                {
+                    c = '_';
+                }
+                else if (c == '+')
+                {
+                    c = '-';
+                }
+            }
+        });
     }
 
     public static bool operator ==(DAsyncId left, DAsyncId right) => left.Equals(right);
@@ -185,13 +235,40 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     private static bool TryParseCore(ReadOnlySpan<char> value, out DAsyncId id)
     {
+        if (value.Length != CharCount)
+        {
+            id = default;
+            return false;
+        }
+        
+        Span<char> chars = stackalloc char[CharCount];
+        for (int i = 0; i < CharCount; i++)
+        {
+            ref readonly char c = ref value[i];
+            switch (c)
+            {
+                case '_':
+                    chars[i] = '/';
+                    break;
+                
+                case '-':
+                    chars[i] = '+';
+                    break;
+                
+                default:
+                    chars[i] = c;
+                    break;
+            }
+        }
+        
         Span<byte> bytes = stackalloc byte[ByteCount];
-        if (!Convert.TryFromBase64Chars(value, bytes, out int bytesWritten) || bytesWritten != ByteCount)
+        if (!Convert.TryFromBase64Chars(chars, bytes, out int bytesWritten))
         {
             id = default;
             return false;
         }
 
+        Debug.Assert(bytesWritten == ByteCount);
         return TryReadBytesCore(bytes, out id);
     }
 

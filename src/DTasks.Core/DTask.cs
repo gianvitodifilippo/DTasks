@@ -74,7 +74,7 @@ public abstract class DTask : IDAsyncRunnable
     protected abstract void Run(IDAsyncRunner runner);
 
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public Awaiter GetAwaiter() => new Awaiter(this);
+    public Awaiter GetAwaiter() => new(this);
 
     public static DTask CompletedDTask { get; } = new SucceededDTask();
 
@@ -219,7 +219,7 @@ public abstract class DTask<TResult> : DTask
     internal override TReturn Accept<TReturn>(IDTaskVisitor<TReturn> visitor) => visitor.Visit(this);
 
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public new Awaiter GetAwaiter() => new Awaiter(this);
+    public new Awaiter GetAwaiter() => new(this);
 
     public new static DTask<TResult> FromException(Exception exception) => new FaultedDTask<TResult>(exception);
 

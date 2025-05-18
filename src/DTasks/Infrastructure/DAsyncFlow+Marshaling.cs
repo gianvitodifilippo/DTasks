@@ -23,11 +23,11 @@ internal sealed partial class DAsyncFlow
         .RegisterSurrogatableType(typeof(DTask))
         .RegisterSurrogatableType(typeof(DTask<>))
         .RegisterSurrogatableType(typeof(HandleRunnable))
-        .RegisterTypeId(typeof(HostIndirectionStateMachine))
-        .RegisterTypeId(typeof(HandleStateMachine))
+        .RegisterTypeId(typeof(HostIndirectionStateMachine), "HostIndirectionStateMachine")
+        .RegisterTypeId(typeof(HandleStateMachine), "HandleStateMachine")
         .RegisterTypeId(typeof(CompletedHandleStateMachine))
         .RegisterTypeId(typeof(WhenAllResultBranchStateMachine))
-        .RegisterTypeId(typeof(WhenAnyStateMachine))
+        .RegisterTypeId(typeof(WhenAnyStateMachine), "WhenAnyStateMachine")
         .RegisterDAsyncMethod(s_whenAllDAsyncMethod);
 
     public static void RegisterGenericTypeIds(IMarshalingConfigurationBuilder builder, Type resultType)

@@ -1,4 +1,5 @@
 ﻿using DTasks.Extensions.DependencyInjection.Configuration;
+using DTasks.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -6,13 +7,15 @@ namespace DTasks.Configuration;
 
 public interface IHostingDTasksConfigurationBuilder : IDependencyInjectionDTasksConfigurationBuilder
 {
-    new IDependencyInjectionDTasksConfigurationBuilder ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure);
+    new IHostingDTasksConfigurationBuilder SetProperty<TProperty>(DAsyncPropertyKey<TProperty> key, TProperty value);
 
-    new IDependencyInjectionDTasksConfigurationBuilder ConfigureState(Action<IStateConfigurationBuilder> configure);
+    new IHostingDTasksConfigurationBuilder ConfigureMarshaling(Action<IMarshalingConfigurationBuilder> configure);
 
-    new IDependencyInjectionDTasksConfigurationBuilder ConfigureExecution(Action<IExecutionConfigurationBuilder> configure);
+    new IHostingDTasksConfigurationBuilder ConfigureState(Action<IStateConfigurationBuilder> configure);
 
-    new IDependencyInjectionDTasksConfigurationBuilder ConfigureServices(Action<IServiceConfigurationBuilder> configure);
+    new IHostingDTasksConfigurationBuilder ConfigureExecution(Action<IExecutionConfigurationBuilder> configure);
+
+    new IHostingDTasksConfigurationBuilder ConfigureServices(Action<IServiceConfigurationBuilder> configure);
 
     IHostingDTasksConfigurationBuilder UseServiceProviderOptions(ServiceProviderOptions options);
 
