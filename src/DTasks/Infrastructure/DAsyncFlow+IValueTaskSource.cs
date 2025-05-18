@@ -46,7 +46,7 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
         Assert.Null(_resultOrException);
         Debug.Assert(_branchIndex == -1);
 
-        CancellationProvider.UnregisterHandler(this);
+        _cancellationProvider?.UnregisterHandler(this);
         _host.OnFinalize(this);
 
         _state = FlowState.Pending;
@@ -59,6 +59,12 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
         _id = default;
         _stateMachine = null;
         _parent = null;
+
+        _heap = null;
+        _stack = null;
+        _surrogator = null;
+        _cancellationProvider = null;
+        _suspensionHandler = null;
 
         _surrogates.Clear();
         _tasks.Clear();
