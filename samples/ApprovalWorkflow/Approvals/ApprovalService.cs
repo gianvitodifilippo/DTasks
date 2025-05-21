@@ -14,8 +14,6 @@ public class ApprovalService(IConfiguration configuration) : IDisposable
         Port = int.Parse(configuration["MailHog:Port"]!)
     };
 
-    // We should be able to generate the callback with an attribute, something like
-    // [DAsyncCallback(route: "approvals/{$id}/{$result}", Method = "get")]
     public DTask<ApprovalResult> SendApprovalRequestDAsync(ApprovalRequestDetails details, string approverEmail)
     {
         return DTask<ApprovalResult>.Factory.Suspend(async (operationId, cancellationToken) =>

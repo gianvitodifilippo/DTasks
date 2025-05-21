@@ -5,10 +5,12 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using DTasks.CompilerServices;
 using DTasks.Infrastructure;
+using DTasks.Metadata;
 using DTasks.Utils;
 
 namespace DTasks;
 
+[DAsync]
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
 [AsyncMethodBuilder(typeof(AsyncDTaskMethodBuilder))]
 public abstract class DTask : IDAsyncRunnable
@@ -192,6 +194,7 @@ public abstract class DTask : IDAsyncRunnable
     private string DebuggerDisplay => $"DTask (Status = {Status})";
 }
 
+[DAsync]
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
 [AsyncMethodBuilder(typeof(AsyncDTaskMethodBuilder<>))]
 public abstract class DTask<TResult> : DTask

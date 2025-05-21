@@ -13,7 +13,7 @@ public interface IMarshalingConfigurationBuilder
 {
     IMarshalingConfigurationBuilder AddSurrogator(IComponentDescriptor<IDAsyncSurrogator> descriptor);
 
-    IMarshalingConfigurationBuilder RegisterSurrogatableType(Type type);
+    IMarshalingConfigurationBuilder RegisterSurrogatableType<TSurrogatable>();
 
     IMarshalingConfigurationBuilder RegisterTypeId(Type type, TypeEncodingStrategy encodingStrategy = TypeEncodingStrategy.FullName);
 
@@ -94,23 +94,6 @@ public static class MarshalingConfigurationBuilderExtensions // TODO: Convert to
 
             Type stateMachineType = asyncStateMachineAttribute.StateMachineType;
             builder.RegisterTypeId(stateMachineType);
-
-            // TODO: This is probably not the right place to do this
-            FieldInfo[] stateMachineFields = stateMachineType.GetFields(BindingFlags.Instance | BindingFlags.NonPublic);
-            foreach (FieldInfo stateMachineField in stateMachineFields)
-            {
-                if (StateMachineFacts.GetFieldKind(stateMachineField) != StateMachineFieldKind.DAsyncAwaiterField)
-                    continue;
-
-                Type fieldType = stateMachineField.FieldType;
-                if (!fieldType.IsGenericType || fieldType.GetGenericTypeDefinition() != typeof(DTask<>.Awaiter))
-                    continue;
-
-                Type[] genericTypeArguments = fieldType.GetGenericArguments();
-                Debug.Assert(genericTypeArguments.Length == 1);
-
-                DAsyncFlow.RegisterGenericTypeIds(builder, genericTypeArguments[0]);
-            }
         }
 
         return builder;

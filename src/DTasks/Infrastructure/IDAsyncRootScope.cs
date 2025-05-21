@@ -11,7 +11,7 @@ public interface IDAsyncRootScope
 {
     IDAsyncTypeResolver TypeResolver { get; }
 
-    FrozenSet<Type> SurrogatableTypes { get; }
+    FrozenSet<ISurrogatableTypeContext> SurrogatableTypes { get; }
     
     bool TryGetProperty<TProperty>(DAsyncPropertyKey<TProperty> key, [MaybeNullWhen(false)] out TProperty value);
 }

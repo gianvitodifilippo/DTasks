@@ -10,6 +10,7 @@ using StackExchange.Redis;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseDTasks(dTasks => dTasks
+    .AutoConfigureMarshaling()
     .UseAspNetCore(aspNetCore => aspNetCore
         .AddResumptionEndpoint(ApprovalService.ResumptionEndpoint)
         .ConfigureSerialization(serialization => serialization
@@ -19,7 +20,6 @@ builder.Host.UseDTasks(dTasks => dTasks
         .RegisterDAsyncService(typeof(AsyncEndpoints)))
     .ConfigureMarshaling(marshaling => marshaling
         .RegisterDAsyncType(typeof(AsyncEndpoints))
-        .RegisterSurrogatableType(typeof(AsyncEndpoints))
         .RegisterTypeId(typeof(AsyncEndpointInfo<ApprovalResult>))));
 #endregion
 
