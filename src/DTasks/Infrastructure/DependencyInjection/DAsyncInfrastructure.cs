@@ -18,7 +18,7 @@ internal sealed class DAsyncInfrastructure : IDAsyncInfrastructure, IDAsyncRootI
     private readonly RootComponentProvider _rootProvider;
     private readonly FrozenDictionary<object, object?> _properties;
     private readonly IDAsyncTypeResolver _typeResolver;
-    private readonly FrozenSet<Type> _surrogatableTypes;
+    private readonly FrozenSet<ISurrogatableTypeContext> _surrogatableTypes;
 
     public DAsyncInfrastructure(DAsyncInfrastructureBuilder builder, DTasksConfigurationBuilder configurationBuilder)
     {
@@ -43,7 +43,7 @@ internal sealed class DAsyncInfrastructure : IDAsyncInfrastructure, IDAsyncRootI
 
     IDAsyncTypeResolver IDAsyncRootInfrastructure.TypeResolver => _typeResolver;
 
-    FrozenSet<Type> IDAsyncRootScope.SurrogatableTypes => _surrogatableTypes;
+    FrozenSet<ISurrogatableTypeContext> IDAsyncRootScope.SurrogatableTypes => _surrogatableTypes;
 
     public IDAsyncHeap GetHeap(IComponentProvider hostProvider) => _getHeap(hostProvider);
 

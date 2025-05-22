@@ -21,7 +21,7 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
     private IComponentDescriptor<IDAsyncCancellationProvider>? _cancellationProviderDescriptor;
     private IComponentDescriptor<IDAsyncSuspensionHandler>? _suspensionHandlerDescriptor;
     private readonly Dictionary<object, object?> _properties = [];
-    private readonly HashSet<Type> _surrogatableTypes = [];
+    private readonly HashSet<ISurrogatableTypeContext> _surrogatableTypes = [];
     private readonly Dictionary<Type, TypeId> _typesToIds = [];
     private readonly Dictionary<TypeId, Type> _idsToTypes = [];
     
@@ -31,7 +31,7 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
         _typesToIds.ToFrozenDictionary(),
         _idsToTypes.ToFrozenDictionary());
     
-    public FrozenSet<Type> SurrogatableTypes => _surrogatableTypes.ToFrozenSet();
+    public FrozenSet<ISurrogatableTypeContext> SurrogatableTypes => _surrogatableTypes.ToFrozenSet();
     
     public DTasksConfiguration Build()
     {
@@ -86,11 +86,9 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
         return this;
     }
 
-    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterSurrogatableType(Type type)
+    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterSurrogatableType<TSurrogatable>()
     {
-        ThrowHelper.ThrowIfNull(type);
-
-        _surrogatableTypes.Add(type);
+        _surrogatableTypes.Add(new SurrogatableTypeContext<TSurrogatable>());
         return this;
     }
 

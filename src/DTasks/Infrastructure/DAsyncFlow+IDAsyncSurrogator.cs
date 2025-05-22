@@ -10,9 +10,6 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
 
     bool IDAsyncSurrogator.TrySurrogate<T, TAction>(in T value, scoped ref TAction action)
     {
-        //if (@object is not null && s_surrogatableTypes.Contains(@object.GetType()))
-        //    throw new InvalidOperationException($"'{@object}' cannot be surrogated.");
-
         if (value is DTask task)
         {
             if (!_surrogates.TryGetValue(task, out DTaskSurrogate? taskSurrogate))

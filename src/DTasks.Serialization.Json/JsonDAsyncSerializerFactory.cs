@@ -12,21 +12,18 @@ internal sealed class JsonDAsyncSerializerFactory
 {
     private readonly IStateMachineInspector _inspector;
     private readonly IDAsyncTypeResolver _typeResolver;
-    private readonly FrozenSet<Type> _surrogatableNonGenericTypes;
-    private readonly FrozenSet<Type> _surrogatableGenericTypes;
+    private readonly FrozenSet<ISurrogatableTypeContext> _surrogatableTypes;
     private readonly JsonSerializerOptions _options;
 
     public JsonDAsyncSerializerFactory(
         IStateMachineInspector inspector,
         IDAsyncTypeResolver typeResolver,
-        FrozenSet<Type> surrogatableNonGenericTypes,
-        FrozenSet<Type> surrogatableGenericTypes,
+        FrozenSet<ISurrogatableTypeContext> surrogatableTypes,
         JsonSerializerOptions options)
     {
         _inspector = inspector;
         _typeResolver = typeResolver;
-        _surrogatableNonGenericTypes = surrogatableNonGenericTypes;
-        _surrogatableGenericTypes = surrogatableGenericTypes;
+        _surrogatableTypes = surrogatableTypes;
         _options = options;
     }
 
@@ -44,20 +41,25 @@ internal sealed class JsonDAsyncSerializerFactory
         surrogatorOptions.ReferenceHandler = new StateMachineReferenceHandler(referenceResolver);
         defaultOptions.ReferenceHandler = new StateMachineReferenceHandler(referenceResolver);
 
-        object[] converterConstructorArguments = [flowScope.Surrogator, defaultOptions];
-
-        foreach (Type surrogatableType in _surrogatableNonGenericTypes)
+        AddSurrogatableConverterAction addConverterAction = new(flowScope.Surrogator, defaultOptions, surrogatorOptions);
+        foreach (ISurrogatableTypeContext typeContext in _surrogatableTypes)
         {
-            Type surrogatableConverterType = typeof(SurrogatableConverter<>).MakeGenericType(surrogatableType);
-            JsonConverter surrogatableConverter = (JsonConverter)Activator.CreateInstance(surrogatableConverterType, converterConstructorArguments)!;
-            surrogatorOptions.Converters.Add(surrogatableConverter);
+            typeContext.Execute(ref addConverterAction);
         }
-
-        SurrogatableConverterFactory surrogatableConverterFactory = new(_surrogatableGenericTypes, converterConstructorArguments);
-        surrogatorOptions.Converters.Add(surrogatableConverterFactory);
 
         defaultOptions.TypeInfoResolverChain.Add(new SurrogatorJsonTypeInfoResolver(defaultOptions));
 
         return new JsonStateMachineSerializer(_inspector, _typeResolver, referenceResolver, surrogatorOptions);
+    }
+    
+    private readonly struct AddSurrogatableConverterAction(
+        IDAsyncSurrogator surrogator,
+        JsonSerializerOptions defaultOptions,
+        JsonSerializerOptions surrogatorOptions) : ISurrogatableTypeAction
+    {
+        public void Invoke<TSurrogatable>()
+        {
+            surrogatorOptions.Converters.Add(new SurrogatableConverter<TSurrogatable>(surrogator, defaultOptions));
+        }
     }
 }

@@ -18,6 +18,7 @@ using StackExchange.Redis;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseDTasks(dTasks => dTasks
+    .AutoConfigure()
     .UseAspNetCore(aspNetCore => aspNetCore
         .ConfigureSerialization(serialization => serialization
             .UseStackExchangeRedis()))
@@ -25,8 +26,7 @@ builder.Host.UseDTasks(dTasks => dTasks
     .ConfigureServices(services => services
         .RegisterDAsyncService(typeof(AsyncEndpoints)))
     .ConfigureMarshaling(marshaling => marshaling
-        .RegisterDAsyncType(typeof(AsyncEndpoints))
-        .RegisterSurrogatableType(typeof(AsyncEndpoints))));
+        .RegisterSurrogatableType<AsyncEndpoints>()));
 #endregion
 
 builder.Services
