@@ -1,5 +1,6 @@
 using Approvals;
 using DTasks;
+using DTasks.AspNetCore.Http;
 using DTasks.AspNetCore.Infrastructure;
 using DTasks.AspNetCore.Infrastructure.Http;
 using DTasks.Configuration;
@@ -42,17 +43,24 @@ app.MapRazorPages();
 
 #region TODO: In library
 
-app.MapPost("/approvals", async (
-    HttpContext httpContext,
-    [FromServices] AsyncEndpoints endpoints,
-    [FromServices] DTasksConfiguration configuration,
-    [FromBody] NewApprovalRequest request,
-    CancellationToken cancellationToken) =>
+app.MapAsyncPost("/approvals", async DTask<IResult> (
+    [FromServices] ApproverRepository repository,
+    [FromServices] ApprovalService service,
+    [FromBody] NewApprovalRequest request) =>
 {
-    AspNetCoreDAsyncHost host = AspNetCoreDAsyncHost.CreateAsyncEndpointHost(httpContext);
-    DTask<IResult> task = endpoints.NewApproval(request);
+    string? email = await repository.GetEmailByIdAsync(request.ApproverId);
+    if (email is null)
+        return Results.BadRequest("Invalid approver id");
 
-    await configuration.StartAsync(host, task, cancellationToken);
+    DTask<ApprovalResult> approvalTask = service.SendApprovalRequestDAsync(request.Details, email);
+    DTask timeout = DTask.Delay(TimeSpan.FromDays(7));
+
+    DTask winner = await DTask.WhenAny(timeout, approvalTask);
+    ApprovalResult result = winner == timeout
+        ? ApprovalResult.Reject
+        : approvalTask.Result;
+
+    return AsyncResults.Success(result);
 });
 
 #endregion

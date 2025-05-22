@@ -17,7 +17,6 @@ internal sealed partial class DAsyncFlow
         _state = FlowState.Idling;
         _host = s_nullHost;
         _hostComponentProvider.Reset();
-        _returnToPool = false;
         
 #if DEBUG
         _stackTrace = null;

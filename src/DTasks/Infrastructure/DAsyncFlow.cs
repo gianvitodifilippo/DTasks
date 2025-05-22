@@ -22,7 +22,6 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
 
     private readonly IDAsyncFlowPool _pool;
     private readonly IDAsyncInfrastructure _infrastructure;
-    private bool _returnToPool;
 
 #if DEBUG
     private string? _stackTrace;
@@ -122,14 +121,12 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         _state = FlowState.Pending;
         _host = host;
         _stackTrace = stackTrace;
-        _returnToPool = stackTrace is null;
     }
 #else
-    public void Initialize(IDAsyncHost host, bool returnToPool)
+    public void Initialize(IDAsyncHost host)
     {
         _state = FlowState.Pending;
         _host = host;
-        _returnToPool = returnToPool;
     }
 #endif
 

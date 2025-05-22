@@ -414,8 +414,6 @@ internal readonly ref struct InspectorILGenerator(
             case < -128 or >= 128:
                 il.Emit(OpCodes.Ldc_I4, value);
                 break;
-            default:
-                throw new UnreachableException();
         }
     }
 

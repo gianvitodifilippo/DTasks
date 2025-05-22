@@ -163,7 +163,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         Debug.Assert(_branchCount == 0);
 
         _aggregateType = AggregateType.WhenAll;
-        using (DAsyncFlow childFlow = _pool.UnsafeGet(_host))
+        using (DAsyncFlow childFlow = _pool.Get(_host))
         {
             foreach (IDAsyncRunnable branch in branches)
             {
@@ -245,7 +245,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
         _aggregateType = AggregateType.WhenAllResult;
         _whenAllBranchResults = new Dictionary<int, TResult>();
-        using (DAsyncFlow childFlow = _pool.UnsafeGet(_host))
+        using (DAsyncFlow childFlow = _pool.Get(_host))
         {
             foreach (IDAsyncRunnable branch in branches)
             {
@@ -340,7 +340,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
         _aggregateType = AggregateType.WhenAny;
 
-        using (DAsyncFlow childFlow = _pool.UnsafeGet(_host))
+        using (DAsyncFlow childFlow = _pool.Get(_host))
         {
             foreach (IDAsyncRunnable branch in branches)
             {
