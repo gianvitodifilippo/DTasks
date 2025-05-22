@@ -1,53 +1,36 @@
-using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 
-namespace DTasks.Analyzer.Utils;
+namespace DTasks.AspNetCore.Analyzer.Utils;
 
-internal static class SymbolExtensions
+public static class SymbolExtensions
 {
     private static readonly SymbolDisplayFormat s_fullNameFormat = new(
         globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Included,
         typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
         genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters);
     
+    private const string DTasksAspNetCoreEndpointRouteBuilderExtensionsQualifiedName = "Microsoft.AspNetCore.Routing.DTasksAspNetCoreEndpointRouteBuilderExtensions";
+    private const string TaskQualifiedName = "System.Threading.Tasks.Task";
     private const string DTaskQualifiedName = "DTasks.DTask";
-    private const string WhenAllMethodName = "WhenAll";
     
-    public static bool IsGenericWhenAll(this IMethodSymbol method, [NotNullWhen(true)] out ITypeSymbol? typeArgument)
+    public static bool IsEndpointRouteBuilderExtensions(this ITypeSymbol type)
     {
-        if (method is not { Name: WhenAllMethodName, IsStatic: true, Arity: 1 })
-        {
-            typeArgument = null;
-            return false;
-        }
-
-        typeArgument = method.TypeArguments[0];
-
-        INamedTypeSymbol containingType = method.ContainingType;
-        return containingType.IsDTask();
+        return type.QualifiedNameIs(DTasksAspNetCoreEndpointRouteBuilderExtensionsQualifiedName.AsSpan());
     }
 
+    public static bool IsTask(this ITypeSymbol type)
+    {
+        return type.QualifiedNameIs(TaskQualifiedName.AsSpan());
+    }
+
+    public static bool IsDTask(this ITypeSymbol type)
+    {
+        return type.QualifiedNameIs(DTaskQualifiedName.AsSpan());
+    }
+    
     public static string GetFullName(this ITypeSymbol type) => type.ToDisplayString(s_fullNameFormat);
 
-    public static bool IsDTask(this INamedTypeSymbol type)
-    {
-        return type.Arity == 0 && type.QualifiedNameIs(DTaskQualifiedName.AsSpan());
-    }
-    
-    public static bool IsGenericDTask(this INamedTypeSymbol type, [NotNullWhen(true)] out ITypeSymbol? typeArgument)
-    {
-        if (type.Arity != 1 || !type.QualifiedNameIs(DTaskQualifiedName.AsSpan()))
-        {
-            typeArgument = null;
-            return false;
-        }
-
-        typeArgument = type.TypeArguments[0];
-        return true;
-    }
-    
-    private static bool QualifiedNameIs(this INamedTypeSymbol type, ReadOnlySpan<char> fullName)
+    public static bool QualifiedNameIs(this ITypeSymbol type, ReadOnlySpan<char> fullName)
     {
         string typeName = type.Name;
         
@@ -64,7 +47,7 @@ internal static class SymbolExtensions
         return @namespace.QualifiedNameIs(fullName.Slice(0, dotIndex));
     }
 
-    private static bool QualifiedNameIs(this INamespaceSymbol @namespace, ReadOnlySpan<char> fullName)
+    public static bool QualifiedNameIs(this INamespaceSymbol @namespace, ReadOnlySpan<char> fullName)
     {
         while (@namespace.ContainingNamespace is { } parentNamespace)
         {

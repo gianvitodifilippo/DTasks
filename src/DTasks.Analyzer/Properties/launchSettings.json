@@ -3,7 +3,7 @@
   "profiles": {
     "Generators": {
       "commandName": "DebugRoslynComponent",
-      "targetProject": "../DTasks/DTasks.csproj"
+      "targetProject": "../../samples/ApprovalWorkflow/Approvals/Approvals.csproj"
     }
   }
 }

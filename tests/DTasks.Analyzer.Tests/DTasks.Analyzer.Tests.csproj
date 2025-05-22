@@ -14,11 +14,6 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="FluentAssertions" Version="6.12.2" />
-        <PackageReference Include="FluentAssertions.Analyzers" Version="0.34.1">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
         <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.13.0" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing" Version="1.1.2" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
@@ -35,7 +30,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="FluentAssertions" />
         <Using Include="Xunit" />
     </ItemGroup>
 

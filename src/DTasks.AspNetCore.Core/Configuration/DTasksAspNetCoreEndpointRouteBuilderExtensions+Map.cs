@@ -22,10 +22,10 @@ public static partial class DTasksAspNetCoreEndpointRouteBuilderExtensions
     private const string MapEndpointDynamicCodeWarning = "This API may perform reflection on the supplied delegate and its parameters. These types may require generated code and aren't compatible with native AOT applications.";
     
     private static readonly ModuleBuilder s_dynamicModule = CreateDynamicModule();
-    private static readonly MethodInfo s_startAsyncMethod = typeof(DTasksAspNetCoreEndpointRouteBuilderExtensions).GetRequiredMethod(
-        name: nameof(StartAsync),
+    private static readonly MethodInfo s_runAsyncMethod = typeof(DTasksHttpContextExtensions).GetRequiredMethod(
+        name: nameof(DTasksHttpContextExtensions.RunAsync),
         genericParameterCount: 0,
-        bindingAttr: BindingFlags.Static | BindingFlags.NonPublic,
+        bindingAttr: BindingFlags.Static | BindingFlags.Public,
         parameterTypes: [typeof(HttpContext), typeof(IDAsyncRunnable)]);
 
     public static IEndpointConventionBuilder MapAsyncGet(
@@ -110,6 +110,7 @@ public static partial class DTasksAspNetCoreEndpointRouteBuilderExtensions
         [StringSyntax("Route")] string pattern,
         Delegate handler)
     {
+        throw new NotImplementedException();
         return endpoints.MapPost(pattern, TransformDAsyncHandler(handler));
     }
 
@@ -166,15 +167,7 @@ public static partial class DTasksAspNetCoreEndpointRouteBuilderExtensions
     private static Task RunRequestDelegateAsync(HttpContext httpContext, AsyncRequestDelegate requestDelegate)
     {
         DTask task = requestDelegate(httpContext);
-        return StartAsync(httpContext, task);
-    }
-
-    internal static Task StartAsync(HttpContext httpContext, IDAsyncRunnable runnable)
-    {
-        var configuration = httpContext.RequestServices.GetRequiredService<DTasksConfiguration>();
-        var host = AspNetCoreDAsyncHost.CreateAsyncEndpointHost(httpContext);
-
-        return configuration.StartAsync(host, runnable, httpContext.RequestAborted);
+        return httpContext.RunAsync(task);
     }
 
     private static Delegate TransformDAsyncHandler(Delegate handler)
@@ -273,7 +266,7 @@ public static partial class DTasksAspNetCoreEndpointRouteBuilderExtensions
         }
 
         il.Emit(OpCodes.Callvirt, handlerInvokeMethod);
-        il.Emit(OpCodes.Call, s_startAsyncMethod);
+        il.Emit(OpCodes.Call, s_runAsyncMethod);
         il.Emit(OpCodes.Ret);
         
         Type result = closureType.CreateType();

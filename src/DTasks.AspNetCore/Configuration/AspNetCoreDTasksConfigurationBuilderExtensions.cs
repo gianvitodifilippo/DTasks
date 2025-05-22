@@ -5,7 +5,7 @@ using DTasks.Serialization.Json.Converters;
 
 namespace DTasks.Configuration;
 
-public static class AspNetCoreDTasksServiceConfigurationExtensions
+public static class AspNetCoreDTasksConfigurationBuilderExtensions
 {
     public static TBuilder UseAspNetCore<TBuilder>(this TBuilder builder)
         where TBuilder : IDependencyInjectionDTasksConfigurationBuilder

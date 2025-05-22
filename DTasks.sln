@@ -50,6 +50,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Analyzer", "src\DTas
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.Analyzer.Tests", "tests\DTasks.Analyzer.Tests\DTasks.Analyzer.Tests.csproj", "{4DB9AD0D-2433-4631-8140-8BC9DED0F9A8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.AspNetCore.Analyzer", "src\DTasks.AspNetCore.Analyzer\DTasks.AspNetCore.Analyzer.csproj", "{372EF8B9-7981-4960-8372-FB7CD345847B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTasks.AspNetCore.Analyzer.Tests", "tests\DTasks.AspNetCore.Analyzer.Tests\DTasks.AspNetCore.Analyzer.Tests.csproj", "{2F399D2E-F305-462B-843F-1BEC04218B7C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -218,6 +222,22 @@ Global
 		{4DB9AD0D-2433-4631-8140-8BC9DED0F9A8}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4DB9AD0D-2433-4631-8140-8BC9DED0F9A8}.Release-Tests|Any CPU.ActiveCfg = Release-Tests|Any CPU
 		{4DB9AD0D-2433-4631-8140-8BC9DED0F9A8}.Release-Tests|Any CPU.Build.0 = Release-Tests|Any CPU
+		{372EF8B9-7981-4960-8372-FB7CD345847B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{372EF8B9-7981-4960-8372-FB7CD345847B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{372EF8B9-7981-4960-8372-FB7CD345847B}.Debug-Tests|Any CPU.ActiveCfg = Debug-Tests|Any CPU
+		{372EF8B9-7981-4960-8372-FB7CD345847B}.Debug-Tests|Any CPU.Build.0 = Debug-Tests|Any CPU
+		{372EF8B9-7981-4960-8372-FB7CD345847B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{372EF8B9-7981-4960-8372-FB7CD345847B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{372EF8B9-7981-4960-8372-FB7CD345847B}.Release-Tests|Any CPU.ActiveCfg = Release-Tests|Any CPU
+		{372EF8B9-7981-4960-8372-FB7CD345847B}.Release-Tests|Any CPU.Build.0 = Release-Tests|Any CPU
+		{2F399D2E-F305-462B-843F-1BEC04218B7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F399D2E-F305-462B-843F-1BEC04218B7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F399D2E-F305-462B-843F-1BEC04218B7C}.Debug-Tests|Any CPU.ActiveCfg = Debug-Tests|Any CPU
+		{2F399D2E-F305-462B-843F-1BEC04218B7C}.Debug-Tests|Any CPU.Build.0 = Debug-Tests|Any CPU
+		{2F399D2E-F305-462B-843F-1BEC04218B7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F399D2E-F305-462B-843F-1BEC04218B7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F399D2E-F305-462B-843F-1BEC04218B7C}.Release-Tests|Any CPU.ActiveCfg = Release-Tests|Any CPU
+		{2F399D2E-F305-462B-843F-1BEC04218B7C}.Release-Tests|Any CPU.Build.0 = Release-Tests|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -231,6 +251,7 @@ Global
 		{C60509EB-669E-4C34-857B-04967AD676F4} = {CF0C47EC-6DB3-4ED6-B6D9-0435E3DB3D48}
 		{8F3CA502-6DBC-4027-B68A-DD33368F77C7} = {CF0C47EC-6DB3-4ED6-B6D9-0435E3DB3D48}
 		{4DB9AD0D-2433-4631-8140-8BC9DED0F9A8} = {CF0C47EC-6DB3-4ED6-B6D9-0435E3DB3D48}
+		{2F399D2E-F305-462B-843F-1BEC04218B7C} = {CF0C47EC-6DB3-4ED6-B6D9-0435E3DB3D48}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DB810E73-A3F8-4B7B-838B-FFBD7C299A22}

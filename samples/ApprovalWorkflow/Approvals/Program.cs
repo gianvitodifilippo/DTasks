@@ -1,7 +1,6 @@
 using Approvals;
 using DTasks;
 using DTasks.AspNetCore.Http;
-using DTasks.AspNetCore.Infrastructure;
 using DTasks.AspNetCore.Infrastructure.Http;
 using DTasks.Configuration;
 using DTasks.Serialization.Configuration;
@@ -11,12 +10,18 @@ using StackExchange.Redis;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseDTasks(dTasks => dTasks
+    .AutoConfigure()
     .UseAspNetCore(aspNetCore => aspNetCore
         .AddResumptionEndpoint(ApprovalService.ResumptionEndpoint)
         .ConfigureSerialization(serialization => serialization
             .UseStackExchangeRedis()))
-#region TODO: In library
+#region TODO: Source generate this
+    .ConfigureServices(services => services
+        .RegisterDAsyncService(typeof(ApproverRepository))
+        .RegisterDAsyncService(typeof(ApprovalService)))
     .ConfigureMarshaling(marshaling => marshaling
+        .RegisterSurrogatableType<ApproverRepository>()
+        .RegisterSurrogatableType<ApprovalService>()
         .RegisterTypeId(typeof(AsyncEndpointInfo<ApprovalResult>))));
 #endregion
 
@@ -32,7 +37,7 @@ var app = builder.Build();
 app.MapDTasks();
 app.MapRazorPages();
 
-app.MapAsyncPost("/approvals", async DTask<IResult> (
+app.MapAsyncPost("/approvals", async (
     [FromServices] ApproverRepository repository,
     [FromServices] ApprovalService service,
     [FromBody] NewApprovalRequest request) =>
