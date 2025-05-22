@@ -1,4 +1,5 @@
-using DTasks.Utils;
+using DTasks.Configuration;
+using DTasks.Infrastructure.Marshaling;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Extensions.DependencyInjection.Configuration;
@@ -7,63 +8,74 @@ using KeyedServiceIdentifier = (Type ServiceType, object? ServiceKey);
 
 internal sealed class ServiceConfigurationBuilder : IServiceConfigurationBuilder
 {
-    private readonly HashSet<KeyedServiceIdentifier> _additionalKeyedServiceTypes = [];
-    private readonly HashSet<Type> _additionalServiceTypes = [];
-    private bool _replaceAllServices;
+    private readonly HashSet<KeyedServiceIdentifier> _keyedServiceIdentifiers = [];
+    private readonly HashSet<Type> _serviceIdentifiers = [];
+    private readonly HashSet<ISurrogatableTypeContext> _surrogatableTypes = [];
 
     public bool IsDAsyncService(ServiceDescriptor descriptor)
     {
         Type serviceType = descriptor.ServiceType;
 
-        if (_replaceAllServices)
-            return IsSupportedServiceType(serviceType);
-
         return
-            descriptor.IsKeyedService && _additionalKeyedServiceTypes.Contains((serviceType, descriptor.ServiceKey)) ||
-            _additionalServiceTypes.Contains(serviceType);
+            descriptor.IsKeyedService && _keyedServiceIdentifiers.Contains((serviceType, descriptor.ServiceKey)) ||
+            _serviceIdentifiers.Contains(serviceType);
     }
 
-    IServiceConfigurationBuilder IServiceConfigurationBuilder.RegisterAllServices(bool registerAll)
+    public void ConfigureMarshaling(IMarshalingConfigurationBuilder marshaling)
     {
-        _replaceAllServices = registerAll;
+        RegisterSurrogatableTypeAction action = new(marshaling);
+        foreach (ISurrogatableTypeContext surrogatableTypeContext in _surrogatableTypes)
+        {
+            surrogatableTypeContext.Execute(ref action);
+        }
+    }
+
+    IServiceConfigurationBuilder IServiceConfigurationBuilder.RegisterDAsyncService<TService>()
+    {
+        RegisterDAsyncService<TService, TService>();
         return this;
     }
 
-    IServiceConfigurationBuilder IServiceConfigurationBuilder.RegisterDAsyncService(Type serviceType)
+    IServiceConfigurationBuilder IServiceConfigurationBuilder.RegisterDAsyncService<TService>(object? serviceKey)
     {
-        ThrowHelper.ThrowIfNull(serviceType);
-
-        return RegisterDAsyncServiceCore(serviceType);
-    }
-
-    IServiceConfigurationBuilder IServiceConfigurationBuilder.RegisterDAsyncService(Type serviceType, object? serviceKey)
-    {
-        ThrowHelper.ThrowIfNull(serviceType);
-
-        return serviceKey is null
-            ? RegisterDAsyncServiceCore(serviceType)
-            : RegisterDAsyncServiceCore(serviceType, serviceKey);
-    }
-
-    private IServiceConfigurationBuilder RegisterDAsyncServiceCore(Type serviceType)
-    {
-        if (!IsSupportedServiceType(serviceType))
-            throw UnsupportedServiceType();
-
-        _additionalServiceTypes.Add(serviceType);
+        RegisterDAsyncKeyedService<TService, TService>(serviceKey);
         return this;
     }
 
-    private IServiceConfigurationBuilder RegisterDAsyncServiceCore(Type serviceType, object serviceKey)
+    IServiceConfigurationBuilder IServiceConfigurationBuilder.RegisterDAsyncService<TService, TImplementation>()
     {
-        if (!IsSupportedServiceType(serviceType))
-            throw UnsupportedServiceType();
-
-        _additionalKeyedServiceTypes.Add((serviceType, serviceKey));
+        RegisterDAsyncService<TService, TImplementation>();
         return this;
     }
 
-    private static bool IsSupportedServiceType(Type serviceType) => !serviceType.ContainsGenericParameters && !serviceType.IsGenericTypeDefinition;
+    IServiceConfigurationBuilder IServiceConfigurationBuilder.RegisterDAsyncService<TService, TImplementation>(object? serviceKey)
+    {
+        RegisterDAsyncKeyedService<TService, TImplementation>(serviceKey);
+        return this;
+    }
 
-    private static NotSupportedException UnsupportedServiceType() => new("Open generic types and types containing generic type parameters are not supported.");
+    private void RegisterDAsyncService<TService, TImplementation>()
+    {
+        _serviceIdentifiers.Add(typeof(TService));
+        _surrogatableTypes.Add(SurrogatableTypeContext.Of<TImplementation>());
+    }
+
+    private void RegisterDAsyncKeyedService<TService, TImplementation>(object? serviceKey)
+    {
+        if (serviceKey is null)
+        {
+            _serviceIdentifiers.Add(typeof(TService));
+        }
+        else
+        {
+            _keyedServiceIdentifiers.Add((typeof(TService), serviceKey));   
+        }
+        
+        _surrogatableTypes.Add(SurrogatableTypeContext.Of<TImplementation>());
+    }
+    
+    private readonly struct RegisterSurrogatableTypeAction(IMarshalingConfigurationBuilder marshaling) : ISurrogatableTypeAction
+    {
+        public void Invoke<TSurrogatable>() => marshaling.RegisterSurrogatableType<TSurrogatable>();
+    }
 }

@@ -88,7 +88,7 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
 
     IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterSurrogatableType<TSurrogatable>()
     {
-        _surrogatableTypes.Add(new SurrogatableTypeContext<TSurrogatable>());
+        _surrogatableTypes.Add(SurrogatableTypeContext.Of<TSurrogatable>());
         return this;
     }
 
