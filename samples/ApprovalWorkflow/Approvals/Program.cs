@@ -11,14 +11,11 @@ using StackExchange.Redis;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseDTasks(dTasks => dTasks
-    .AutoConfigure()
     .UseAspNetCore(aspNetCore => aspNetCore
         .AddResumptionEndpoint(ApprovalService.ResumptionEndpoint)
         .ConfigureSerialization(serialization => serialization
             .UseStackExchangeRedis()))
 #region TODO: In library
-    .ConfigureServices(services => services
-        .RegisterDAsyncService<AsyncEndpoints>())
     .ConfigureMarshaling(marshaling => marshaling
         .RegisterTypeId(typeof(AsyncEndpointInfo<ApprovalResult>))));
 #endregion
@@ -30,18 +27,10 @@ builder.Services
     .AddSingleton<ApproverRepository>()
     .AddSingleton<ApprovalService>();
 
-#region TODO: In library
-
-builder.Services.AddScoped<AsyncEndpoints>();
-
-#endregion
-
 var app = builder.Build();
 
 app.MapDTasks();
 app.MapRazorPages();
-
-#region TODO: In library
 
 app.MapAsyncPost("/approvals", async DTask<IResult> (
     [FromServices] ApproverRepository repository,
@@ -62,7 +51,5 @@ app.MapAsyncPost("/approvals", async DTask<IResult> (
 
     return AsyncResults.Success(result);
 });
-
-#endregion
 
 app.Run();
