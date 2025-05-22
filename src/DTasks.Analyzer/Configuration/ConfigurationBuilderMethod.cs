@@ -1,6 +1,6 @@
 namespace DTasks.Analyzer.Configuration;
 
-internal enum InfrastructureMarshalingBuilderMethod
+internal enum ConfigurationBuilderMethod
 {
     None,
     SurrogateDTaskOf,

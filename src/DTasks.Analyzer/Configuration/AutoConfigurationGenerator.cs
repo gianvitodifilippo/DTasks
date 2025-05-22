@@ -24,42 +24,33 @@ public class AutoConfigurationGenerator : IIncrementalGenerator
         context.RegisterImplementationSourceOutput(invocations, EmitSource);
     }
 
-    private static void EmitSource(SourceProductionContext context, ImmutableArray<InfrastructureMarshalingBuilderInvocation> invocations)
+    private static void EmitSource(SourceProductionContext context, ImmutableArray<ConfigurationBuilderInvocation> invocations)
     {
         StringBuilder sb = new();
-        MarshalingConfigurationSourceBuilder sourceBuilder = new(sb);
+        ConfigurationSourceBuilder sourceBuilder = new(sb);
         
         sourceBuilder.Begin();
-
-        foreach (InfrastructureMarshalingBuilderInvocation invocation in invocations.Distinct())
-        {
-            sourceBuilder.AddInvocation(invocation);
-        }
-        
+        sourceBuilder.AddInfrastructureBuilderInvocations(invocations.Distinct());
         sourceBuilder.End();
 
         string source = sb.ToString();
-        context.AddSource("DTasks.Analyzer.Marshaling.g.cs", source);
+        context.AddSource("DTasks.Analyzer.Configuration.g.cs", source);
     }
     
     private static bool OfTriggeringSyntax(SyntaxNode node, CancellationToken cancellationToken)
     {
         return node is
-            MethodDeclarationSyntax or
             VariableDeclaratorSyntax or
             InvocationExpressionSyntax or
             ParameterSyntax;
     }
 
-    private static InfrastructureMarshalingBuilderInvocation ToBuilderInvocation(GeneratorSyntaxContext context, CancellationToken cancellationToken)
+    private static ConfigurationBuilderInvocation ToBuilderInvocation(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {
         SemanticModel semanticModel = context.SemanticModel;
         
         switch (context.Node)
         {
-            case MethodDeclarationSyntax methodDeclaration:
-                return HandleMethodDeclaration(methodDeclaration, semanticModel, cancellationToken);
-            
             case VariableDeclaratorSyntax variableDeclarator:
                 return HandleVariableDeclarator(variableDeclarator, semanticModel, cancellationToken);
 
@@ -77,27 +68,7 @@ public class AutoConfigurationGenerator : IIncrementalGenerator
         return default;
     }
 
-    private static InfrastructureMarshalingBuilderInvocation HandleMethodDeclaration(MethodDeclarationSyntax methodDeclaration, SemanticModel semanticModel, CancellationToken cancellationToken)
-    {
-        if (!methodDeclaration.IsAsync() || methodDeclaration.IsStatic() || methodDeclaration.Arity != 0)
-            return default;
-        
-        ClassDeclarationSyntax? containingClass = methodDeclaration.GetContainingClass();
-        if (containingClass is null || containingClass.Arity != 0)
-            return default;
-        
-        IMethodSymbol? method = semanticModel.GetDeclaredSymbol(methodDeclaration, cancellationToken);
-        if (method is null || !method.IsDAsync())
-            return default;
-
-        ISymbol? symbol = semanticModel.GetDeclaredSymbol(containingClass, cancellationToken);
-        if (symbol is not INamedTypeSymbol type)
-            return default;
-
-        return SurrogateDTaskOf(type);
-    }
-
-    private static InfrastructureMarshalingBuilderInvocation HandleInvocationExpression(InvocationExpressionSyntax invocationExpression, SemanticModel semanticModel, CancellationToken cancellationToken)
+    private static ConfigurationBuilderInvocation HandleInvocationExpression(InvocationExpressionSyntax invocationExpression, SemanticModel semanticModel, CancellationToken cancellationToken)
     {
         IOperation? operation = semanticModel.GetOperation(invocationExpression, cancellationToken);
         if (operation is not IInvocationOperation invocationOperation)
@@ -109,7 +80,7 @@ public class AutoConfigurationGenerator : IIncrementalGenerator
         return AwaitWhenAllOf(typeArgument);
     }
 
-    private static InfrastructureMarshalingBuilderInvocation HandleVariableDeclarator(VariableDeclaratorSyntax variableDeclarator, SemanticModel semanticModel, CancellationToken cancellationToken)
+    private static ConfigurationBuilderInvocation HandleVariableDeclarator(VariableDeclaratorSyntax variableDeclarator, SemanticModel semanticModel, CancellationToken cancellationToken)
     {
         MethodDeclarationSyntax? containingMethodDeclaration = variableDeclarator.GetContainingMethod();
         if (containingMethodDeclaration is null || !containingMethodDeclaration.IsAsync())
@@ -129,7 +100,7 @@ public class AutoConfigurationGenerator : IIncrementalGenerator
         return SurrogateDTaskOf(typeArgument);
     }
 
-    private static InfrastructureMarshalingBuilderInvocation HandleParameter(ParameterSyntax parameter, SemanticModel semanticModel, CancellationToken cancellationToken)
+    private static ConfigurationBuilderInvocation HandleParameter(ParameterSyntax parameter, SemanticModel semanticModel, CancellationToken cancellationToken)
     {
         ISymbol? symbol = ModelExtensions.GetDeclaredSymbol(semanticModel, parameter, cancellationToken);
         if (symbol is not IParameterSymbol { Type: INamedTypeSymbol type })
@@ -141,13 +112,13 @@ public class AutoConfigurationGenerator : IIncrementalGenerator
         return SurrogateDTaskOf(typeArgument);
     }
 
-    private static InfrastructureMarshalingBuilderInvocation SurrogateDTaskOf(ITypeSymbol type)
+    private static ConfigurationBuilderInvocation SurrogateDTaskOf(ITypeSymbol type)
     {
-        return new(InfrastructureMarshalingBuilderMethod.SurrogateDTaskOf, type.GetFullName());
+        return new(ConfigurationBuilderMethod.SurrogateDTaskOf, type.GetFullName());
     }
 
-    private static InfrastructureMarshalingBuilderInvocation AwaitWhenAllOf(ITypeSymbol type)
+    private static ConfigurationBuilderInvocation AwaitWhenAllOf(ITypeSymbol type)
     {
-        return new(InfrastructureMarshalingBuilderMethod.AwaitWhenAllOf, type.GetFullName());
+        return new(ConfigurationBuilderMethod.AwaitWhenAllOf, type.GetFullName());
     }
 }

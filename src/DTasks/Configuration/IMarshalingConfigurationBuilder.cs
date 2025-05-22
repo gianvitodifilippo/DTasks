@@ -5,6 +5,7 @@ using DTasks.Configuration.DependencyInjection;
 using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Inspection;
+using DTasks.Metadata;
 using DTasks.Utils;
 
 namespace DTasks.Configuration;
@@ -58,6 +59,22 @@ public static class MarshalingConfigurationBuilderExtensions // TODO: Convert to
         return builder.RegisterTypeId(stateMachineType);
     }
 
+    public static IMarshalingConfigurationBuilder RegisterDAsyncMethods(this IMarshalingConfigurationBuilder builder, Assembly assembly)
+    {
+        ThrowHelper.ThrowIfNull(builder);
+        ThrowHelper.ThrowIfNull(assembly);
+
+        foreach (Type type in assembly.GetTypes())
+        {
+            if (type.ContainsGenericParameters)
+                continue;
+            
+            RegisterDAsyncTypeCore(builder, type);
+        }
+
+        return builder;
+    }
+
     public static IMarshalingConfigurationBuilder RegisterDAsyncType(this IMarshalingConfigurationBuilder builder, Type type)
     {
         ThrowHelper.ThrowIfNull(builder);
@@ -85,7 +102,7 @@ public static class MarshalingConfigurationBuilderExtensions // TODO: Convert to
             if (method.IsGenericMethodDefinition)
                 continue;
 
-            if (!typeof(DTask).IsAssignableFrom(method.ReturnType))
+            if (!method.ReturnType.IsDefined(typeof(DAsyncAttribute)))
                 continue;
 
             AsyncStateMachineAttribute? asyncStateMachineAttribute = method.GetCustomAttribute<AsyncStateMachineAttribute>();
