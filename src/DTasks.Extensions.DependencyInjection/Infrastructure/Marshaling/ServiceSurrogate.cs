@@ -12,8 +12,8 @@ internal class ServiceSurrogate
     {
         ServiceSurrogate surrogate = key switch
         {
-            string stringKey => new KeyedServiceSurrogate<string>() { Key = stringKey },
-            int intKey => new KeyedServiceSurrogate<int>() { Key = intKey },
+            string stringKey => new KeyedServiceSurrogate<string> { Key = stringKey },
+            int intKey => new KeyedServiceSurrogate<int> { Key = intKey },
             _ => throw new ArgumentException($"Keys of type {key.GetType()} are not supported.", nameof(key))
         };
 

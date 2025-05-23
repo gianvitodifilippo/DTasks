@@ -4,7 +4,7 @@ using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json.Converters;
 
-public sealed class TypeIdJsonConverter : JsonConverter<TypeId>
+public sealed class TypeIdConverter : JsonConverter<TypeId>
 {
     public override TypeId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

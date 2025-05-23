@@ -24,9 +24,7 @@ builder.Host.UseDTasks(dTasks => dTasks
             .UseStackExchangeRedis()))
 #region TODO: In library
     .ConfigureServices(services => services
-        .RegisterDAsyncService(typeof(AsyncEndpoints)))
-    .ConfigureMarshaling(marshaling => marshaling
-        .RegisterSurrogatableType<AsyncEndpoints>()));
+        .RegisterDAsyncService<AsyncEndpoints>()));
 #endregion
 
 builder.Services

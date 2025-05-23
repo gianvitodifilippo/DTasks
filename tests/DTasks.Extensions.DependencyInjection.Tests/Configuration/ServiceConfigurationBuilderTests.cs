@@ -28,10 +28,9 @@ public class ServiceConfigurationBuilderTests
     public void IsDAsyncService_ReturnsTrue_WhenServiceTypeWasRegistered()
     {
         // Arrange
-        Type serviceType = typeof(object);
-        ServiceDescriptor descriptor = ServiceDescriptor.Singleton(serviceType, new object());
+        ServiceDescriptor descriptor = ServiceDescriptor.Singleton(new object());
 
-        RegisterDAsyncService(serviceType);
+        RegisterDAsyncService<object>();
 
         // Act
         bool result = _sut.IsDAsyncService(descriptor);
@@ -46,9 +45,10 @@ public class ServiceConfigurationBuilderTests
         // Arrange
         Type serviceType = typeof(object);
         object serviceKey = new object();
+        object otherKey = new object();
         ServiceDescriptor descriptor = ServiceDescriptor.KeyedSingleton(serviceType, serviceKey);
 
-        RegisterDAsyncService(serviceType, new object());
+        RegisterDAsyncService<object>(otherKey);
 
         // Act
         bool result = _sut.IsDAsyncService(descriptor);
@@ -61,26 +61,10 @@ public class ServiceConfigurationBuilderTests
     public void IsDAsyncService_ReturnsTrue_WhenKeyedServiceTypeWasRegistered()
     {
         // Arrange
-        Type serviceType = typeof(object);
         object serviceKey = new object();
-        ServiceDescriptor descriptor = ServiceDescriptor.KeyedSingleton(serviceType, serviceKey, new object());
+        ServiceDescriptor descriptor = ServiceDescriptor.KeyedSingleton(serviceKey, new object());
 
-        RegisterDAsyncService(serviceType, serviceKey);
-
-        // Act
-        bool result = _sut.IsDAsyncService(descriptor);
-
-        // Assert
-        result.Should().BeTrue();
-    }
-
-    [Fact]
-    public void IsDAsyncService_ReturnsTrue_WhenAllServicesWereRegistered()
-    {
-        // Arrange
-        ServiceDescriptor descriptor = ServiceDescriptor.Singleton(new object());
-
-        RegisterAllServices();
+        RegisterDAsyncService<object>(serviceKey);
 
         // Act
         bool result = _sut.IsDAsyncService(descriptor);
@@ -89,34 +73,13 @@ public class ServiceConfigurationBuilderTests
         result.Should().BeTrue();
     }
 
-    [Fact]
-    public void IsDAsyncService_ReturnsFalse_WhenAllServicesWereRegisteredAndServiceTypeIsOpenGeneric()
+    private void RegisterDAsyncService<TService>()
     {
-        // Arrange
-        Type serviceType = typeof(IEnumerable<>);
-        ServiceDescriptor descriptor = ServiceDescriptor.Singleton(serviceType, new object());
-
-        RegisterAllServices();
-
-        // Act
-        bool result = _sut.IsDAsyncService(descriptor);
-
-        // Assert
-        result.Should().BeFalse();
+        ((IServiceConfigurationBuilder)_sut).RegisterDAsyncService<TService>();
     }
 
-    private void RegisterDAsyncService(Type serviceType)
+    private void RegisterDAsyncService<TService>(object serviceKey)
     {
-        ((IServiceConfigurationBuilder)_sut).RegisterDAsyncService(serviceType);
-    }
-
-    private void RegisterDAsyncService(Type serviceType, object serviceKey)
-    {
-        ((IServiceConfigurationBuilder)_sut).RegisterDAsyncService(serviceType, serviceKey);
-    }
-
-    private void RegisterAllServices()
-    {
-        ((IServiceConfigurationBuilder)_sut).RegisterAllServices();
+        ((IServiceConfigurationBuilder)_sut).RegisterDAsyncService<TService>(serviceKey);
     }
 }

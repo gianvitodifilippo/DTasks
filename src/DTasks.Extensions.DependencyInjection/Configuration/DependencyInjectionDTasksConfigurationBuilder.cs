@@ -30,14 +30,19 @@ internal sealed class DependencyInjectionDTasksConfigurationBuilder(IServiceColl
             }
 
             builder
-                .ConfigureMarshaling(marshaling => marshaling
-                    .AddSurrogator(InfrastructureServiceProvider.Descriptor.Map(provider => provider
-                        .GetRequiredService<DAsyncSurrogatorProvider>()
-                        .GetSurrogator(provider)))
-                    .RegisterTypeId(typeof(ServiceSurrogate))
-                    .RegisterTypeId(typeof(KeyedServiceSurrogate<string>))
-                    .RegisterTypeId(typeof(KeyedServiceSurrogate<int>))
-                    .RegisterTypeIds(dAsyncTypes));
+                .ConfigureMarshaling(marshaling =>
+                {
+                    _serviceConfigurationBuilder.ConfigureMarshaling(marshaling);
+                    
+                    marshaling
+                        .AddSurrogator(InfrastructureServiceProvider.Descriptor.Map(provider => provider
+                            .GetRequiredService<DAsyncSurrogatorProvider>()
+                            .GetSurrogator(provider)))
+                        .RegisterTypeId(typeof(ServiceSurrogate))
+                        .RegisterTypeId(typeof(KeyedServiceSurrogate<string>))
+                        .RegisterTypeId(typeof(KeyedServiceSurrogate<int>))
+                        .RegisterTypeIds(dAsyncTypes);
+                });
         });
 
         ServiceContainerBuilder containerBuilder = new(services, configuration.Infrastructure.TypeResolver);
