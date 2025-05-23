@@ -5,8 +5,4 @@ public interface IServiceConfigurationBuilder
     IServiceConfigurationBuilder RegisterDAsyncService<TService>();
 
     IServiceConfigurationBuilder RegisterDAsyncService<TService>(object? serviceKey);
-    
-    IServiceConfigurationBuilder RegisterDAsyncService<TService, TImplementation>();
-
-    IServiceConfigurationBuilder RegisterDAsyncService<TService, TImplementation>(object? serviceKey);
 }

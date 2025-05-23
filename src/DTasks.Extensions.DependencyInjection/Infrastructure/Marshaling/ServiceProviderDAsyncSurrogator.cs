@@ -101,7 +101,7 @@ internal class ServiceProviderDAsyncSurrogator : IDAsyncSurrogator, ISurrogateCo
             : _provider.GetRequiredService(serviceType);
 
         return service is not T value
-            ? throw new InvalidOperationException("The surrogate is not compatible with the required value type.")
+            ? throw new InvalidOperationException("The surrogate is not compatible with the type of the required value.")
             : value;
     }
 }

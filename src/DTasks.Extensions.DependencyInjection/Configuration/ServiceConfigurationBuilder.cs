@@ -32,35 +32,17 @@ internal sealed class ServiceConfigurationBuilder : IServiceConfigurationBuilder
 
     IServiceConfigurationBuilder IServiceConfigurationBuilder.RegisterDAsyncService<TService>()
     {
-        RegisterDAsyncService<TService, TService>();
+        RegisterDAsyncService<TService>(null);
         return this;
     }
 
     IServiceConfigurationBuilder IServiceConfigurationBuilder.RegisterDAsyncService<TService>(object? serviceKey)
     {
-        RegisterDAsyncKeyedService<TService, TService>(serviceKey);
+        RegisterDAsyncService<TService>(serviceKey);
         return this;
     }
 
-    IServiceConfigurationBuilder IServiceConfigurationBuilder.RegisterDAsyncService<TService, TImplementation>()
-    {
-        RegisterDAsyncService<TService, TImplementation>();
-        return this;
-    }
-
-    IServiceConfigurationBuilder IServiceConfigurationBuilder.RegisterDAsyncService<TService, TImplementation>(object? serviceKey)
-    {
-        RegisterDAsyncKeyedService<TService, TImplementation>(serviceKey);
-        return this;
-    }
-
-    private void RegisterDAsyncService<TService, TImplementation>()
-    {
-        _serviceIdentifiers.Add(typeof(TService));
-        _surrogatableTypes.Add(SurrogatableTypeContext.Of<TImplementation>());
-    }
-
-    private void RegisterDAsyncKeyedService<TService, TImplementation>(object? serviceKey)
+    private void RegisterDAsyncService<TService>(object? serviceKey)
     {
         if (serviceKey is null)
         {
@@ -71,7 +53,7 @@ internal sealed class ServiceConfigurationBuilder : IServiceConfigurationBuilder
             _keyedServiceIdentifiers.Add((typeof(TService), serviceKey));   
         }
         
-        _surrogatableTypes.Add(SurrogatableTypeContext.Of<TImplementation>());
+        _surrogatableTypes.Add(SurrogatableTypeContext.Of<TService>());
     }
     
     private readonly struct RegisterSurrogatableTypeAction(IMarshalingConfigurationBuilder marshaling) : ISurrogatableTypeAction

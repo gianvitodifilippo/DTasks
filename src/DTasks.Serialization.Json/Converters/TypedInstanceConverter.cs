@@ -4,7 +4,7 @@ using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json.Converters;
 
-public sealed class TypedInstanceJsonConverter<TValue>(IDAsyncTypeResolver typeResolver) : JsonConverter<TypedInstance<TValue>>
+public sealed class TypedInstanceConverter<TValue>(IDAsyncTypeResolver typeResolver) : JsonConverter<TypedInstance<TValue>>
     where TValue : class
 {
     private static ReadOnlySpan<byte> TypeIdPropertyName => "t"u8;

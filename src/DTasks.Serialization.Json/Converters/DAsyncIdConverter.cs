@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace DTasks.Serialization.Json.Converters;
 
-public sealed class DAsyncIdJsonConverter : JsonConverter<DAsyncId>
+public sealed class DAsyncIdConverter : JsonConverter<DAsyncId>
 {
     public override DAsyncId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

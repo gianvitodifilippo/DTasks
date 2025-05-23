@@ -78,8 +78,8 @@ internal sealed class JsonFormatConfigurationBuilder : IJsonFormatConfigurationB
         serializerOptions.AllowOutOfOrderMetadataProperties = false;
         serializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
 
-        serializerOptions.Converters.Add(new TypeIdJsonConverter());
-        serializerOptions.Converters.Add(new DAsyncIdJsonConverter());
+        serializerOptions.Converters.Add(new TypeIdConverter());
+        serializerOptions.Converters.Add(new DAsyncIdConverter());
 
         return new JsonDAsyncSerializerFactory(
             inspector,
