@@ -1,6 +1,7 @@
 ﻿using System.Collections.Frozen;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using DTasks.Infrastructure.Generics;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Utils;
 
@@ -11,7 +12,7 @@ public interface IDAsyncRootScope
 {
     IDAsyncTypeResolver TypeResolver { get; }
 
-    FrozenSet<ISurrogatableTypeContext> SurrogatableTypes { get; }
+    FrozenSet<ITypeContext> SurrogatableTypeContexts { get; }
     
     bool TryGetProperty<TProperty>(DAsyncPropertyKey<TProperty> key, [MaybeNullWhen(false)] out TProperty value);
 }

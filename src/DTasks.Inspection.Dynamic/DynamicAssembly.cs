@@ -108,10 +108,9 @@ internal sealed class DynamicAssembly
 
         lock (_userAssemblies)
         {
-            if (_userAssemblies.Contains(assembly))
+            if (!_userAssemblies.Add(assembly))
                 return;
 
-            _userAssemblies.Add(assembly);
             _assembly.SetCustomAttribute(new CustomAttributeBuilder(
                 con: _ignoresAccessChecksToAttributeConstructor,
                 constructorArgs: [assembly.GetName().Name]));

@@ -1,15 +1,15 @@
 using System.ComponentModel;
 
-namespace DTasks.Infrastructure.Marshaling;
+namespace DTasks.Infrastructure.Generics;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface ISurrogatableTypeContext
+public interface ITypeContext
 {
     Type Type { get; }
     
     void Execute<TAction>(ref TAction action)
-        where TAction : ISurrogatableTypeAction;
+        where TAction : ITypeAction;
     
     TReturn Execute<TAction, TReturn>(ref TAction action)
-        where TAction : ISurrogatableTypeAction<TReturn>;
+        where TAction : ITypeAction<TReturn>;
 }

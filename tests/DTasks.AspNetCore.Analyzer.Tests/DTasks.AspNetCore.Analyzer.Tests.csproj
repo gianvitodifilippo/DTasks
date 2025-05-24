@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
@@ -25,8 +25,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\DTasks.Analyzer\DTasks.Analyzer.csproj" />
-        <ProjectReference Include="..\..\src\DTasks\DTasks.csproj" />
+        <ProjectReference Include="..\..\src\DTasks.AspNetCore.Analyzer\DTasks.AspNetCore.Analyzer.csproj" />
+        <ProjectReference Include="..\..\src\DTasks.AspNetCore\DTasks.AspNetCore.csproj" />
     </ItemGroup>
 
     <ItemGroup>

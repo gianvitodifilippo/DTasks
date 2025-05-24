@@ -1,4 +1,5 @@
 using DTasks.Configuration;
+using DTasks.Infrastructure.Generics;
 using DTasks.Infrastructure.Marshaling;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,7 +11,7 @@ internal sealed class ServiceConfigurationBuilder : IServiceConfigurationBuilder
 {
     private readonly HashSet<KeyedServiceIdentifier> _keyedServiceIdentifiers = [];
     private readonly HashSet<Type> _serviceIdentifiers = [];
-    private readonly HashSet<ISurrogatableTypeContext> _surrogatableTypes = [];
+    private readonly HashSet<ITypeContext> _surrogatableTypeContexts = [];
 
     public bool IsDAsyncService(ServiceDescriptor descriptor)
     {
@@ -23,10 +24,9 @@ internal sealed class ServiceConfigurationBuilder : IServiceConfigurationBuilder
 
     public void ConfigureMarshaling(IMarshalingConfigurationBuilder marshaling)
     {
-        RegisterSurrogatableTypeAction action = new(marshaling);
-        foreach (ISurrogatableTypeContext surrogatableTypeContext in _surrogatableTypes)
+        foreach (ITypeContext typeContext in _surrogatableTypeContexts)
         {
-            surrogatableTypeContext.Execute(ref action);
+            marshaling.RegisterSurrogatableType(typeContext);
         }
     }
 
@@ -53,11 +53,6 @@ internal sealed class ServiceConfigurationBuilder : IServiceConfigurationBuilder
             _keyedServiceIdentifiers.Add((typeof(TService), serviceKey));   
         }
         
-        _surrogatableTypes.Add(SurrogatableTypeContext.Of<TService>());
-    }
-    
-    private readonly struct RegisterSurrogatableTypeAction(IMarshalingConfigurationBuilder marshaling) : ISurrogatableTypeAction
-    {
-        public void Invoke<TSurrogatable>() => marshaling.RegisterSurrogatableType<TSurrogatable>();
+        _surrogatableTypeContexts.Add(TypeContext.Of<TService>());
     }
 }

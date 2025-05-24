@@ -84,7 +84,7 @@ internal sealed class JsonFormatConfigurationBuilder : IJsonFormatConfigurationB
         return new JsonDAsyncSerializerFactory(
             inspector,
             rootScope.TypeResolver,
-            rootScope.SurrogatableTypes,
+            rootScope.SurrogatableTypeContexts,
             serializerOptions);
     }
 }

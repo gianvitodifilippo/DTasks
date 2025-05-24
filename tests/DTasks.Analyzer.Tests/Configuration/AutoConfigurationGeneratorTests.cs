@@ -95,22 +95,6 @@ public class AutoConfigurationGeneratorTests
     }
     
     [Fact]
-    public async Task GenericDTaskLocalInNonDAsyncMethod_ProducesNoCalls()
-    {
-        await RunTestAsync(
-            source: """
-                static class C
-                {
-                    static async System.Threading.Tasks.Task M()
-                    {
-                        DTask<int> t = null!;
-                    }
-                }
-                """,
-            expectedInfrastructureInvocations: "");
-    }
-    
-    [Fact]
     public async Task GenericDTaskLocalInNonAsyncMethod_ProducesNoCalls()
     {
         await RunTestAsync(

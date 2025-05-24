@@ -10,7 +10,7 @@ using Microsoft.CodeAnalysis.Operations;
 namespace DTasks.Analyzer.Configuration;
 
 [Generator]
-public class AutoConfigurationGenerator : IIncrementalGenerator
+public sealed class AutoConfigurationGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -30,7 +30,7 @@ public class AutoConfigurationGenerator : IIncrementalGenerator
         ConfigurationSourceBuilder sourceBuilder = new(sb);
         
         sourceBuilder.Begin();
-        sourceBuilder.AddInfrastructureBuilderInvocations(invocations.Distinct());
+        sourceBuilder.AddInfrastructureBuilderInvocations(invocations.Distinct()); // TODO: Move in pipeline
         sourceBuilder.End();
 
         string source = sb.ToString();
@@ -82,16 +82,31 @@ public class AutoConfigurationGenerator : IIncrementalGenerator
 
     private static ConfigurationBuilderInvocation HandleVariableDeclarator(VariableDeclaratorSyntax variableDeclarator, SemanticModel semanticModel, CancellationToken cancellationToken)
     {
-        MethodDeclarationSyntax? containingMethodDeclaration = variableDeclarator.GetContainingMethod();
-        if (containingMethodDeclaration is null || !containingMethodDeclaration.IsAsync())
-            return default;
+        IMethodSymbol? containerSymbol;
         
-        IMethodSymbol? containingMethodSymbol = semanticModel.GetDeclaredSymbol(containingMethodDeclaration, cancellationToken);
-        if (containingMethodSymbol is null || !containingMethodSymbol.IsDAsync())
+        MethodDeclarationSyntax? containingMethod = variableDeclarator.GetContainingMethod();
+        if (containingMethod is not null)
+        {
+            if (!containingMethod.IsAsync())
+                return default;
+            
+            containerSymbol = semanticModel.GetDeclaredSymbol(containingMethod, cancellationToken);
+        }
+        else
+        {
+            LambdaExpressionSyntax? containingLambda = variableDeclarator.GetContainingLambda();
+            if (containingLambda is null || !containingLambda.IsAsync())
+                return default;
+            
+            SymbolInfo lambdaSymbolInfo = semanticModel.GetSymbolInfo(containingLambda, cancellationToken);
+            containerSymbol = lambdaSymbolInfo.Symbol as IMethodSymbol;
+        }
+        
+        if (containerSymbol is null)
             return default;
         
         IOperation? operation = semanticModel.GetOperation(variableDeclarator, cancellationToken);
-        if (operation is not IVariableDeclaratorOperation { Symbol: { Type: INamedTypeSymbol type } })
+        if (operation is not IVariableDeclaratorOperation { Symbol.Type: INamedTypeSymbol type })
             return default;
         
         if (!type.IsGenericDTask(out ITypeSymbol? typeArgument))

@@ -5,7 +5,12 @@ using DTasks.AspNetCore.Execution;
 
 namespace Approvals;
 
-public class ApprovalService(IConfiguration configuration) : IDisposable
+public interface IApprovalService
+{
+    DTask<ApprovalResult> SendApprovalRequestDAsync(ApprovalRequestDetails details, string approverEmail);
+}
+
+public class ApprovalService(IConfiguration configuration) : IApprovalService, IDisposable
 {
     public static readonly ResumptionEndpoint<ApprovalResult> ResumptionEndpoint = new("approvals/resume/{operationId}");
     

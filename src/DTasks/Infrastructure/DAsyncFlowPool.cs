@@ -22,10 +22,10 @@ internal sealed class DAsyncFlowPool : IDAsyncFlowPool
         return flow;
     }
 #else
-    public DAsyncFlow Get(IDAsyncHost host, bool returnToPool)
+    public DAsyncFlow Get(IDAsyncHost host)
     {
         DAsyncFlow flow = _pool.Get();
-        flow.Initialize(host, returnToPool);
+        flow.Initialize(host);
 
         return flow;
     }

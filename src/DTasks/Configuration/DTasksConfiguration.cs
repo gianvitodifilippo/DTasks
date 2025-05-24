@@ -26,50 +26,41 @@ public sealed class DTasksConfiguration
 #if DEBUG
         return _flowPool.Get(host, Environment.StackTrace);
 #else
-        return _flowPool.Get(host, returnToPool: false);
+        return _flowPool.Get(host);
 #endif
     }
 
-    public ValueTask StartAsync(IDAsyncHost host, IDAsyncRunnable runnable, CancellationToken cancellationToken = default)
+    public async Task StartAsync(IDAsyncHost host, IDAsyncRunnable runnable, CancellationToken cancellationToken = default)
     {
         ThrowHelper.ThrowIfNull(host);
         ThrowHelper.ThrowIfNull(runnable);
 
-        DAsyncFlow flow = GetFlow(host);
-        return flow.StartAsync(runnable, cancellationToken);
+        using DAsyncFlow flow = _flowPool.Get(host);
+        await flow.StartAsync(runnable, cancellationToken);
     }
 
-    public ValueTask ResumeAsync(IDAsyncHost host, DAsyncId id, CancellationToken cancellationToken = default)
+    public async Task ResumeAsync(IDAsyncHost host, DAsyncId id, CancellationToken cancellationToken = default)
     {
         ThrowHelper.ThrowIfNull(host);
 
-        DAsyncFlow flow = GetFlow(host);
-        return flow.ResumeAsync(id, cancellationToken);
+        using DAsyncFlow flow = _flowPool.Get(host);
+        await flow.ResumeAsync(id, cancellationToken);
     }
 
-    public ValueTask ResumeAsync<TResult>(IDAsyncHost host, DAsyncId id, TResult result, CancellationToken cancellationToken = default)
+    public async Task ResumeAsync<TResult>(IDAsyncHost host, DAsyncId id, TResult result, CancellationToken cancellationToken = default)
     {
         ThrowHelper.ThrowIfNull(host);
 
-        DAsyncFlow flow = GetFlow(host);
-        return flow.ResumeAsync(id, result, cancellationToken);
+        using DAsyncFlow flow = _flowPool.Get(host);
+        await flow.ResumeAsync(id, result, cancellationToken);
     }
 
-    public ValueTask ResumeAsync(IDAsyncHost host, DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
+    public async Task ResumeAsync(IDAsyncHost host, DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
     {
         ThrowHelper.ThrowIfNull(host);
 
-        DAsyncFlow flow = GetFlow(host);
-        return flow.ResumeAsync(id, exception, cancellationToken);
-    }
-
-    private DAsyncFlow GetFlow(IDAsyncHost host)
-    {
-#if DEBUG
-        return _flowPool.Get(host, stackTrace: null);
-#else
-        return _flowPool.Get(host, returnToPool: true);
-#endif
+        using DAsyncFlow flow = _flowPool.Get(host);
+        await flow.ResumeAsync(id, exception, cancellationToken);
     }
 
     public static DTasksConfiguration Build(Action<IDTasksConfigurationBuilder> configure)

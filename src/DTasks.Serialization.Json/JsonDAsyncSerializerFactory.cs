@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DTasks.Infrastructure;
+using DTasks.Infrastructure.Generics;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Inspection;
 using DTasks.Serialization.Json.Converters;
@@ -12,18 +13,18 @@ internal sealed class JsonDAsyncSerializerFactory
 {
     private readonly IStateMachineInspector _inspector;
     private readonly IDAsyncTypeResolver _typeResolver;
-    private readonly FrozenSet<ISurrogatableTypeContext> _surrogatableTypes;
+    private readonly FrozenSet<ITypeContext> _surrogatableTypeContexts;
     private readonly JsonSerializerOptions _options;
 
     public JsonDAsyncSerializerFactory(
         IStateMachineInspector inspector,
         IDAsyncTypeResolver typeResolver,
-        FrozenSet<ISurrogatableTypeContext> surrogatableTypes,
+        FrozenSet<ITypeContext> surrogatableTypeContexts,
         JsonSerializerOptions options)
     {
         _inspector = inspector;
         _typeResolver = typeResolver;
-        _surrogatableTypes = surrogatableTypes;
+        _surrogatableTypeContexts = surrogatableTypeContexts;
         _options = options;
     }
 
@@ -42,7 +43,7 @@ internal sealed class JsonDAsyncSerializerFactory
         defaultOptions.ReferenceHandler = new StateMachineReferenceHandler(referenceResolver);
 
         AddSurrogatableConverterAction addConverterAction = new(flowScope.Surrogator, defaultOptions, surrogatorOptions);
-        foreach (ISurrogatableTypeContext typeContext in _surrogatableTypes)
+        foreach (ITypeContext typeContext in _surrogatableTypeContexts)
         {
             typeContext.Execute(ref addConverterAction);
         }
@@ -55,11 +56,11 @@ internal sealed class JsonDAsyncSerializerFactory
     private readonly struct AddSurrogatableConverterAction(
         IDAsyncSurrogator surrogator,
         JsonSerializerOptions defaultOptions,
-        JsonSerializerOptions surrogatorOptions) : ISurrogatableTypeAction
+        JsonSerializerOptions surrogatorOptions) : ITypeAction
     {
-        public void Invoke<TSurrogatable>()
+        public void Invoke<T>()
         {
-            surrogatorOptions.Converters.Add(new SurrogatableConverter<TSurrogatable>(surrogator, defaultOptions));
+            surrogatorOptions.Converters.Add(new SurrogatableConverter<T>(surrogator, defaultOptions));
         }
     }
 }

@@ -76,12 +76,6 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
             _flowProperties?.Clear();
         }
 
-        if (_returnToPool)
-        {
-            _returnToPool = false;
-            Dispose();
-        }
-
 #if DEBUG
         _stackTrace = null;
 #endif

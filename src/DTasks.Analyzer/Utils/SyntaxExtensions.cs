@@ -12,9 +12,9 @@ public static class SyntaxExtensions
         return methodDeclaration.Modifiers.Any(SyntaxKind.AsyncKeyword);
     }
     
-    public static bool IsStatic(this MethodDeclarationSyntax methodDeclaration)
+    public static bool IsAsync(this LambdaExpressionSyntax lambdaExpression)
     {
-        return methodDeclaration.Modifiers.Any(SyntaxKind.StaticKeyword);
+        return lambdaExpression.Modifiers.Any(SyntaxKind.AsyncKeyword);
     }
     
     public static MethodDeclarationSyntax? GetContainingMethod(this SyntaxNode? node)
@@ -23,6 +23,19 @@ public static class SyntaxExtensions
         {
             if (node is MethodDeclarationSyntax methodDeclaration)
                 return methodDeclaration;
+
+            node = node.Parent;
+        }
+
+        return null;
+    }
+    
+    public static LambdaExpressionSyntax? GetContainingLambda(this SyntaxNode? node)
+    {
+        while (node is not CompilationUnitSyntax and not null)
+        {
+            if (node is LambdaExpressionSyntax lambdaExpression)
+                return lambdaExpression;
 
             node = node.Parent;
         }

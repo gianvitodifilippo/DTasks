@@ -2,7 +2,12 @@
 
 namespace Approvals;
 
-public class ApproverRepository(IConfiguration configuration)
+public interface IApproverRepository
+{
+    Task<string?> GetEmailByIdAsync(Guid id);
+}
+
+public class ApproverRepository(IConfiguration configuration) : IApproverRepository
 {
     public async Task<string?> GetEmailByIdAsync(Guid id)
     {

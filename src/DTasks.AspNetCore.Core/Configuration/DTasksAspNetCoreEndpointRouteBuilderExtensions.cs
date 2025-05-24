@@ -12,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.Routing;
 
-public static class DTasksAspNetCoreEndpointRouteBuilderExtensions
+public static partial class DTasksAspNetCoreEndpointRouteBuilderExtensions
 {
     public static void MapDTasks(this IEndpointRouteBuilder endpoints)
     {

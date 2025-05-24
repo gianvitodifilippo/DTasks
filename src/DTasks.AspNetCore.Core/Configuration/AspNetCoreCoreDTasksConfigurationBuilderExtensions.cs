@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Configuration;
 
-public static class DTasksConfigurationBuilderExtensions
+public static class AspNetCoreCoreDTasksConfigurationBuilderExtensions
 {
     public static TBuilder AddAspNetCore<TBuilder>(this TBuilder builder)
         where TBuilder : IDependencyInjectionDTasksConfigurationBuilder
