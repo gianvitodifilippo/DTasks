@@ -1,3 +1,4 @@
+using DTasks.Configuration;
 using DTasks.Configuration.DependencyInjection;
 using DTasks.Serialization.Configuration;
 using StackExchange.Redis;

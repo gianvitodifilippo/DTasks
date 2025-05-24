@@ -1,6 +1,6 @@
 using DTasks.Serialization.StackExchangeRedis.Configuration;
 
-namespace DTasks.Serialization.Configuration;
+namespace DTasks.Configuration;
 
 public static class RedisSerializationConfigurationBuilderExtensions
 {

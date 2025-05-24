@@ -1,6 +1,7 @@
 using DTasks.Configuration.DependencyInjection;
+using DTasks.Serialization;
 
-namespace DTasks.Serialization.Configuration;
+namespace DTasks.Configuration;
 
 public interface ISerializationConfigurationBuilder
 {

@@ -2,9 +2,9 @@ using DTasks.Configuration;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Testing;
 
-namespace DTasks.Analyzer.Configuration;
+namespace DTasks.Analyzer;
 
-public class AutoConfigurationGeneratorTests
+public class DTasksGeneratorTests
 {
     [Fact]
     public async Task GenericDTaskLocalInDAsyncMethod_ProducesCallToSurrogateDTaskOf()
@@ -58,6 +58,7 @@ public class AutoConfigurationGeneratorTests
                 AwaitWhenAllOf<global::System.Int32>()
                 """);
     }
+    
     [Fact]
     public async Task GenericDTaskLocalAndCallToGenericWhenAllInDAsyncMethod_ProducesCallToSurrogateDTaskOfAndToAwaitWhenAllOf()
     {
@@ -149,7 +150,7 @@ public class AutoConfigurationGeneratorTests
             }
             """;
         
-        var test = new CSharpSourceGeneratorTest<AutoConfigurationGenerator, DefaultVerifier>
+        var test = new CSharpSourceGeneratorTest<DTasksGenerator, DefaultVerifier>
         {
             ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestState =
@@ -157,7 +158,7 @@ public class AutoConfigurationGeneratorTests
                 Sources = { source },
                 GeneratedSources =
                 {
-                    (typeof(AutoConfigurationGenerator), "DTasks.Analyzer.Configuration.g.cs", expected)
+                    (typeof(DTasksGenerator), "DTasks.Analyzer.g.cs", expected)
                 },
                 AdditionalReferences = { typeof(DTask).Assembly, typeof(DTasksConfiguration).Assembly }
             }

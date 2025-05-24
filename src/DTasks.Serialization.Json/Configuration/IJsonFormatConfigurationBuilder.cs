@@ -4,7 +4,7 @@ using DTasks.Configuration.DependencyInjection;
 using DTasks.Infrastructure;
 using DTasks.Inspection;
 
-namespace DTasks.Serialization.Json.Configuration;
+namespace DTasks.Configuration;
 
 public interface IJsonFormatConfigurationBuilder
 {

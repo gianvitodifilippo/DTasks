@@ -9,15 +9,19 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
+        <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0"/>
         <PackageReference Include="Npgsql" Version="9.0.3"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\..\src\DTasks.Analyzer\DTasks.Analyzer.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-      <ProjectReference Include="..\..\..\src\DTasks.AspNetCore.Analyzer\DTasks.AspNetCore.Analyzer.csproj"  OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-      <ProjectReference Include="..\..\..\src\DTasks.AspNetCore\DTasks.AspNetCore.csproj" />
-      <ProjectReference Include="..\..\..\src\DTasks.Serialization.StackExchangeRedis.DependencyInjection\DTasks.Serialization.StackExchangeRedis.DependencyInjection.csproj" />
+        <ProjectReference Include="..\..\..\src\DTasks.Analyzer\DTasks.Analyzer.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="..\..\..\src\DTasks.AspNetCore.Analyzer\DTasks.AspNetCore.Analyzer.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="..\..\..\src\DTasks.AspNetCore\DTasks.AspNetCore.csproj"/>
+        <ProjectReference Include="..\..\..\src\DTasks.Serialization.StackExchangeRedis.DependencyInjection\DTasks.Serialization.StackExchangeRedis.DependencyInjection.csproj"/>
     </ItemGroup>
+
+    <PropertyGroup>
+        <InterceptorsNamespaces>$(InterceptorsNamespaces);DTasks.Configuration</InterceptorsNamespaces>
+    </PropertyGroup>
 
 </Project>

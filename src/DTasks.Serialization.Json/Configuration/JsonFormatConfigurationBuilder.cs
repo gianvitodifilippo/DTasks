@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DTasks.Configuration;
 using DTasks.Configuration.DependencyInjection;
 using DTasks.Infrastructure;
 using DTasks.Inspection;

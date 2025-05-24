@@ -1,7 +1,7 @@
 using DTasks.Configuration.DependencyInjection;
 using StackExchange.Redis;
 
-namespace DTasks.Serialization.StackExchangeRedis.Configuration;
+namespace DTasks.Configuration;
 
 public interface IRedisStorageConfigurationBuilder
 {

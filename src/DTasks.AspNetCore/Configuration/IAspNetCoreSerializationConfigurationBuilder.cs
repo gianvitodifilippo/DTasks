@@ -3,7 +3,7 @@ using DTasks.Serialization;
 using DTasks.Serialization.Configuration;
 using DTasks.Serialization.Json.Configuration;
 
-namespace DTasks.AspNetCore.Configuration;
+namespace DTasks.Configuration;
 
 public interface IAspNetCoreSerializationConfigurationBuilder : ISerializationConfigurationBuilder
 {

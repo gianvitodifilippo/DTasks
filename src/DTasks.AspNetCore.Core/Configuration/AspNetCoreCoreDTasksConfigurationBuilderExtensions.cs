@@ -1,7 +1,4 @@
 using DTasks.AspNetCore.Configuration;
-using DTasks.AspNetCore.Execution;
-using DTasks.AspNetCore.Infrastructure.Http;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Configuration;
 

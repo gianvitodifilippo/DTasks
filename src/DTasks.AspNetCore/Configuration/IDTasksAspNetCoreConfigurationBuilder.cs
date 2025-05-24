@@ -1,8 +1,9 @@
-﻿using DTasks.AspNetCore.Execution;
+﻿using DTasks.AspNetCore;
+using DTasks.AspNetCore.Execution;
 using DTasks.Configuration;
 using Microsoft.Extensions.Options;
 
-namespace DTasks.AspNetCore.Configuration;
+namespace DTasks.Configuration;
 
 public interface IDTasksAspNetCoreConfigurationBuilder : IDTasksAspNetCoreCoreConfigurationBuilder
 {

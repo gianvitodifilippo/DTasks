@@ -3,7 +3,7 @@ using DTasks.Extensions.DependencyInjection.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 
-namespace DTasks.Serialization.Configuration;
+namespace DTasks.Configuration;
 
 public static class RedisDependencyInjectionSerializationConfigurationBuilderExtensions
 {

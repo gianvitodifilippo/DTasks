@@ -16,6 +16,6 @@ public class ApprovalPage : PageModel
 
     public void OnGet()
     {
-        CallbackPath = ApprovalService.ResumptionEndpoint.MakeCallbackPath(OperationId);
+        CallbackPath = ResumptionEndpoints.Approval.MakeCallbackPath(OperationId);
     }
 }

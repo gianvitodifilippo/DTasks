@@ -9,11 +9,39 @@ public static class SymbolExtensions
         typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
         genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters);
     
+    private const string ActionQualifiedName = "System.Action";
+    private const string ConfigurationBuilderQualifiedName = "DTasks.Configuration.IDTasksAspNetCoreCoreConfigurationBuilder";
+    private const string ConfigurationBuilderAttributeQualifiedName = "DTasks.Metadata.ConfigurationBuilderAttribute";
     private const string DTasksAspNetCoreEndpointRouteBuilderExtensionsQualifiedName = "Microsoft.AspNetCore.Routing.DTasksAspNetCoreEndpointRouteBuilderExtensions";
     private const string TaskQualifiedName = "System.Threading.Tasks.Task";
     private const string DTaskQualifiedName = "DTasks.DTask";
     private const string AsyncResultAttributeQualifiedName = "DTasks.AspNetCore.Metadata.AsyncResultAttribute";
+    private const string ResumptionEndpointQualifiedName = "DTasks.AspNetCore.Execution.ResumptionEndpoint";
     
+    public static bool IsAction(this ITypeSymbol type)
+    {
+        return type.QualifiedNameIs(ActionQualifiedName.AsSpan());
+    }
+
+    public static bool IsConfigurationBuilderAttribute(this ITypeSymbol type)
+    {
+        return type.QualifiedNameIs(ConfigurationBuilderAttributeQualifiedName.AsSpan());
+    }
+
+    public static bool IsAssignableToConfigurationBuilder(this ITypeSymbol type)
+    {
+        if (type.QualifiedNameIs(ConfigurationBuilderQualifiedName.AsSpan()))
+            return true;
+
+        foreach (INamedTypeSymbol interfaceType in type.Interfaces)
+        {
+            if (interfaceType.IsAssignableToConfigurationBuilder())
+                return true;
+        }
+
+        return false;
+    }
+
     public static bool IsEndpointRouteBuilderExtensions(this ITypeSymbol type)
     {
         return type.QualifiedNameIs(DTasksAspNetCoreEndpointRouteBuilderExtensionsQualifiedName.AsSpan());
@@ -33,7 +61,12 @@ public static class SymbolExtensions
     {
         return type.QualifiedNameIs(AsyncResultAttributeQualifiedName.AsSpan());
     }
-    
+
+    public static bool IsResumptionEndpoint(this ITypeSymbol type)
+    {
+        return type.QualifiedNameIs(ResumptionEndpointQualifiedName.AsSpan());
+    }
+
     public static string GetFullName(this ITypeSymbol type) => type.ToDisplayString(s_fullNameFormat);
 
     public static bool QualifiedNameIs(this ITypeSymbol type, ReadOnlySpan<char> fullName)

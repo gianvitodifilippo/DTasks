@@ -1,8 +1,7 @@
 ﻿using DTasks.AspNetCore.Infrastructure.Http;
+using DTasks.Configuration;
 using DTasks.Configuration.DependencyInjection;
 using DTasks.Serialization;
-using DTasks.Serialization.Configuration;
-using DTasks.Serialization.Json.Configuration;
 using DTasks.Serialization.Json.Converters;
 
 namespace DTasks.AspNetCore.Configuration;

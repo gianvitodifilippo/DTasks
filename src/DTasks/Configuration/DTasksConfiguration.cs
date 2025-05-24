@@ -1,4 +1,5 @@
 using DTasks.Infrastructure;
+using DTasks.Metadata;
 using DTasks.Utils;
 
 namespace DTasks.Configuration;
@@ -63,7 +64,7 @@ public sealed class DTasksConfiguration
         await flow.ResumeAsync(id, exception, cancellationToken);
     }
 
-    public static DTasksConfiguration Build(Action<IDTasksConfigurationBuilder> configure)
+    public static DTasksConfiguration Build([ConfigurationBuilder] Action<IDTasksConfigurationBuilder> configure)
     {
         DTasksConfigurationBuilder builder = new();
         DAsyncFlow.ConfigureMarshaling(builder);
