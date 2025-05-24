@@ -1,6 +1,6 @@
 using DTasks.Serialization.Json.Configuration;
 
-namespace DTasks.Serialization.Configuration;
+namespace DTasks.Configuration;
 
 public static class JsonSerializationConfigurationBuilderExtensions
 {

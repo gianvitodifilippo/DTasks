@@ -1,41 +1,51 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
+using DTasks.AspNetCore.Analyzer.Configuration;
+using DTasks.AspNetCore.Analyzer.Routing;
 using DTasks.AspNetCore.Analyzer.Utils;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 
-namespace DTasks.AspNetCore.Analyzer.Routing;
+namespace DTasks.AspNetCore.Analyzer;
 
 [Generator]
-public sealed class EndpointMappingGenerator : IIncrementalGenerator
+public sealed class DTasksAspNetCoreGenerator : IIncrementalGenerator
 {
+    private const string ResumptionEndpointAttributeQualifiedName = "DTasks.AspNetCore.Metadata.ResumptionEndpointsAttribute";
+    
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         IncrementalValuesProvider<MapMethodInvocation> invocations = context.SyntaxProvider
             .CreateSyntaxProvider(OfCallsToMapAsyncMethods, ToMethodInvocation)
-            .Where(parameters => parameters is not null)!;
+            .Where(static parameters => parameters is not null)!;
         
         IncrementalValueProvider<ImmutableArray<string>> serviceTypeLists = invocations
-            .SelectMany((invocation, _) => invocation.Parameters)
-            .Where(parameter => parameter.Binding == "global::Microsoft.AspNetCore.Mvc.FromServicesAttribute")
-            .Select((parameter, _) => parameter.Type)
+            .SelectMany(static (invocation, _) => invocation.Parameters)
+            .Where(static parameter => parameter.Binding == "global::Microsoft.AspNetCore.Mvc.FromServicesAttribute")
+            .Select(static (parameter, _) => parameter.Type)
             .Collect();
 
         IncrementalValueProvider<ImmutableArray<string>> invocationResultTypeLists = invocations
-            .Select((invocation, _) => invocation.ResultType)
-            .Where(resultType => resultType is not null and not "global::Microsoft.AspNetCore.Http.IResult")
+            .Select(static (invocation, _) => invocation.ResultType)
+            .Where(static resultType => resultType is not null and not "global::Microsoft.AspNetCore.Http.IResult")
             .Collect()!;
         
         IncrementalValueProvider<ImmutableArray<string>> resultTypeLists = context.SyntaxProvider
             .CreateSyntaxProvider(OfMethodCallsOrPropertyAccesses, ToAsyncResultTypes)
-            .SelectMany((resultTypes, _) => resultTypes)
+            .SelectMany(static (resultTypes, _) => resultTypes)
+            .Collect();
+
+        IncrementalValueProvider<ImmutableArray<ResumptionEndpointContainer>> containerLists = context.SyntaxProvider
+            .ForAttributeWithMetadataName(ResumptionEndpointAttributeQualifiedName, OfStaticClasses, ToResumptionEndpointsContainer)
             .Collect();
 
         var autoConfigurationData = serviceTypeLists
             .Combine(invocationResultTypeLists)
-            .Combine(resultTypeLists);
+            .Combine(resultTypeLists)
+            .Combine(containerLists);
 
         context.RegisterImplementationSourceOutput(invocations.Collect(), EmitMappingMethodsSource);
         context.RegisterImplementationSourceOutput(autoConfigurationData, EmitAutoConfigurationSource);
@@ -57,9 +67,9 @@ public sealed class EndpointMappingGenerator : IIncrementalGenerator
         context.AddSource("DTasks.AspNetCore.Analyzer.Routing.g.cs", source);
     }
 
-    private static void EmitAutoConfigurationSource(SourceProductionContext context, ((ImmutableArray<string>, ImmutableArray<string>), ImmutableArray<string>) data)
+    private static void EmitAutoConfigurationSource(SourceProductionContext context, (((ImmutableArray<string>, ImmutableArray<string>), ImmutableArray<string>), ImmutableArray<ResumptionEndpointContainer>) data)
     {
-        ((ImmutableArray<string> serviceTypes, ImmutableArray<string> invocationResultTypes), ImmutableArray<string> resultTypes) = data;
+        (((ImmutableArray<string> serviceTypes, ImmutableArray<string> invocationResultTypes), ImmutableArray<string> resultTypes), ImmutableArray<ResumptionEndpointContainer> resumptionEndpoints) = data;
         
         StringBuilder sb = new();
         ConfigurationSourceBuilder sourceBuilder = new(sb);
@@ -74,6 +84,8 @@ public sealed class EndpointMappingGenerator : IIncrementalGenerator
         {
             sourceBuilder.AddResultTypes(invocationResultTypes.Concat(resultTypes).Distinct());
         }
+        
+        sourceBuilder.AddResumptionEndpoints(resumptionEndpoints);
         sourceBuilder.End();
         
         string source = sb.ToString();
@@ -138,7 +150,7 @@ public sealed class EndpointMappingGenerator : IIncrementalGenerator
                 return null;
         }
 
-        SymbolInfo methodSymbolInfo = semanticModel.GetSymbolInfo(memberAccessExpression, cancellationToken);
+        SymbolInfo methodSymbolInfo = ModelExtensions.GetSymbolInfo(semanticModel, memberAccessExpression, cancellationToken);
         if (methodSymbolInfo.Symbol is not IMethodSymbol mapMethod)
             return null;
         
@@ -152,7 +164,7 @@ public sealed class EndpointMappingGenerator : IIncrementalGenerator
             patternTypeFullName = patternType.GetFullName();
         }
         
-        SymbolInfo lambdaSymbolInfo = semanticModel.GetSymbolInfo(invocationExpression.ArgumentList.Arguments[1].Expression);
+        SymbolInfo lambdaSymbolInfo = ModelExtensions.GetSymbolInfo(semanticModel, invocationExpression.ArgumentList.Arguments[1].Expression);
         if (lambdaSymbolInfo.Symbol is not IMethodSymbol lambdaMethod)
             return null; // TODO: What if it's not a lambda?
 
@@ -246,5 +258,40 @@ public sealed class EndpointMappingGenerator : IIncrementalGenerator
         return resultTypeArrayBuilder is null
             ? default
             : resultTypeArrayBuilder.ToImmutable().ToEquatable();
+    }
+
+    private static bool OfStaticClasses(SyntaxNode node, CancellationToken cancellationToken)
+    {
+        if (node is not ClassDeclarationSyntax classDeclaration)
+            return false;
+
+        foreach (SyntaxToken modifier in classDeclaration.Modifiers)
+        {
+            if (modifier.IsKind(SyntaxKind.StaticKeyword))
+                return true;
+        }
+        
+        return false;
+    }
+
+    private static ResumptionEndpointContainer ToResumptionEndpointsContainer(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
+    {
+        if (context.TargetSymbol is not INamedTypeSymbol endpointsClass)
+            return default;
+
+        var memberArrayBuilder = ImmutableArray.CreateBuilder<string>();
+        foreach (ISymbol member in endpointsClass.GetMembers())
+        {
+            bool isResumptionEndpoint = member is
+                IFieldSymbol { IsReadOnly: true, DeclaredAccessibility: Accessibility.Public or Accessibility.Internal } or
+                IPropertySymbol { DeclaredAccessibility: Accessibility.Public or Accessibility.Internal };
+
+            if (!isResumptionEndpoint)
+                continue;
+            
+            memberArrayBuilder.Add(member.Name);
+        }
+        
+        return new(endpointsClass.GetFullName(), memberArrayBuilder.ToImmutable().ToEquatable());
     }
 }

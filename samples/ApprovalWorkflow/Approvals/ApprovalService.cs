@@ -12,8 +12,6 @@ public interface IApprovalService
 
 public class ApprovalService(IConfiguration configuration) : IApprovalService, IDisposable
 {
-    public static readonly ResumptionEndpoint<ApprovalResult> ResumptionEndpoint = new("approvals/resume/{operationId}");
-    
     private readonly SmtpClient _smtp = new SmtpClient(configuration["MailHog:Host"]!)
     {
         Port = int.Parse(configuration["MailHog:Port"]!)
@@ -23,8 +21,8 @@ public class ApprovalService(IConfiguration configuration) : IApprovalService, I
     {
         return DTask<ApprovalResult>.Factory.Suspend(async (operationId, cancellationToken) =>
         {
-            string approveLink = $"http://localhost:5033/ApprovalDecision?operationId={WebUtility.UrlEncode(operationId.ToString())}&result={(int)ApprovalResult.Approve}";
-            string rejectLink = $"http://localhost:5033/ApprovalDecision?operationId={WebUtility.UrlEncode(operationId.ToString())}&result={(int)ApprovalResult.Reject}";
+            string approveLink = $"http://localhost:5033/ApprovalDecision?operationId={operationId}&result={(int)ApprovalResult.Approve}";
+            string rejectLink = $"http://localhost:5033/ApprovalDecision?operationId={operationId}&result={(int)ApprovalResult.Reject}";
             var mailMessage = new MailMessage
             {
                 From = new MailAddress("noreply@approvals.com"),

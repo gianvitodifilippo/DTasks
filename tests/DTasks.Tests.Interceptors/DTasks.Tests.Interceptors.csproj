@@ -17,5 +17,9 @@
         </PackageReference>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
     </ItemGroup>
+    
+    <PropertyGroup>
+        <NoWarn>RSEXPERIMENTAL002</NoWarn>
+    </PropertyGroup>
 
 </Project>

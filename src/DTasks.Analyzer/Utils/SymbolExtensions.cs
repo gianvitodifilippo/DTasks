@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 
@@ -11,9 +10,12 @@ internal static class SymbolExtensions
         typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
         genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters);
     
+    private const string ActionQualifiedName = "System.Action";
     private const string DTaskQualifiedName = "DTasks.DTask";
+    private const string ConfigurationBuilderQualifiedName = "DTasks.Configuration.IDTasksConfigurationBuilder";
+    private const string ConfigurationBuilderAttributeQualifiedName = "DTasks.Metadata.ConfigurationBuilderAttribute";
     private const string WhenAllMethodName = "WhenAll";
-    
+
     public static bool IsGenericWhenAll(this IMethodSymbol method, [NotNullWhen(true)] out ITypeSymbol? typeArgument)
     {
         if (method is not { Name: WhenAllMethodName, IsStatic: true, Arity: 1 })
@@ -29,6 +31,11 @@ internal static class SymbolExtensions
     }
 
     public static string GetFullName(this ITypeSymbol type) => type.ToDisplayString(s_fullNameFormat);
+
+    public static bool IsAction(this ITypeSymbol type)
+    {
+        return type.QualifiedNameIs(ActionQualifiedName.AsSpan());
+    }
 
     public static bool IsDTask(this INamedTypeSymbol type)
     {
@@ -46,8 +53,27 @@ internal static class SymbolExtensions
         typeArgument = type.TypeArguments[0];
         return true;
     }
+
+    public static bool IsConfigurationBuilderAttribute(this ITypeSymbol type)
+    {
+        return type.QualifiedNameIs(ConfigurationBuilderAttributeQualifiedName.AsSpan());
+    }
+
+    public static bool IsAssignableToConfigurationBuilder(this ITypeSymbol type)
+    {
+        if (type.QualifiedNameIs(ConfigurationBuilderQualifiedName.AsSpan()))
+            return true;
+
+        foreach (INamedTypeSymbol interfaceType in type.Interfaces)
+        {
+            if (interfaceType.IsAssignableToConfigurationBuilder())
+                return true;
+        }
+
+        return false;
+    }
     
-    private static bool QualifiedNameIs(this INamedTypeSymbol type, ReadOnlySpan<char> fullName)
+    private static bool QualifiedNameIs(this ITypeSymbol type, ReadOnlySpan<char> fullName)
     {
         string typeName = type.Name;
         

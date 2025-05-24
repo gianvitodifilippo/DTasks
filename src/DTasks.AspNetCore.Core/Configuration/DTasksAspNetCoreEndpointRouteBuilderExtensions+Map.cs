@@ -110,7 +110,6 @@ public static partial class DTasksAspNetCoreEndpointRouteBuilderExtensions
         [StringSyntax("Route")] string pattern,
         Delegate handler)
     {
-        throw new NotImplementedException();
         return endpoints.MapPost(pattern, TransformDAsyncHandler(handler));
     }
 

@@ -1,16 +1,17 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
+using DTasks.Analyzer.Configuration;
 using DTasks.Analyzer.Utils;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 
-namespace DTasks.Analyzer.Configuration;
+namespace DTasks.Analyzer;
 
 [Generator]
-public sealed class AutoConfigurationGenerator : IIncrementalGenerator
+public sealed class DTasksGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -34,7 +35,7 @@ public sealed class AutoConfigurationGenerator : IIncrementalGenerator
         sourceBuilder.End();
 
         string source = sb.ToString();
-        context.AddSource("DTasks.Analyzer.Configuration.g.cs", source);
+        context.AddSource("DTasks.Analyzer.g.cs", source);
     }
     
     private static bool OfTriggeringSyntax(SyntaxNode node, CancellationToken cancellationToken)

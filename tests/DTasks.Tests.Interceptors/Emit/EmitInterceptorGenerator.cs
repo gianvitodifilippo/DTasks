@@ -1,8 +1,9 @@
-﻿using System.Text;
+﻿using System.Collections.Immutable;
+using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
-using Microsoft.CodeAnalysis.Text;
 
 namespace DTasks.Tests.Interceptors.Emit;
 
@@ -11,33 +12,33 @@ public class EmitInterceptorGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var methodBuilderInterceptionLocations = context.SyntaxProvider
-            .CreateSyntaxProvider(OfGetILGeneratorInvocation, ToMethodBuilderInterceptionLocationInfo)
-            .Where(static info => info != default)
+        var methodBuilderInterceptableLocations = context.SyntaxProvider
+            .CreateSyntaxProvider(OfGetILGeneratorInvocation, ToMethodBuilderInterceptableLocation)
+            .Where(static location => location is not null)
             .Collect();
 
-        var constructorBuilderInterceptionLocations = context.SyntaxProvider
-            .CreateSyntaxProvider(OfGetILGeneratorInvocation, ToConstructorBuilderInterceptionLocationInfo)
-            .Where(static info => info != default)
+        var constructorBuilderInterceptableLocations = context.SyntaxProvider
+            .CreateSyntaxProvider(OfGetILGeneratorInvocation, ToConstructorBuilderInterceptableLocation)
+            .Where(static location => location is not null)
             .Collect();
 
-        var parameters = methodBuilderInterceptionLocations
-            .Combine(constructorBuilderInterceptionLocations)
-            .Select((pair, cancellationToken) => new ILInterceptorParameters(pair.Left, pair.Right));
+        var interceptableLocations = methodBuilderInterceptableLocations
+            .Combine(constructorBuilderInterceptableLocations);
 
-        context.RegisterImplementationSourceOutput(parameters, GenerateInterceptorSource);
+        context.RegisterImplementationSourceOutput(interceptableLocations, GenerateInterceptorSource!);
     }
 
-    private static void GenerateInterceptorSource(SourceProductionContext context, ILInterceptorParameters parameters)
+    private static void GenerateInterceptorSource(SourceProductionContext context, (ImmutableArray<InterceptableLocation>, ImmutableArray<InterceptableLocation>) parameters)
     {
         var (methodBuilderInterceptionLocations, constructorBuilderInterceptorLocations) = parameters;
         if (methodBuilderInterceptionLocations.IsEmpty && constructorBuilderInterceptorLocations.IsEmpty)
             return;
 
-        var source = new StringBuilder();
-        ILGeneratorInterceptorsRenderer.Render(source, methodBuilderInterceptionLocations, constructorBuilderInterceptorLocations);
+        StringBuilder sb = new();
+        ILGeneratorInterceptorsRenderer.Render(sb, methodBuilderInterceptionLocations, constructorBuilderInterceptorLocations);
 
-        context.AddSource("ILGeneratorInterceptors", source.ToString());
+        string source = sb.ToString();
+        context.AddSource("ILGeneratorInterceptors.g.cs", source);
     }
 
     private static bool OfGetILGeneratorInvocation(SyntaxNode node, CancellationToken cancellationToken) => node is InvocationExpressionSyntax
@@ -48,30 +49,24 @@ public class EmitInterceptorGenerator : IIncrementalGenerator
         }
     };
 
-    private static InterceptionLocationInfo ToMethodBuilderInterceptionLocationInfo(GeneratorSyntaxContext context, CancellationToken cancellationToken)
+    private static InterceptableLocation? ToMethodBuilderInterceptableLocation(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {
-        return ToInterceptionLocationInfo(context, "MethodBuilder", cancellationToken);
+        return ToInterceptableLocation(context, "MethodBuilder", cancellationToken);
     }
 
-    private static InterceptionLocationInfo ToConstructorBuilderInterceptionLocationInfo(GeneratorSyntaxContext context, CancellationToken cancellationToken)
+    private static InterceptableLocation? ToConstructorBuilderInterceptableLocation(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {
-        return ToInterceptionLocationInfo(context, "ConstructorBuilder", cancellationToken);
+        return ToInterceptableLocation(context, "ConstructorBuilder", cancellationToken);
     }
 
-    private static InterceptionLocationInfo ToInterceptionLocationInfo(GeneratorSyntaxContext context, string receiverType, CancellationToken cancellationToken)
+    private static InterceptableLocation? ToInterceptableLocation(GeneratorSyntaxContext context, string receiverType, CancellationToken cancellationToken)
     {
         var node = (InvocationExpressionSyntax)context.Node;
         IOperation? operation = context.SemanticModel.GetOperation(node, cancellationToken);
 
         if (operation is not IInvocationOperation { Arguments.Length: 0 } invocation || invocation.Instance?.Type?.Name != receiverType)
-            return default;
+            return null;
 
-        LinePosition position = ((MemberAccessExpressionSyntax)node.Expression)
-            .Name
-            .GetLocation()
-            .GetLineSpan()
-            .StartLinePosition;
-
-        return new InterceptionLocationInfo(node.SyntaxTree.FilePath, position.Line + 1, position.Character + 1);
+        return context.SemanticModel.GetInterceptableLocation(node, cancellationToken);
     }
 }

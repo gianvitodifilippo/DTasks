@@ -1,20 +1,14 @@
 using Approvals;
 using DTasks;
-using DTasks.AspNetCore.Configuration;
 using DTasks.AspNetCore.Http;
-using DTasks.AspNetCore.Infrastructure.Http;
 using DTasks.Configuration;
-using DTasks.Serialization.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseDTasks(dTasks => dTasks
-    .AutoConfigure()
     .UseAspNetCore(aspNetCore => aspNetCore
-        .AutoConfigure()
-        .AddResumptionEndpoint(ApprovalService.ResumptionEndpoint)
         .ConfigureSerialization(serialization => serialization
             .UseStackExchangeRedis())));
 

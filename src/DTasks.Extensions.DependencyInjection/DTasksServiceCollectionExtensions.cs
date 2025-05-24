@@ -1,12 +1,13 @@
 ﻿using DTasks.Configuration;
 using DTasks.Extensions.DependencyInjection.Configuration;
+using DTasks.Metadata;
 using DTasks.Utils;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
 public static class DTasksServiceCollectionExtensions
 {
-    public static IServiceCollection AddDTasks(this IServiceCollection services, Action<IDependencyInjectionDTasksConfigurationBuilder> configure)
+    public static IServiceCollection AddDTasks(this IServiceCollection services, [ConfigurationBuilder] Action<IDependencyInjectionDTasksConfigurationBuilder> configure)
     {
         ThrowHelper.ThrowIfNull(services);
         ThrowHelper.ThrowIfNull(configure);

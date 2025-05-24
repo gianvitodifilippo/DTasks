@@ -1,4 +1,4 @@
-namespace DTasks.Extensions.DependencyInjection.Configuration;
+namespace DTasks.Configuration;
 
 public interface IServiceConfigurationBuilder
 {

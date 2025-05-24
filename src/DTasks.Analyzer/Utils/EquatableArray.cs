@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 
-namespace DTasks.AspNetCore.Analyzer.Utils;
+namespace DTasks.Analyzer.Utils;
 
 internal readonly struct EquatableArray<T>(ImmutableArray<T> array) : IEquatable<EquatableArray<T>>, IEnumerable<T>
     where T : IEquatable<T>
