@@ -2,9 +2,8 @@ using DTasks.AspNetCore.Execution;
 using DTasks.AspNetCore.Infrastructure.Execution;
 using DTasks.AspNetCore.Infrastructure.Http;
 using DTasks.Configuration;
-using DTasks.Configuration.DependencyInjection;
 using DTasks.Extensions.DependencyInjection.Configuration;
-using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Generics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -14,6 +13,7 @@ internal sealed class DTasksAspNetCoreCoreConfigurationBuilder(IDependencyInject
 {
     private readonly WebSuspensionRegisterBuilder _suspensionRegisterBuilder = new();
     private readonly List<Action<OptionsBuilder<DTasksAspNetCoreOptions>>> _configureOptionsActions = [];
+    private readonly HashSet<ITypeContext> _endpointResultTypeContexts = [];
     private DTasksAspNetCoreOptions? _customOptions;
 
     IDependencyInjectionDTasksConfigurationBuilder IDTasksAspNetCoreCoreConfigurationBuilder.DTasks => dTasks;
@@ -50,11 +50,26 @@ internal sealed class DTasksAspNetCoreCoreConfigurationBuilder(IDependencyInject
         builder
             .ConfigureExecution(execution => execution
                 .UseSuspensionHandler(InfrastructureServiceProvider.GetRequiredService<PollingDAsyncSuspensionHandler>()))
-            .ConfigureMarshaling(marshaling => marshaling
-                .RegisterTypeId(typeof(WebhookDAsyncContinuation.Surrogate))
-                .RegisterTypeId(typeof(WebSocketsDAsyncContinuation.Surrogate)));
+            .ConfigureMarshaling(marshaling =>
+            {
+                RegisterAsyncEndpointInfoTypeIdAction registerEndpointResultsAction = new(marshaling);
+                foreach (ITypeContext endpointResultTypeContext in _endpointResultTypeContexts)
+                {
+                    endpointResultTypeContext.Execute(ref registerEndpointResultsAction);
+                }
+                
+                marshaling
+                    .RegisterTypeId(typeof(WebhookDAsyncContinuation.Surrogate))
+                    .RegisterTypeId(typeof(WebSocketsDAsyncContinuation.Surrogate));
+            });
 
         return builder;
+    }
+
+    IDTasksAspNetCoreCoreConfigurationBuilder IDTasksAspNetCoreCoreConfigurationBuilder.RegisterEndpointResult<TResult>()
+    {
+        _endpointResultTypeContexts.Add(TypeContext.Of<TResult>());
+        return this;
     }
 
     IDTasksAspNetCoreCoreConfigurationBuilder IDTasksAspNetCoreCoreConfigurationBuilder.AddResumptionEndpoint(ResumptionEndpoint endpoint)
@@ -85,5 +100,13 @@ internal sealed class DTasksAspNetCoreCoreConfigurationBuilder(IDependencyInject
     {
         _configureOptionsActions.Add(configure);
         return this;
+    }
+    
+    private readonly struct RegisterAsyncEndpointInfoTypeIdAction(IMarshalingConfigurationBuilder marshaling) : ITypeAction
+    {
+        public void Invoke<T>()
+        {
+            marshaling.RegisterTypeId(typeof(AsyncEndpointInfo<T>));
+        }
     }
 }

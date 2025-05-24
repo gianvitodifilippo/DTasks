@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using DTasks.Configuration;
 using DTasks.Configuration.DependencyInjection;
 using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Generics;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
 
@@ -18,7 +19,7 @@ internal sealed class DAsyncInfrastructure : IDAsyncInfrastructure, IDAsyncRootI
     private readonly RootComponentProvider _rootProvider;
     private readonly FrozenDictionary<object, object?> _properties;
     private readonly IDAsyncTypeResolver _typeResolver;
-    private readonly FrozenSet<ISurrogatableTypeContext> _surrogatableTypes;
+    private readonly FrozenSet<ITypeContext> _surrogatableTypeContexts;
 
     public DAsyncInfrastructure(DAsyncInfrastructureBuilder builder, DTasksConfigurationBuilder configurationBuilder)
     {
@@ -30,7 +31,7 @@ internal sealed class DAsyncInfrastructure : IDAsyncInfrastructure, IDAsyncRootI
         _rootProvider = new RootComponentProvider(this);
         _properties = configurationBuilder.Properties;
         _typeResolver = configurationBuilder.TypeResolver;
-        _surrogatableTypes = configurationBuilder.SurrogatableTypes;
+        _surrogatableTypeContexts = configurationBuilder.SurrogatableTypeContexts;
     }
     
     public IDAsyncRootInfrastructure RootInfrastructure => this;
@@ -43,7 +44,7 @@ internal sealed class DAsyncInfrastructure : IDAsyncInfrastructure, IDAsyncRootI
 
     IDAsyncTypeResolver IDAsyncRootInfrastructure.TypeResolver => _typeResolver;
 
-    FrozenSet<ISurrogatableTypeContext> IDAsyncRootScope.SurrogatableTypes => _surrogatableTypes;
+    FrozenSet<ITypeContext> IDAsyncRootScope.SurrogatableTypeContexts => _surrogatableTypeContexts;
 
     public IDAsyncHeap GetHeap(IComponentProvider hostProvider) => _getHeap(hostProvider);
 

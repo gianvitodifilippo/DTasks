@@ -4,6 +4,7 @@ using DTasks.Configuration.DependencyInjection;
 using DTasks.Infrastructure;
 using DTasks.Infrastructure.DependencyInjection;
 using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Generics;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
 using DTasks.Utils;
@@ -21,7 +22,7 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
     private IComponentDescriptor<IDAsyncCancellationProvider>? _cancellationProviderDescriptor;
     private IComponentDescriptor<IDAsyncSuspensionHandler>? _suspensionHandlerDescriptor;
     private readonly Dictionary<object, object?> _properties = [];
-    private readonly HashSet<ISurrogatableTypeContext> _surrogatableTypes = [];
+    private readonly HashSet<ITypeContext> _surrogatableTypeContexts = [];
     private readonly Dictionary<Type, TypeId> _typesToIds = [];
     private readonly Dictionary<TypeId, Type> _idsToTypes = [];
     
@@ -31,7 +32,7 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
         _typesToIds.ToFrozenDictionary(),
         _idsToTypes.ToFrozenDictionary());
     
-    public FrozenSet<ISurrogatableTypeContext> SurrogatableTypes => _surrogatableTypes.ToFrozenSet();
+    public FrozenSet<ITypeContext> SurrogatableTypeContexts => _surrogatableTypeContexts.ToFrozenSet();
     
     public DTasksConfiguration Build()
     {
@@ -86,9 +87,9 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
         return this;
     }
 
-    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterSurrogatableType<TSurrogatable>()
+    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterSurrogatableType(ITypeContext typeContext)
     {
-        _surrogatableTypes.Add(SurrogatableTypeContext.Of<TSurrogatable>());
+        _surrogatableTypeContexts.Add(typeContext);
         return this;
     }
 

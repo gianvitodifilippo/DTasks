@@ -7,6 +7,8 @@ namespace DTasks.AspNetCore.Configuration;
 public interface IDTasksAspNetCoreCoreConfigurationBuilder
 {
     IDependencyInjectionDTasksConfigurationBuilder DTasks { get; }
+
+    IDTasksAspNetCoreCoreConfigurationBuilder RegisterEndpointResult<TResult>();
     
     IDTasksAspNetCoreCoreConfigurationBuilder AddResumptionEndpoint(ResumptionEndpoint endpoint);
     

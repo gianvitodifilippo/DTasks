@@ -1,5 +1,6 @@
 using Approvals;
 using DTasks;
+using DTasks.AspNetCore.Configuration;
 using DTasks.AspNetCore.Http;
 using DTasks.AspNetCore.Infrastructure.Http;
 using DTasks.Configuration;
@@ -12,25 +13,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseDTasks(dTasks => dTasks
     .AutoConfigure()
     .UseAspNetCore(aspNetCore => aspNetCore
+        .AutoConfigure()
         .AddResumptionEndpoint(ApprovalService.ResumptionEndpoint)
         .ConfigureSerialization(serialization => serialization
-            .UseStackExchangeRedis()))
-#region TODO: Source generate this
-    .ConfigureServices(services => services
-        .RegisterDAsyncService(typeof(ApproverRepository))
-        .RegisterDAsyncService(typeof(ApprovalService)))
-    .ConfigureMarshaling(marshaling => marshaling
-        .RegisterSurrogatableType<ApproverRepository>()
-        .RegisterSurrogatableType<ApprovalService>()
-        .RegisterTypeId(typeof(AsyncEndpointInfo<ApprovalResult>))));
-#endregion
+            .UseStackExchangeRedis())));
 
 builder.Services.AddRazorPages();
 
 builder.Services
     .AddSingleton(ConnectionMultiplexer.Connect("localhost:6379"))
-    .AddSingleton<ApproverRepository>()
-    .AddSingleton<ApprovalService>();
+    .AddSingleton<IApproverRepository, ApproverRepository>()
+    .AddSingleton<IApprovalService, ApprovalService>();
 
 var app = builder.Build();
 
@@ -38,8 +31,8 @@ app.MapDTasks();
 app.MapRazorPages();
 
 app.MapAsyncPost("/approvals", async (
-    [FromServices] ApproverRepository repository,
-    [FromServices] ApprovalService service,
+    [FromServices] IApproverRepository repository,
+    [FromServices] IApprovalService service,
     [FromBody] NewApprovalRequest request) =>
 {
     string? email = await repository.GetEmailByIdAsync(request.ApproverId);
@@ -53,7 +46,7 @@ app.MapAsyncPost("/approvals", async (
     ApprovalResult result = winner == timeout
         ? ApprovalResult.Reject
         : approvalTask.Result;
-
+    
     return AsyncResults.Success(result);
 });
 

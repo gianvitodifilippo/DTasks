@@ -36,21 +36,27 @@ internal sealed class DTasksAspNetCoreConfigurationBuilder(IDependencyInjectionD
             });
     }
 
+    IDTasksAspNetCoreConfigurationBuilder IDTasksAspNetCoreConfigurationBuilder.RegisterEndpointResult<TResult>()
+    {
+        _configureAspNetCoreActions.Add(aspNetCore => aspNetCore.RegisterEndpointResult<TResult>());
+        return this;
+    }
+
     IDTasksAspNetCoreConfigurationBuilder IDTasksAspNetCoreConfigurationBuilder.AddResumptionEndpoint(ResumptionEndpoint endpoint)
     {
-        _configureAspNetCoreActions.Add(options => options.AddResumptionEndpoint(endpoint));
+        _configureAspNetCoreActions.Add(aspNetCore => aspNetCore.AddResumptionEndpoint(endpoint));
         return this;
     }
 
     IDTasksAspNetCoreConfigurationBuilder IDTasksAspNetCoreConfigurationBuilder.AddResumptionEndpoint<TResult>(ResumptionEndpoint<TResult> endpoint)
     {
-        _configureAspNetCoreActions.Add(options => options.AddResumptionEndpoint(endpoint));
+        _configureAspNetCoreActions.Add(aspNetCore => aspNetCore.AddResumptionEndpoint(endpoint));
         return this;
     }
 
     IDTasksAspNetCoreConfigurationBuilder IDTasksAspNetCoreConfigurationBuilder.AddDefaultResumptionEndpoint<TResult>()
     {
-        _configureAspNetCoreActions.Add(options => options.AddDefaultResumptionEndpoint<TResult>());
+        _configureAspNetCoreActions.Add(aspNetCore => aspNetCore.AddDefaultResumptionEndpoint<TResult>());
         return this;
     }
 
@@ -70,6 +76,11 @@ internal sealed class DTasksAspNetCoreConfigurationBuilder(IDependencyInjectionD
     {
         _configureSerializationActions.Add(configure);
         return this;
+    }
+
+    IDTasksAspNetCoreCoreConfigurationBuilder IDTasksAspNetCoreCoreConfigurationBuilder.RegisterEndpointResult<TResult>()
+    {
+        return ((IDTasksAspNetCoreConfigurationBuilder)this).RegisterEndpointResult<TResult>();
     }
     
     IDTasksAspNetCoreCoreConfigurationBuilder IDTasksAspNetCoreCoreConfigurationBuilder.AddResumptionEndpoint(ResumptionEndpoint endpoint)

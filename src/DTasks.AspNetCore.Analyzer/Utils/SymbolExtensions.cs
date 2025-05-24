@@ -12,6 +12,7 @@ public static class SymbolExtensions
     private const string DTasksAspNetCoreEndpointRouteBuilderExtensionsQualifiedName = "Microsoft.AspNetCore.Routing.DTasksAspNetCoreEndpointRouteBuilderExtensions";
     private const string TaskQualifiedName = "System.Threading.Tasks.Task";
     private const string DTaskQualifiedName = "DTasks.DTask";
+    private const string AsyncResultAttributeQualifiedName = "DTasks.AspNetCore.Metadata.AsyncResultAttribute";
     
     public static bool IsEndpointRouteBuilderExtensions(this ITypeSymbol type)
     {
@@ -26,6 +27,11 @@ public static class SymbolExtensions
     public static bool IsDTask(this ITypeSymbol type)
     {
         return type.QualifiedNameIs(DTaskQualifiedName.AsSpan());
+    }
+
+    public static bool IsAsyncResultAttribute(this ITypeSymbol type)
+    {
+        return type.QualifiedNameIs(AsyncResultAttributeQualifiedName.AsSpan());
     }
     
     public static string GetFullName(this ITypeSymbol type) => type.ToDisplayString(s_fullNameFormat);

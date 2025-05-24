@@ -13,15 +13,35 @@ public sealed class EndpointMappingGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<MapMethodInvocation>> invocationProviders = context.SyntaxProvider
+        IncrementalValuesProvider<MapMethodInvocation> invocations = context.SyntaxProvider
             .CreateSyntaxProvider(OfCallsToMapAsyncMethods, ToMethodInvocation)
-            .Where(parameters => parameters is not null)
+            .Where(parameters => parameters is not null)!;
+        
+        IncrementalValueProvider<ImmutableArray<string>> serviceTypeLists = invocations
+            .SelectMany((invocation, _) => invocation.Parameters)
+            .Where(parameter => parameter.Binding == "global::Microsoft.AspNetCore.Mvc.FromServicesAttribute")
+            .Select((parameter, _) => parameter.Type)
+            .Collect();
+
+        IncrementalValueProvider<ImmutableArray<string>> invocationResultTypeLists = invocations
+            .Select((invocation, _) => invocation.ResultType)
+            .Where(resultType => resultType is not null and not "global::Microsoft.AspNetCore.Http.IResult")
             .Collect()!;
         
-        context.RegisterImplementationSourceOutput(invocationProviders, EmitSource);
+        IncrementalValueProvider<ImmutableArray<string>> resultTypeLists = context.SyntaxProvider
+            .CreateSyntaxProvider(OfMethodCallsOrPropertyAccesses, ToAsyncResultTypes)
+            .SelectMany((resultTypes, _) => resultTypes)
+            .Collect();
+
+        var autoConfigurationData = serviceTypeLists
+            .Combine(invocationResultTypeLists)
+            .Combine(resultTypeLists);
+
+        context.RegisterImplementationSourceOutput(invocations.Collect(), EmitMappingMethodsSource);
+        context.RegisterImplementationSourceOutput(autoConfigurationData, EmitAutoConfigurationSource);
     }
 
-    private static void EmitSource(SourceProductionContext context, ImmutableArray<MapMethodInvocation> invocations)
+    private static void EmitMappingMethodsSource(SourceProductionContext context, ImmutableArray<MapMethodInvocation> invocations)
     {
         StringBuilder sb = new();
         HttpMappingSourceBuilder sourceBuilder = new(sb);
@@ -35,6 +55,29 @@ public sealed class EndpointMappingGenerator : IIncrementalGenerator
 
         string source = sb.ToString();
         context.AddSource("DTasks.AspNetCore.Analyzer.Routing.g.cs", source);
+    }
+
+    private static void EmitAutoConfigurationSource(SourceProductionContext context, ((ImmutableArray<string>, ImmutableArray<string>), ImmutableArray<string>) data)
+    {
+        ((ImmutableArray<string> serviceTypes, ImmutableArray<string> invocationResultTypes), ImmutableArray<string> resultTypes) = data;
+        
+        StringBuilder sb = new();
+        ConfigurationSourceBuilder sourceBuilder = new(sb);
+
+        sourceBuilder.Begin();
+        if (!serviceTypes.IsEmpty)
+        {
+            sourceBuilder.AddServiceTypes(serviceTypes.Distinct());
+        }
+
+        if (!invocationResultTypes.IsEmpty || !resultTypes.IsEmpty)
+        {
+            sourceBuilder.AddResultTypes(invocationResultTypes.Concat(resultTypes).Distinct());
+        }
+        sourceBuilder.End();
+        
+        string source = sb.ToString();
+        context.AddSource("DTasks.AspNetCore.Analyzer.Configuration.g.cs", source);
     }
 
     private static bool OfCallsToMapAsyncMethods(SyntaxNode node, CancellationToken cancellationToken)
@@ -61,6 +104,8 @@ public sealed class EndpointMappingGenerator : IIncrementalGenerator
             Debug.Fail($"Expected node filter by {nameof(OfCallsToMapAsyncMethods)}.");
             return null;
         }
+        
+        SemanticModel semanticModel = context.SemanticModel;
 
         MapMethod method;
         switch (memberAccessExpression.Name.Identifier.Text)
@@ -93,7 +138,7 @@ public sealed class EndpointMappingGenerator : IIncrementalGenerator
                 return null;
         }
 
-        SymbolInfo methodSymbolInfo = context.SemanticModel.GetSymbolInfo(memberAccessExpression, cancellationToken);
+        SymbolInfo methodSymbolInfo = semanticModel.GetSymbolInfo(memberAccessExpression, cancellationToken);
         if (methodSymbolInfo.Symbol is not IMethodSymbol mapMethod)
             return null;
         
@@ -101,21 +146,21 @@ public sealed class EndpointMappingGenerator : IIncrementalGenerator
             return null;
 
         string? patternTypeFullName = "string";
-        IOperation? patternOperation = context.SemanticModel.GetOperation(invocationExpression.ArgumentList.Arguments[0], cancellationToken);
+        IOperation? patternOperation = semanticModel.GetOperation(invocationExpression.ArgumentList.Arguments[0], cancellationToken);
         if (patternOperation is IArgumentOperation { Parameter.Type: { } patternType })
         {
             patternTypeFullName = patternType.GetFullName();
         }
         
-        SymbolInfo lambdaSymbolInfo = context.SemanticModel.GetSymbolInfo(invocationExpression.ArgumentList.Arguments[1].Expression);
+        SymbolInfo lambdaSymbolInfo = semanticModel.GetSymbolInfo(invocationExpression.ArgumentList.Arguments[1].Expression);
         if (lambdaSymbolInfo.Symbol is not IMethodSymbol lambdaMethod)
-            return null;
+            return null; // TODO: What if it's not a lambda?
 
         if (!lambdaMethod.ReturnType.IsTask() && !lambdaMethod.ReturnType.IsDTask())
             return null;
 
         int parameterCount = lambdaMethod.Parameters.Length;
-        ParameterInfo[] parameterInfos = new ParameterInfo[parameterCount];
+        var parameterInfoArrayBuilder = ImmutableArray.CreateBuilder<ParameterInfo>(parameterCount);
 
         for (int i = 0; i < parameterCount; i++)
         {
@@ -126,7 +171,7 @@ public sealed class EndpointMappingGenerator : IIncrementalGenerator
             string parameterTypeFullName = parameter.Type.GetFullName();
             if (parameterAttributes.Length == 0)
             {
-                parameterInfos[i] = new(parameterName, parameterTypeFullName, null);
+                parameterInfoArrayBuilder.Add(new(parameterName, parameterTypeFullName, null));
                 continue;
             }
             
@@ -134,11 +179,11 @@ public sealed class EndpointMappingGenerator : IIncrementalGenerator
             AttributeData attribute = parameterAttributes[0];
             if (attribute.AttributeClass is not { } attributeType)
             {
-                parameterInfos[i] = new(parameterName, parameterTypeFullName, null);
+                parameterInfoArrayBuilder.Add(new(parameterName, parameterTypeFullName, null));
                 continue;
             }
 
-            parameterInfos[i] = new(parameterName, parameterTypeFullName, attributeType.GetFullName());
+            parameterInfoArrayBuilder.Add(new(parameterName, parameterTypeFullName, attributeType.GetFullName()));
         }
 
         var taskType = (INamedTypeSymbol)lambdaMethod.ReturnType;
@@ -146,6 +191,60 @@ public sealed class EndpointMappingGenerator : IIncrementalGenerator
             ? null
             : taskType.TypeArguments[0].GetFullName();
 
-        return new(method, patternTypeFullName, resultTypeFullName, parameterInfos.ToEquatable());
+        return new(method, patternTypeFullName, resultTypeFullName, parameterInfoArrayBuilder.ToImmutable().ToEquatable());
+    }
+
+    private static bool OfMethodCallsOrPropertyAccesses(SyntaxNode node, CancellationToken cancellationToken)
+    {
+        return node is InvocationExpressionSyntax or MemberAccessExpressionSyntax;
+    }
+
+    private static EquatableArray<string> ToAsyncResultTypes(GeneratorSyntaxContext context, CancellationToken cancellationToken)
+    {
+        IOperation? operation = context.SemanticModel.GetOperation(context.Node, cancellationToken);
+
+        IMethodSymbol? method = operation switch
+        {
+            IInvocationOperation invocation => invocation.TargetMethod,
+            IPropertyReferenceOperation propertyReference => propertyReference.Property.GetMethod,
+            _ => null
+        };
+        
+        if (method is null)
+            return default;
+
+        ImmutableArray<string>.Builder? resultTypeArrayBuilder = null;
+        ImmutableArray<AttributeData> attributes = method.GetReturnTypeAttributes();
+        foreach (AttributeData attribute in attributes)
+        {
+            if (attribute.AttributeClass is null || !attribute.AttributeClass.IsAsyncResultAttribute())
+                continue;
+            
+            ImmutableArray<TypedConstant> constructorArguments = attribute.ConstructorArguments;
+            if (constructorArguments.Length < 1)
+                continue;
+            
+            object? constructorArgumentValue = constructorArguments[0].Value;
+            switch (constructorArgumentValue)
+            {
+                case int genericParameterPosition:
+                    ImmutableArray<ITypeSymbol> typeArguments = method.TypeArguments;
+                    if (typeArguments.Length <= genericParameterPosition)
+                        continue;
+
+                    resultTypeArrayBuilder ??= ImmutableArray.CreateBuilder<string>();
+                    resultTypeArrayBuilder.Add(typeArguments[genericParameterPosition].GetFullName());
+                    break;
+                
+                case ITypeSymbol resultType:
+                    resultTypeArrayBuilder ??= ImmutableArray.CreateBuilder<string>();
+                    resultTypeArrayBuilder.Add(resultType.GetFullName());
+                    break;
+            }
+        }
+        
+        return resultTypeArrayBuilder is null
+            ? default
+            : resultTypeArrayBuilder.ToImmutable().ToEquatable();
     }
 }

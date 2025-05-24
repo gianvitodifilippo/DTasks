@@ -1,18 +1,19 @@
 using System.Collections;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 
 namespace DTasks.AspNetCore.Analyzer.Utils;
 
-internal readonly struct EquatableArray<T>(T[] array) : IEquatable<EquatableArray<T>>, IEnumerable<T>
+internal readonly struct EquatableArray<T>(ImmutableArray<T> array) : IEquatable<EquatableArray<T>>, IEnumerable<T>
     where T : IEquatable<T>
 {
-    private readonly T[]? _array = array;
+    private readonly ImmutableArray<T> _array = array;
 
-    public int Length => _array?.Length ?? 0;
+    public int Length => _array.IsDefault
+        ? 0
+        : _array.Length;
     
-    public T this[int index] => _array is null
-        ? throw new IndexOutOfRangeException()
-        : _array[index];
+    public T this[int index] => _array[index];
 
     public bool Equals(EquatableArray<T> other) => _array.AsSpan().SequenceEqual(other._array.AsSpan());
 
@@ -20,7 +21,7 @@ internal readonly struct EquatableArray<T>(T[] array) : IEquatable<EquatableArra
 
     public override int GetHashCode()
     {
-        if (_array is null)
+        if (_array.IsDefaultOrEmpty)
             return 0;
 
         HashCode hashCode = default;
@@ -78,9 +79,9 @@ internal readonly struct EquatableArray<T>(T[] array) : IEquatable<EquatableArra
     }
 }
 
-internal static class ArrayExtensions
+internal static class ImmutableArrayExtensions
 {
-    public static EquatableArray<T> ToEquatable<T>(this T[] array)
+    public static EquatableArray<T> ToEquatable<T>(this ImmutableArray<T> array)
         where T : IEquatable<T>
     {
         return new(array);

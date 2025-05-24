@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using DTasks.Configuration.DependencyInjection;
 using DTasks.Infrastructure;
+using DTasks.Infrastructure.Generics;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Inspection;
 using DTasks.Metadata;
@@ -14,7 +15,7 @@ public interface IMarshalingConfigurationBuilder
 {
     IMarshalingConfigurationBuilder AddSurrogator(IComponentDescriptor<IDAsyncSurrogator> descriptor);
 
-    IMarshalingConfigurationBuilder RegisterSurrogatableType<TSurrogatable>();
+    IMarshalingConfigurationBuilder RegisterSurrogatableType(ITypeContext typeContext);
 
     IMarshalingConfigurationBuilder RegisterTypeId(Type type, TypeEncodingStrategy encodingStrategy = TypeEncodingStrategy.FullName);
 
@@ -23,6 +24,13 @@ public interface IMarshalingConfigurationBuilder
 
 public static class MarshalingConfigurationBuilderExtensions // TODO: Convert to generic methods returning TBuilder
 {
+    public static IMarshalingConfigurationBuilder RegisterSurrogatableType<TSurrogatable>(this IMarshalingConfigurationBuilder builder)
+    {
+        ThrowHelper.ThrowIfNull(builder);
+        
+        return builder.RegisterSurrogatableType(TypeContext.Of<TSurrogatable>());
+    }
+    
     public static IMarshalingConfigurationBuilder RegisterTypeIds(this IMarshalingConfigurationBuilder builder, IEnumerable<Type> types)
     {
         ThrowHelper.ThrowIfNull(builder);
