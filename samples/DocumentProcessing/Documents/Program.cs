@@ -1,8 +1,5 @@
-using System;
 using System.Net.WebSockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
@@ -12,12 +9,7 @@ using DTasks.AspNetCore.Configuration;
 using DTasks.AspNetCore.Http;
 using DTasks.Configuration;
 using DTasks.Serialization.Configuration;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
