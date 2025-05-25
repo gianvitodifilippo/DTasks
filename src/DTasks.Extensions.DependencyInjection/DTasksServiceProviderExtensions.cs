@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using DTasks.Metadata;
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -6,7 +7,7 @@ namespace DTasks.Extensions.DependencyInjection;
 
 public static class DTasksServiceProviderExtensions
 {
-    [return: DAsyncService]
+    [return: Marshalable]
     public static object? GetDAsyncService(this IServiceProvider provider, Type serviceType)
     {
         ThrowHelper.ThrowIfNull(provider);
@@ -21,7 +22,7 @@ public static class DTasksServiceProviderExtensions
         return service;
     }
 
-    [return: DAsyncService]
+    [return: Marshalable]
     public static T? GetDAsyncService<T>(this IServiceProvider provider)
         where T : notnull
     {
@@ -36,7 +37,7 @@ public static class DTasksServiceProviderExtensions
         return service;
     }
 
-    [return: DAsyncService]
+    [return: Marshalable]
     public static object GetRequiredDAsyncService(this IServiceProvider provider, Type serviceType)
     {
         ThrowHelper.ThrowIfNull(provider);
@@ -48,7 +49,7 @@ public static class DTasksServiceProviderExtensions
         return service;
     }
 
-    [return: DAsyncService]
+    [return: Marshalable]
     public static T GetRequiredDAsyncService<T>(this IServiceProvider provider)
         where T : notnull
     {
@@ -60,7 +61,7 @@ public static class DTasksServiceProviderExtensions
         return service;
     }
 
-    [return: DAsyncService]
+    [return: Marshalable]
     public static IEnumerable<object?> GetDAsyncServices(this IServiceProvider provider, Type serviceType)
     {
         ThrowHelper.ThrowIfNull(provider);
@@ -72,7 +73,7 @@ public static class DTasksServiceProviderExtensions
         return services;
     }
 
-    [return: DAsyncService]
+    [return: Marshalable]
     public static IEnumerable<T> GetDAsyncServices<T>(this IServiceProvider provider)
         where T : notnull
     {
@@ -85,7 +86,7 @@ public static class DTasksServiceProviderExtensions
     }
 
     // TODO: provider.GetKeyedService(serviceType, serviceKey) should be available when .NET 10 is shipped (https://github.com/dotnet/runtime/issues/102816)
-    [return: DAsyncService]
+    [return: Marshalable]
     public static object? GetKeyedDAsyncService(this IServiceProvider provider, Type serviceType, object? serviceKey)
     {
         ThrowHelper.ThrowIfNull(provider);
@@ -103,7 +104,7 @@ public static class DTasksServiceProviderExtensions
         return service;
     }
 
-    [return: DAsyncService]
+    [return: Marshalable]
     public static T? GetKeyedDAsyncService<T>(this IServiceProvider provider, object? serviceKey)
         where T : notnull
     {
@@ -118,7 +119,7 @@ public static class DTasksServiceProviderExtensions
         return service;
     }
 
-    [return: DAsyncService]
+    [return: Marshalable]
     public static object GetRequiredKeyedDAsyncService(this IServiceProvider provider, Type serviceType, object? serviceKey)
     {
         ThrowHelper.ThrowIfNull(provider);
@@ -130,7 +131,7 @@ public static class DTasksServiceProviderExtensions
         return service;
     }
 
-    [return: DAsyncService]
+    [return: Marshalable]
     public static T GetRequiredKeyedDAsyncService<T>(this IServiceProvider provider, object? serviceKey)
         where T : notnull
     {
@@ -142,7 +143,7 @@ public static class DTasksServiceProviderExtensions
         return service;
     }
 
-    [return: DAsyncService]
+    [return: Marshalable]
     public static IEnumerable<object?> GetKeyedDAsyncServices(this IServiceProvider provider, Type serviceType, object? serviceKey)
     {
         ThrowHelper.ThrowIfNull(provider);
@@ -154,7 +155,7 @@ public static class DTasksServiceProviderExtensions
         return services;
     }
 
-    [return: DAsyncService]
+    [return: Marshalable]
     public static IEnumerable<T> GetKeyedDAsyncServices<T>(this IServiceProvider provider, object? serviceKey)
         where T : notnull
     {

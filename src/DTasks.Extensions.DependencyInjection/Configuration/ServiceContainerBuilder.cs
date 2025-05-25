@@ -4,6 +4,7 @@ using System.Reflection;
 using DTasks.Extensions.DependencyInjection.Infrastructure.Marshaling;
 using DTasks.Extensions.DependencyInjection.Utils;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Metadata;
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -209,7 +210,7 @@ internal sealed class ServiceContainerBuilder(IServiceCollection services, IDAsy
 
     private ExpressionOrError MakeImplementationArgument(ServiceDescriptor descriptor, Expression providerExpr, Type implementationType, ParameterInfo parameter)
     {
-        bool isDAsyncDependency = parameter.IsDefined(typeof(DAsyncServiceAttribute), inherit: true);
+        bool isDAsyncDependency = parameter.IsDefined(typeof(MarshalableAttribute), inherit: true);
         bool hasDefaultValue = ParameterDefaultValue.TryGetDefaultValue(parameter, out object? defaultValue);
         bool isServiceKey = parameter.IsDefined(typeof(ServiceKeyAttribute), inherit: true);
 

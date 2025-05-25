@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using DTasks.Extensions.DependencyInjection.Infrastructure.Marshaling;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit.Sdk;
 
@@ -148,12 +149,12 @@ public partial class ServiceContainerBuilderTests
         [ServiceKey] string Key,
                                                                                       Dependency1 Dependency1,
         [FromKeyedServices(ServiceWithAllKindsOfDependencies.Dep2Key)] Dependency2 Dependency2,
-        [DAsyncService] Dependency3 Dependency3,
-        [DAsyncService, FromKeyedServices(ServiceWithAllKindsOfDependencies.Dep4Key)] Dependency4 Dependency4,
+        [Marshalable] Dependency3 Dependency3,
+        [Marshalable, FromKeyedServices(ServiceWithAllKindsOfDependencies.Dep4Key)] Dependency4 Dependency4,
                                                                                       NonResolvableDependency? Dependency5 = null,
         [FromKeyedServices(ServiceWithAllKindsOfDependencies.Dep6Key)] NonResolvableDependency? Dependency6 = null,
-        [DAsyncService] NonResolvableDependency? Dependency7 = null,
-        [DAsyncService, FromKeyedServices(ServiceWithAllKindsOfDependencies.Dep8Key)] NonResolvableDependency? Dependency8 = null)
+        [Marshalable] NonResolvableDependency? Dependency7 = null,
+        [Marshalable, FromKeyedServices(ServiceWithAllKindsOfDependencies.Dep8Key)] NonResolvableDependency? Dependency8 = null)
     {
         public const string Dep2Key = "dep2";
         public const string Dep4Key = "dep4";
@@ -167,7 +168,7 @@ public partial class ServiceContainerBuilderTests
 
     private record ServiceWithObjectServiceKey([ServiceKey] object Key);
 
-    private record ServiceWithServiceKeyAsDAsyncService([ServiceKey, DAsyncService] object Key);
+    private record ServiceWithServiceKeyAsDAsyncService([ServiceKey, Marshalable] object Key);
 
     private class UnresolvableService
     {
