@@ -45,7 +45,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     internal bool IsDefault => this == default;
 
-    internal bool IsFlowId
+    internal bool IsFlow
     {
         get
         {
@@ -73,29 +73,11 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     public bool TryWriteChars(Span<char> destination)
     {
-        // TODO: Unify with ToString with the (Try)WriteCharsCore method
         if (CharCount > destination.Length)
             return false;
 
-        bool result = Convert.TryToBase64Chars(Bytes, destination, out int charsWritten);
-        
-        Debug.Assert(result);
-        Debug.Assert(charsWritten == CharCount);
-        
-        for (int i = 0; i < charsWritten; i++)
-        {
-            ref char c = ref destination[i];
-            if (c == '/')
-            {
-                c = '_';
-            }
-            else if (c == '+')
-            {
-                c = '-';
-            }
-        }
-
-        return result;
+        WriteCharsCore(destination);
+        return true;
     }
 
     public bool Equals(DAsyncId other) =>
@@ -113,24 +95,26 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
 
     public override string ToString()
     {
-        return string.Create(CharCount, this, static (chars, self) =>
-        {
-            bool result = Convert.TryToBase64Chars(self.Bytes, chars, out int charsWritten);
-            Debug.Assert(result && charsWritten == CharCount);
+        return string.Create(CharCount, this, static (chars, self) => self.WriteCharsCore(chars));
+    }
 
-            for (int i = 0; i < CharCount; i++)
+    private void WriteCharsCore(Span<char> destination)
+    {
+        bool result = Convert.TryToBase64Chars(Bytes, destination, out int charsWritten);
+        Debug.Assert(result && charsWritten == CharCount);
+
+        for (int i = 0; i < CharCount; i++)
+        {
+            ref char c = ref destination[i];
+            if (c == '/')
             {
-                ref char c = ref chars[i];
-                if (c == '/')
-                {
-                    c = '_';
-                }
-                else if (c == '+')
-                {
-                    c = '-';
-                }
+                c = '_';
             }
-        });
+            else if (c == '+')
+            {
+                c = '-';
+            }
+        }
     }
 
     public static bool operator ==(DAsyncId left, DAsyncId right) => left.Equals(right);
@@ -145,7 +129,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
         return new(bytes);
     }
 
-    internal static DAsyncId NewFlowId()
+    internal static DAsyncId NewFlow()
     {
         Span<byte> bytes = stackalloc byte[ByteCount];
 
@@ -292,7 +276,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
                 return "<default>";
 #if DEBUG_TESTS
             string id = ToString()[^4..];
-            return IsFlowId ? $"root:{id}" : id;
+            return IsFlow ? $"root:{id}" : id;
 #else
             return ToString();
 #endif

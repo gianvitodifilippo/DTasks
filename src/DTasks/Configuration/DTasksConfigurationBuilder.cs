@@ -107,6 +107,7 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
     IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterTypeId(Type type, string idValue)
     {
         ThrowHelper.ThrowIfNull(type);
+        ThrowHelper.ThrowIfNullOrWhiteSpace(idValue);
 
         if (type.ContainsGenericParameters)
             throw new ArgumentException("Open generic types are not supported.", nameof(type));

@@ -1,0 +1,1236 @@
+﻿#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+using System.Linq.Expressions;
+using DTasks.Configuration;
+using DTasks.Configuration.DependencyInjection;
+using DTasks.Execution;
+using DTasks.Infrastructure.DependencyInjection;
+using DTasks.Infrastructure.Execution;
+using DTasks.Infrastructure.Fakes;
+using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
+using NSubstitute.ExceptionExtensions;
+
+namespace DTasks.Infrastructure;
+
+public sealed class DAsyncFlowTests
+{
+    private readonly FakeStorage _storage;
+    private readonly IDAsyncStack _stack;
+    private readonly IDAsyncHeap _heap;
+    private readonly IDAsyncSuspensionHandler _suspensionHandler;
+    private readonly DAsyncFlow _sut;
+    private readonly IDAsyncFlowPool _pool;
+    private readonly IDAsyncInfrastructure _infrastructure;
+    private readonly IDAsyncHost _host;
+    private readonly CancellationToken _cancellationToken;
+
+    public DAsyncFlowTests()
+    {
+        _storage = new();
+        _stack = Substitute.For<IDAsyncStack>();
+        _heap = Substitute.For<IDAsyncHeap>();
+        _suspensionHandler = Substitute.For<IDAsyncSuspensionHandler>();
+
+        var stateManagerDescriptor =
+            from flow in ComponentDescriptors.Flow
+            select new FakeDAsyncStateManager(_storage, _stack, _heap, flow.Parent.Parent.TypeResolver, flow.Surrogator);
+
+        var suspensionHandlerDescriptor = ComponentDescriptor.Singleton(_suspensionHandler);
+        
+        DTasksConfigurationBuilder configurationBuilder = new();
+        DAsyncFlow.ConfigureMarshaling(configurationBuilder);
+        
+        DAsyncInfrastructureBuilder infrastructureBuilder = new();
+        infrastructureBuilder.UseStack(stateManagerDescriptor);
+        infrastructureBuilder.UseHeap(stateManagerDescriptor);
+        infrastructureBuilder.UseSuspensionHandler(suspensionHandlerDescriptor);
+        
+        _pool = Substitute.For<IDAsyncFlowPool>();
+        _infrastructure = infrastructureBuilder.Build(configurationBuilder);
+        _host = Substitute.For<IDAsyncHost>();
+        _cancellationToken = new CancellationTokenSource().Token;
+
+        _sut = DAsyncFlow.Create(_pool, _infrastructure);
+#if DEBUG
+        _sut.Initialize(new ContextRecordingDAsyncHost(_host), Environment.StackTrace);
+#else
+        _sut.Initialize(_host);
+#endif
+    }
+
+    [Fact]
+    public void NonInitializedFlow_ThrowsWhenUsed()
+    {
+        // Arrange
+        var sut = DAsyncFlow.Create(_pool, _infrastructure);
+        var runnable = Substitute.For<IDAsyncRunnable>();
+        
+        // Act
+        Func<ValueTask> act = () => sut.StartAsync(runnable, _cancellationToken);
+        
+        // Assert
+        act.Should().ThrowExactly<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Dispose_ReturnsFlowToPool()
+    {
+        // Arrange
+        
+        // Act
+        _sut.Dispose();
+        
+        // Assert
+        _pool.Received().Return(_sut);
+    }
+
+    [Fact]
+    public async Task CallingSetResultOnStartContext_MakesFlowReturn()
+    {
+        // Arrange
+        var runnable = Substitute.For<IDAsyncRunnable>();
+
+        _host
+            .OnStartAsync(Arg.Any<IDAsyncFlowStartContext>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                call.Arg<IDAsyncFlowStartContext>().SetResult();
+                return Task.CompletedTask;
+            });
+        
+        // Act
+        await _sut.StartAsync(runnable, _cancellationToken);
+
+        // Assert
+        runnable.DidNotReceive().Run(Arg.Any<IDAsyncRunner>());
+        await _host.Received().OnStartAsync(Arg.Any<IDAsyncFlowStartContext>(), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task CallingSetExceptionOnStartContext_MakesFlowThrow()
+    {
+        // Arrange
+        var runnable = Substitute.For<IDAsyncRunnable>();
+        var expectedException = new Exception();
+
+        _host
+            .OnStartAsync(Arg.Any<IDAsyncFlowStartContext>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                call.Arg<IDAsyncFlowStartContext>().SetException(expectedException);
+                return Task.CompletedTask;
+            });
+        
+        // Act
+        Exception? thrownException = await GetExceptionAsync(() => _sut.StartAsync(runnable, _cancellationToken));
+
+        // Assert
+        thrownException.Should().BeSameAs(expectedException);
+        runnable.DidNotReceive().Run(Arg.Any<IDAsyncRunner>());
+        await _host.Received().OnStartAsync(Arg.Any<IDAsyncFlowStartContext>(), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task ExceptionThrownSynchronouslyOnStart_MakesFlowThrowInfrastructureException()
+    {
+        // Arrange
+        var runnable = Substitute.For<IDAsyncRunnable>();
+        var expectedException = new Exception();
+
+#pragma warning disable NS5003
+        _host
+            .OnStartAsync(Arg.Any<IDAsyncFlowStartContext>(), Arg.Any<CancellationToken>())
+            .Throws(expectedException);
+#pragma warning restore NS5003
+        
+        // Act
+        Exception? thrownException = await GetExceptionAsync(() => _sut.StartAsync(runnable, _cancellationToken));
+
+        // Assert
+        thrownException.Should().BeOfType<DAsyncInfrastructureException>().Which.InnerException.Should().BeSameAs(expectedException);
+        runnable.DidNotReceive().Run(Arg.Any<IDAsyncRunner>());
+        await _host.Received().OnStartAsync(Arg.Any<IDAsyncFlowStartContext>(), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task ExceptionThrownAsynchronouslyOnStart_MakesFlowThrowInfrastructureException()
+    {
+        // Arrange
+        var runnable = Substitute.For<IDAsyncRunnable>();
+        var expectedException = new Exception();
+
+        _host
+            .OnStartAsync(Arg.Any<IDAsyncFlowStartContext>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(expectedException);
+        
+        // Act
+        Exception? thrownException = await GetExceptionAsync(() => _sut.StartAsync(runnable, _cancellationToken));
+
+        // Assert
+        thrownException.Should().BeOfType<DAsyncInfrastructureException>().Which.InnerException.Should().BeSameAs(expectedException);
+        runnable.DidNotReceive().Run(Arg.Any<IDAsyncRunner>());
+        await _host.Received().OnStartAsync(Arg.Any<IDAsyncFlowStartContext>(), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task RunsSucceedRunnable()
+    {
+        // Arrange
+        var runnable = new SucceedDAsyncRunnable();
+    
+        // Act
+        await _sut.StartAsync(runnable, _cancellationToken);
+    
+        // Assert
+        await _host.Received(1).OnSucceedAsync(Arg.Is<IDAsyncFlowCompletionContext>(ctx => ctx.FlowId.IsFlow), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task ExceptionThrownSynchronouslyOnSucceed_MakesFlowThrowInfrastructureException()
+    {
+        // Arrange
+        var runnable = new SucceedDAsyncRunnable();
+        var expectedException = new Exception();
+
+#pragma warning disable NS5003
+        _host
+            .OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), Arg.Any<CancellationToken>())
+            .Throws(expectedException);
+#pragma warning restore NS5003
+    
+        // Act
+        Exception? thrownException = await GetExceptionAsync(() => _sut.StartAsync(runnable, _cancellationToken));
+    
+        // Assert
+        thrownException.Should().BeOfType<DAsyncInfrastructureException>().Which.InnerException.Should().BeSameAs(expectedException);
+    }
+
+    [Fact]
+    public async Task ExceptionThrownAsynchronouslyOnSucceed_MakesFlowThrowInfrastructureException()
+    {
+        // Arrange
+        var runnable = new SucceedDAsyncRunnable();
+        var expectedException = new Exception();
+
+        _host
+            .OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(expectedException);
+    
+        // Act
+        Exception? thrownException = await GetExceptionAsync(() => _sut.StartAsync(runnable, _cancellationToken));
+    
+        // Assert
+        thrownException.Should().BeOfType<DAsyncInfrastructureException>().Which.InnerException.Should().BeSameAs(expectedException);
+    }
+    
+    [Fact]
+    public async Task RunsSucceedRunnableOfResult()
+    {
+        // Arrange
+        const int result = 42;
+        var runnable = new SucceedDAsyncRunnable<int>(result);
+    
+        // Act
+        await _sut.StartAsync(runnable, _cancellationToken);
+    
+        // Assert
+        await _host.Received(1).OnSucceedAsync(CompletionContextWithFlowId, result, _cancellationToken);
+    }
+
+    [Fact]
+    public async Task ExceptionThrownSynchronouslyOnSucceedOfResult_MakesFlowThrowInfrastructureException()
+    {
+        // Arrange
+        const int result = 42;
+        var runnable = new SucceedDAsyncRunnable<int>(result);
+        var expectedException = new Exception();
+
+#pragma warning disable NS5003
+        _host
+            .OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>())
+            .Throws(expectedException);
+#pragma warning restore NS5003
+    
+        // Act
+        Exception? thrownException = await GetExceptionAsync(() => _sut.StartAsync(runnable, _cancellationToken));
+    
+        // Assert
+        thrownException.Should().BeOfType<DAsyncInfrastructureException>().Which.InnerException.Should().BeSameAs(expectedException);
+    }
+
+    [Fact]
+    public async Task ExceptionThrownAsynchronouslyOnSucceedOfResult_MakesFlowThrowInfrastructureException()
+    {
+        // Arrange
+        const int result = 42;
+        var runnable = new SucceedDAsyncRunnable<int>(result);
+        var expectedException = new Exception();
+
+        _host
+            .OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>())
+            .ThrowsAsync(expectedException);
+    
+        // Act
+        Exception? thrownException = await GetExceptionAsync(() => _sut.StartAsync(runnable, _cancellationToken));
+    
+        // Assert
+        thrownException.Should().BeOfType<DAsyncInfrastructureException>().Which.InnerException.Should().BeSameAs(expectedException);
+    }
+    
+    [Fact]
+    public async Task RunsFailRunnable()
+    {
+        // Arrange
+        Exception exception = new();
+        var runnable = new FailDAsyncRunnable(exception);
+    
+        // Act
+        await _sut.StartAsync(runnable, _cancellationToken);
+    
+        // Assert
+        await _host.Received(1).OnFailAsync(CompletionContextWithFlowId, exception, _cancellationToken);
+    }
+
+    [Fact]
+    public async Task ExceptionThrownSynchronouslyOnFail_MakesFlowThrowInfrastructureException()
+    {
+        // Arrange
+        Exception exception = new();
+        var runnable = new FailDAsyncRunnable(exception);
+        var expectedException = new Exception();
+
+#pragma warning disable NS5003
+        _host
+            .OnFailAsync(Arg.Any<IDAsyncFlowCompletionContext>(), exception, Arg.Any<CancellationToken>())
+            .Throws(expectedException);
+#pragma warning restore NS5003
+    
+        // Act
+        Exception? thrownException = await GetExceptionAsync(() => _sut.StartAsync(runnable, _cancellationToken));
+    
+        // Assert
+        thrownException.Should().BeOfType<DAsyncInfrastructureException>().Which.InnerException.Should().BeSameAs(expectedException);
+    }
+
+    [Fact]
+    public async Task ExceptionThrownAsynchronouslyOnFail_MakesFlowThrowInfrastructureException()
+    {
+        // Arrange
+        Exception exception = new();
+        var runnable = new FailDAsyncRunnable(exception);
+        var expectedException = new Exception();
+
+        _host
+            .OnFailAsync(Arg.Any<IDAsyncFlowCompletionContext>(), exception, Arg.Any<CancellationToken>())
+            .ThrowsAsync(expectedException);
+    
+        // Act
+        Exception? thrownException = await GetExceptionAsync(() => _sut.StartAsync(runnable, _cancellationToken));
+    
+        // Assert
+        thrownException.Should().BeOfType<DAsyncInfrastructureException>().Which.InnerException.Should().BeSameAs(expectedException);
+    }
+    
+    [Fact]
+    public async Task RunsCancelRunnable()
+    {
+        // Arrange
+        OperationCanceledException exception = new();
+        var runnable = new CancelDAsyncRunnable(exception);
+    
+        // Act
+        await _sut.StartAsync(runnable, _cancellationToken);
+    
+        // Assert
+        await _host.Received(1).OnCancelAsync(CompletionContextWithFlowId, exception, _cancellationToken);
+    }
+
+    [Fact]
+    public async Task ExceptionThrownSynchronouslyOnCancel_MakesFlowThrowInfrastructureException()
+    {
+        // Arrange
+        OperationCanceledException exception = new();
+        var runnable = new CancelDAsyncRunnable(exception);
+        var expectedException = new Exception();
+
+#pragma warning disable NS5003
+        _host
+            .OnCancelAsync(Arg.Any<IDAsyncFlowCompletionContext>(), exception, Arg.Any<CancellationToken>())
+            .Throws(expectedException);
+#pragma warning restore NS5003
+    
+        // Act
+        Exception? thrownException = await GetExceptionAsync(() => _sut.StartAsync(runnable, _cancellationToken));
+    
+        // Assert
+        thrownException.Should().BeOfType<DAsyncInfrastructureException>().Which.InnerException.Should().BeSameAs(expectedException);
+    }
+
+    [Fact]
+    public async Task ExceptionThrownAsynchronouslyOnCancel_MakesFlowThrowInfrastructureException()
+    {
+        // Arrange
+        OperationCanceledException exception = new();
+        var runnable = new CancelDAsyncRunnable(exception);
+        var expectedException = new Exception();
+
+        _host
+            .OnCancelAsync(Arg.Any<IDAsyncFlowCompletionContext>(), exception, Arg.Any<CancellationToken>())
+            .ThrowsAsync(expectedException);
+    
+        // Act
+        Exception? thrownException = await GetExceptionAsync(() => _sut.StartAsync(runnable, _cancellationToken));
+    
+        // Assert
+        thrownException.Should().BeOfType<DAsyncInfrastructureException>().Which.InnerException.Should().BeSameAs(expectedException);
+    }
+    
+    [Fact]
+    public async Task RunsYieldRunnable()
+    {
+        // Arrange
+        var runnable = new YieldDAsyncRunnable();
+        DAsyncId flowId = default;
+        DAsyncId yieldId = default;
+        
+        _stack
+            .When(stack => stack.DehydrateAsync(Arg.Any<ISuspensionContext>(), ref Arg.Any<Arg.AnyType>(), Arg.Any<CancellationToken>()))
+            .Do(call =>
+            {
+                ISuspensionContext suspensionContext = call.Arg<ISuspensionContext>();
+                flowId = suspensionContext.ParentId;
+                yieldId = suspensionContext.Id;
+            });
+    
+        // Act (1)
+        await _sut.StartAsync(runnable, _cancellationToken);
+    
+        // Assert (1)
+        yieldId.Should().NotBe(default(DAsyncId));
+        flowId.IsFlow.Should().BeTrue();
+        await _stack.Received(1).DehydrateAsync(Arg.Any<ISuspensionContext>(), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _suspensionHandler.Received(1).OnYieldAsync(NonReservedId, _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
+        
+        // Act (2)
+        await _sut.ResumeAsync(yieldId, _cancellationToken);
+        
+        // Assert (2)
+        await _stack.Received(1).HydrateAsync(Arg.Is<IResumptionContext>(ctx => ctx.Id == yieldId), _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContextWithFlowId, _cancellationToken);
+    }
+    
+    [Fact]
+    public async Task RunsDelayRunnable()
+    {
+        // Arrange
+        TimeSpan delay = TimeSpan.FromDays(1);
+        var runnable = new DelayDAsyncRunnable(delay);
+        DAsyncId flowId = default;
+        DAsyncId delayId = default;
+        
+        _stack
+            .When(stack => stack.DehydrateAsync(Arg.Any<ISuspensionContext>(), ref Arg.Any<Arg.AnyType>(), Arg.Any<CancellationToken>()))
+            .Do(call =>
+            {
+                ISuspensionContext suspensionContext = call.Arg<ISuspensionContext>();
+                flowId = suspensionContext.ParentId;
+                delayId = suspensionContext.Id;
+            });
+    
+        // Act (1)
+        await _sut.StartAsync(runnable, _cancellationToken);
+    
+        // Assert (1)
+        delayId.Should().NotBe(default(DAsyncId));
+        flowId.IsFlow.Should().BeTrue();
+        await _stack.Received(1).DehydrateAsync(Arg.Any<ISuspensionContext>(), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _suspensionHandler.Received(1).OnDelayAsync(NonReservedId, delay, _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
+        
+        // Act (2)
+        await _sut.ResumeAsync(delayId, _cancellationToken);
+        
+        // Assert (2)
+        await _stack.Received(1).HydrateAsync(Arg.Is<IResumptionContext>(ctx => ctx.Id == delayId), _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContextWithFlowId, _cancellationToken);
+    }
+    
+    [Fact]
+    public async Task RunsCallbackRunnable()
+    {
+        // Arrange
+        var callback = Substitute.For<ISuspensionCallback>();
+        var runnable = new CallbackDAsyncRunnable(callback);
+        DAsyncId flowId = default;
+        DAsyncId callbackId = default;
+        
+        _stack
+            .When(stack => stack.DehydrateAsync(Arg.Any<ISuspensionContext>(), ref Arg.Any<Arg.AnyType>(), Arg.Any<CancellationToken>()))
+            .Do(call =>
+            {
+                ISuspensionContext suspensionContext = call.Arg<ISuspensionContext>();
+                flowId = suspensionContext.ParentId;
+                callbackId = suspensionContext.Id;
+            });
+    
+        // Act (1)
+        await _sut.StartAsync(runnable, _cancellationToken);
+    
+        // Assert (1)
+        callbackId.Should().NotBe(default(DAsyncId));
+        flowId.IsFlow.Should().BeTrue();
+        await _stack.Received(1).DehydrateAsync(Arg.Any<ISuspensionContext>(), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await callback.Received(1).InvokeAsync(callbackId, _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
+        
+        // Act (2)
+        await _sut.ResumeAsync(callbackId, _cancellationToken);
+        
+        // Assert (2)
+        await _stack.Received(1).HydrateAsync(Arg.Is<IResumptionContext>(ctx => ctx.Id == callbackId), _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContextWithFlowId, _cancellationToken);
+    }
+    
+    [Fact]
+    public async Task RunsDTaskThatCompletesLocallyAndSynchronously()
+    {
+        // Arrange
+        const int result = 42;
+    
+        static async DTask<int> M1()
+        {
+            return result;
+        }
+    
+        DTask<int> task = M1();
+    
+        // Act
+        await _sut.StartAsync(task, _cancellationToken);
+    
+        // Assert
+        await _host.Received(1).OnSucceedAsync(CompletionContextWithFlowId, result, _cancellationToken);
+    }
+    
+    [Fact]
+    public async Task RunsDTaskThatCompletesLocallyAndAsynchronously()
+    {
+        // Arrange
+        const int result = 42;
+    
+        static async DTask<int> M1()
+        {
+            await Task.Delay(100, CancellationToken.None);
+            return result;
+        }
+    
+        DTask<int> task = M1();
+    
+        // Act
+        await _sut.StartAsync(task, _cancellationToken);
+    
+        // Assert
+        await _host.Received(1).OnSucceedAsync(CompletionContextWithFlowId, result, _cancellationToken);
+    }
+    
+    [Fact]
+    public async Task RunsDTaskThatAwaitsCompletedDTask()
+    {
+        // Arrange
+        const int result = 42;
+    
+        static async DTask<int> M1()
+        {
+            await DTask.CompletedDTask;
+            return result;
+        }
+    
+        DTask<int> task = M1();
+    
+        // Act
+        await _sut.StartAsync(task, _cancellationToken);
+    
+        // Assert
+        await _host.Received(1).OnSucceedAsync(CompletionContextWithFlowId, result, _cancellationToken);
+    }
+    
+    [Fact]
+    public async Task RunsDTaskThatAwaitsResumingDTask()
+    {
+        // Arrange
+        static async DTask M1()
+        {
+            await new ResumingDTask();
+        }
+    
+        DTask task = M1();
+    
+        // Act
+        await _sut.StartAsync(task, _cancellationToken);
+    
+        // Assert
+        await _host.Received(1).OnSucceedAsync(CompletionContextWithFlowId, _cancellationToken);
+    }
+    //
+    // [Fact]
+    // public async Task RunsDTaskThatAwaitsResumingDTaskOfResult()
+    // {
+    //     // Arrange
+    //     const int result = 42;
+    //
+    //     static async DTask<int> M1()
+    //     {
+    //         return await new ResumingDTask<int>(result);
+    //     }
+    //
+    //     DTask<int> task = M1();
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //
+    //     // Assert
+    //     await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>());
+    // }
+    //
+    // [Fact(Skip = "Not implemented yet")]
+    // public async Task RunsDTaskThatAwaitsExceptionResumingDTask()
+    // {
+    //     // Arrange
+    //     Exception exception = new();
+    //
+    //     static async DTask M1(Exception exception)
+    //     {
+    //         await new ExceptionResumingDTask(exception);
+    //     }
+    //
+    //     DTask task = M1(exception);
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //
+    //     // Assert
+    //     await _host.Received(1).OnFailAsync(Arg.Any<IDAsyncFlowCompletionContext>(), exception, Arg.Any<CancellationToken>());
+    // }
+    //
+    // [Fact]
+    // public async Task RunsDTaskThatAwaitsLocallyCompletingDTask()
+    // {
+    //     // Arrange
+    //     const int result = 42;
+    //
+    //     static async DTask<int> M1()
+    //     {
+    //         int result = await M2();
+    //         return result + 1;
+    //     }
+    //
+    //     static async DTask<int> M2()
+    //     {
+    //         return result;
+    //     }
+    //
+    //     DTask<int> task = M1();
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //
+    //     // Assert
+    //     await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result + 1, Arg.Any<CancellationToken>());
+    // }
+    //
+    // [Fact]
+    // public async Task RunsDTaskThatAwaitsYield()
+    // {
+    //     // Arrange
+    //     const int result = 42;
+    //
+    //     static async DTask<int> M1()
+    //     {
+    //         await DTask.Yield();
+    //         return result;
+    //     }
+    //
+    //     DAsyncId id = default;
+    //     _suspensionHandler
+    //         .When(handler => handler.OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>()))
+    //         .Do(call => id = call.Arg<DAsyncId>());
+    //
+    //     DTask task = M1();
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //     await _sut.ResumeAsync(id);
+    //
+    //     // Assert
+    //     await _suspensionHandler.Received(1).OnYieldAsync(NonReservedId, Arg.Any<CancellationToken>());
+    //     await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>());
+    // }
+    //
+    // [Fact]
+    // public async Task RunsDTaskThatAwaitsDelay()
+    // {
+    //     // Arrange
+    //     const int result = 42;
+    //     TimeSpan delay = TimeSpan.FromMinutes(1);
+    //
+    //     static async DTask<int> M1(TimeSpan delay)
+    //     {
+    //         await DTask.Delay(delay);
+    //         return result;
+    //     }
+    //
+    //     DAsyncId id = default;
+    //     _suspensionHandler
+    //         .When(handler =>
+    //             handler.OnDelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()))
+    //         .Do(call => id = call.Arg<DAsyncId>());
+    //
+    //     DTask task = M1(delay);
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //     await _sut.ResumeAsync(id);
+    //
+    //     // Assert
+    //     await _suspensionHandler.Received(1)
+    //         .OnDelayAsync(Arg.Any<DAsyncId>(), delay, Arg.Any<CancellationToken>());
+    //     await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>());
+    // }
+    //
+    // [Fact]
+    // public async Task RunsDTaskThatAwaitsCallback()
+    // {
+    //     // Arrange
+    //     const int result = 42;
+    //     var callback = Substitute.For<ISuspensionCallback>();
+    //
+    //     static async DTask<int> M1(ISuspensionCallback callback)
+    //     {
+    //         await DTask.Factory.Suspend(callback);
+    //         return result;
+    //     }
+    //
+    //     DAsyncId id = default;
+    //     callback
+    //         .When(cb => cb.InvokeAsync(Arg.Any<DAsyncId>()))
+    //         .Do(call => id = call.Arg<DAsyncId>());
+    //
+    //     DTask task = M1(callback);
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //     await _sut.ResumeAsync(id);
+    //
+    //     // Assert
+    //     await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
+    //     await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>());
+    // }
+    //
+    // [Fact]
+    // public async Task RunsDTaskThatAwaitsCallbackOfResult()
+    // {
+    //     // Arrange
+    //     const int result = 42;
+    //     var callback = Substitute.For<ISuspensionCallback>();
+    //
+    //     static async DTask<int> M1(ISuspensionCallback callback)
+    //     {
+    //         return await DTask<int>.Factory.Suspend(callback);
+    //     }
+    //
+    //     DAsyncId id = default;
+    //     callback
+    //         .When(cb => cb.InvokeAsync(Arg.Any<DAsyncId>()))
+    //         .Do(call => id = call.Arg<DAsyncId>());
+    //
+    //     DTask task = M1(callback);
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //     await _sut.ResumeAsync(id, result);
+    //
+    //     // Assert
+    //     await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
+    //     await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>());
+    // }
+    //
+    // [Fact]
+    // public async Task YieldingTwiceSavesStateWithSameIdWithoutExposingIt()
+    // {
+    //     // Arrange
+    //     static async DTask M1()
+    //     {
+    //         await DTask.Yield();
+    //         await DTask.Yield();
+    //     }
+    //
+    //     DAsyncId hostYieldId1 = default;
+    //     DAsyncId hostYieldId2 = default;
+    //
+    //     _suspensionHandler
+    //         .When(handler => handler.OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>()))
+    //         .Do(call =>
+    //         {
+    //             if (hostYieldId1 == default)
+    //             {
+    //                 hostYieldId1 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             if (hostYieldId2 == default)
+    //             {
+    //                 hostYieldId2 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             throw FailException.ForFailure("YieldAsync called too many times");
+    //         });
+    //
+    //     DTask task = M1();
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //     await _sut.ResumeAsync(hostYieldId1);
+    //     await _sut.ResumeAsync(hostYieldId2);
+    //
+    //     // Assert
+    //     DAsyncId id1 = _storage.Ids[0];
+    //     DAsyncId yieldId1 = _storage.Ids[1];
+    //     DAsyncId id2 = _storage.Ids[2];
+    //     DAsyncId yieldId2 = _storage.Ids[3];
+    //
+    //     hostYieldId1.Should().Be(yieldId1);
+    //     hostYieldId2.Should().Be(yieldId2);
+    //     hostYieldId1.Should().NotBe(hostYieldId2);
+    //     id1.Should().Be(id2).And.NotBe(hostYieldId1).And.NotBe(hostYieldId2);
+    //     await _suspensionHandler.Received(2).OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>());
+    // }
+    //
+    // [Fact]
+    // public async Task RunsDTaskThatAwaitsWhenAll()
+    // {
+    //     // Arrange
+    //     var callback = Substitute.For<ISuspensionCallback>();
+    //
+    //     static async DTask M1(ISuspensionCallback callback)
+    //     {
+    //         await DTask.WhenAll(
+    //             M2(callback),
+    //             DTask.FromResult(string.Empty),
+    //             DTask.CompletedDTask,
+    //             DTask.Delay(TimeSpan.FromMinutes(10))
+    //         );
+    //     }
+    //
+    //     static async DTask M2(ISuspensionCallback callback)
+    //     {
+    //         await DTask.Factory.Suspend(callback);
+    //     }
+    //
+    //     DAsyncId id1 = default;
+    //     DAsyncId id2 = default;
+    //     DAsyncId id3 = default;
+    //     _suspensionHandler
+    //         .When(host => host.OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>()))
+    //         .Do(call => id1 = call.Arg<DAsyncId>());
+    //     _suspensionHandler
+    //         .When(host => host.OnDelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()))
+    //         .Do(call => id2 = call.Arg<DAsyncId>());
+    //     callback
+    //         .When(cb => cb.InvokeAsync(Arg.Any<DAsyncId>()))
+    //         .Do(call => id3 = call.Arg<DAsyncId>());
+    //
+    //     DTask task = M1(callback);
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //     await _sut.ResumeAsync(id1);
+    //     await _sut.ResumeAsync(id2);
+    //     await _sut.ResumeAsync(id3);
+    //
+    //     // Assert
+    //     await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
+    //     await _suspensionHandler.Received(1).OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>());
+    //     await _suspensionHandler.Received(1)
+    //         .OnDelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    //     await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), Arg.Any<CancellationToken>());
+    // }
+    //
+    // [Fact]
+    // public async Task RunsDTaskThatAwaitsWhenAllOfResult()
+    // {
+    //     // Arrange
+    //     const int result1 = 1;
+    //     const int result2 = 2;
+    //     const int result3 = 3;
+    //
+    //     static async DTask<int[]> M1()
+    //     {
+    //         DTask<int>[] tasks =
+    //         [
+    //             M2(result1),
+    //             DTask.FromResult(result3),
+    //             M2(result2)
+    //         ];
+    //         int[] results = await DTask.WhenAll(tasks);
+    //         return results;
+    //     }
+    //
+    //     static async DTask<int> M2(int result)
+    //     {
+    //         await DTask.Yield();
+    //         return result;
+    //     }
+    //
+    //     DAsyncId id1 = default;
+    //     DAsyncId id2 = default;
+    //     DAsyncId id3 = default;
+    //     DAsyncId id4 = default;
+    //     _suspensionHandler
+    //         .When(handler => handler.OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>()))
+    //         .Do(call =>
+    //         {
+    //             if (id1 == default)
+    //             {
+    //                 id1 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             if (id2 == default)
+    //             {
+    //                 id2 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             if (id3 == default)
+    //             {
+    //                 id3 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             if (id4 == default)
+    //             {
+    //                 id4 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             throw FailException.ForFailure("YieldAsync called too many times");
+    //         });
+    //
+    //     DTask task = M1();
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //     await _sut.ResumeAsync(id2);
+    //     await _sut.ResumeAsync(id1);
+    //     await _sut.ResumeAsync(id3);
+    //     await _sut.ResumeAsync(id4);
+    //
+    //     // Assert
+    //     task.Status.Should().Be(DTaskStatus.Suspended);
+    //     await _suspensionHandler.Received(4).OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>());
+    //     await _host.Received(1).OnSucceedAsync(
+    //         Arg.Any<IDAsyncFlowCompletionContext>(),
+    //         Arg.Is<int[]>(results => results.SequenceEqual(new[] { result1, result3, result2 })),
+    //         Arg.Any<CancellationToken>());
+    // }
+    //
+    // [Fact]
+    // public async Task RunsDTaskThatAwaitsWhenAny()
+    // {
+    //     // Arrange
+    //     var callback = Substitute.For<ISuspensionCallback>();
+    //
+    //     static async DTask<bool> M1(ISuspensionCallback callback)
+    //     {
+    //         DTask task1 = M2(callback);
+    //         DTask task2 = DTask.Delay(TimeSpan.FromMinutes(10));
+    //
+    //         DTask winner = await DTask.WhenAny(task1, task2);
+    //
+    //         return winner == task1;
+    //     }
+    //
+    //     static async DTask M2(ISuspensionCallback callback)
+    //     {
+    //         await DTask.Factory.Suspend(callback);
+    //     }
+    //
+    //     DAsyncId id1 = default;
+    //     DAsyncId id2 = default;
+    //     _suspensionHandler
+    //         .When(handler => handler.OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>()))
+    //         .Do(call => id1 = call.Arg<DAsyncId>());
+    //     callback
+    //         .When(cb => cb.InvokeAsync(Arg.Any<DAsyncId>()))
+    //         .Do(call => id2 = call.Arg<DAsyncId>());
+    //
+    //     DTask task = M1(callback);
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //     await _sut.ResumeAsync(id1);
+    //     await _sut.ResumeAsync(id2);
+    //
+    //     // Assert
+    //     await callback.Received(1).InvokeAsync(Arg.Any<DAsyncId>());
+    //     await _suspensionHandler.Received(1).OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>());
+    //     await _suspensionHandler.Received(1)
+    //         .OnDelayAsync(Arg.Any<DAsyncId>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>());
+    //     await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), true, Arg.Any<CancellationToken>());
+    //
+    //     // TODO: Restore this assertion when we properly manage to clean up the state machines of the handles
+    //     // _stateManager.Count.Should().Be(0);
+    // }
+    //
+    // [Fact]
+    // public async Task AwaitingWhenAll_GivesAccessToIndividualResults()
+    // {
+    //     // Arrange
+    //     const int result1 = 1;
+    //     const int result2 = 2;
+    //
+    //     static async DTask<bool> M1()
+    //     {
+    //         DTask<int> task1 = M2(result1);
+    //         DTask<int> task2 = M2(result2);
+    //         await DTask.WhenAll(new DTask[] { task1, task2 });
+    //
+    //         int result1Awaited = await task1;
+    //         int result2Awaited = await task2;
+    //
+    //         int result1Property = task1.Result;
+    //         int result2Property = task2.Result;
+    //
+    //         return
+    //             result1Awaited == result1Property &&
+    //             result2Awaited == result2Property;
+    //     }
+    //
+    //     static async DTask<int> M2(int result)
+    //     {
+    //         await DTask.Yield();
+    //         return result;
+    //     }
+    //
+    //     DAsyncId id1 = default;
+    //     DAsyncId id2 = default;
+    //     DAsyncId id3 = default;
+    //     DAsyncId id4 = default;
+    //     _suspensionHandler
+    //         .When(handler => handler.OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>()))
+    //         .Do(call =>
+    //         {
+    //             if (id1 == default)
+    //             {
+    //                 id1 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             if (id2 == default)
+    //             {
+    //                 id2 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             if (id3 == default)
+    //             {
+    //                 id3 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             if (id4 == default)
+    //             {
+    //                 id4 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             throw FailException.ForFailure("YieldAsync called too many times");
+    //         });
+    //
+    //     DTask task = M1();
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //     await _sut.ResumeAsync(id2);
+    //     await _sut.ResumeAsync(id1);
+    //     await _sut.ResumeAsync(id3);
+    //     await _sut.ResumeAsync(id4);
+    //
+    //     // Assert
+    //     await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), true, Arg.Any<CancellationToken>());
+    //
+    //     // TODO: Restore this assertion when we properly manage to clean up the state machines of the handles
+    //     // _stateManager.Count.Should().Be(0);
+    // }
+    //
+    // [Fact]
+    // public async Task AwaitingWhenAllOfResult_GivesAccessToIndividualResults()
+    // {
+    //     // Arrange
+    //     const int result1 = 1;
+    //     const int result2 = 2;
+    //
+    //     static async DTask<bool> M1()
+    //     {
+    //         DTask<int> task1 = M2(result1);
+    //         DTask<int> task2 = M2(result2);
+    //         int[] results = await DTask.WhenAll(task1, task2);
+    //
+    //         int result1Awaited = await task1;
+    //         int result2Awaited = await task2;
+    //
+    //         int result1Property = task1.Result;
+    //         int result2Property = task2.Result;
+    //
+    //         return
+    //             results[0] == result1Awaited &&
+    //             results[0] == result1Property &&
+    //             results[1] == result2Awaited &&
+    //             results[1] == result2Property;
+    //     }
+    //
+    //     static async DTask<int> M2(int result)
+    //     {
+    //         await DTask.Yield();
+    //         return result;
+    //     }
+    //
+    //     DAsyncId id1 = default;
+    //     DAsyncId id2 = default;
+    //     DAsyncId id3 = default;
+    //     DAsyncId id4 = default;
+    //     _suspensionHandler
+    //         .When(handler => handler.OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>()))
+    //         .Do(call =>
+    //         {
+    //             if (id1 == default)
+    //             {
+    //                 id1 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             if (id2 == default)
+    //             {
+    //                 id2 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             if (id3 == default)
+    //             {
+    //                 id3 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             if (id4 == default)
+    //             {
+    //                 id4 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             throw FailException.ForFailure("YieldAsync called too many times");
+    //         });
+    //
+    //     DTask task = M1();
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //     await _sut.ResumeAsync(id2);
+    //     await _sut.ResumeAsync(id1);
+    //     await _sut.ResumeAsync(id3);
+    //     await _sut.ResumeAsync(id4);
+    //
+    //     // Assert
+    //     await _host.Received(1).OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), true, Arg.Any<CancellationToken>());
+    //
+    //     // TODO: Restore this assertion when we properly manage to clean up the state machines of the handles
+    //     //_stateManager.Count.Should().Be(0);
+    // }
+    //
+    // [Fact(Skip = "Not implemented yet")]
+    // public async Task HandleStateMachinesAreClearedEvenIfNotAwaited()
+    // {
+    //     // Arrange
+    //     const int result1 = 1;
+    //     const int result2 = 2;
+    //
+    //     static async DTask M1()
+    //     {
+    //         DTask<int> task1 = M2(result1);
+    //         DTask<int> task2 = M2(result2);
+    //         int[] results = await DTask.WhenAll(task1, task2);
+    //
+    //         await task1;
+    //     }
+    //
+    //     static async DTask<int> M2(int result)
+    //     {
+    //         await DTask.Yield();
+    //         return result;
+    //     }
+    //
+    //     DAsyncId id1 = default;
+    //     DAsyncId id2 = default;
+    //     DAsyncId id3 = default;
+    //     DAsyncId id4 = default;
+    //     _suspensionHandler
+    //         .When(handler => handler.OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>()))
+    //         .Do(call =>
+    //         {
+    //             if (id1 == default)
+    //             {
+    //                 id1 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             if (id2 == default)
+    //             {
+    //                 id2 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             if (id3 == default)
+    //             {
+    //                 id3 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             if (id4 == default)
+    //             {
+    //                 id4 = call.Arg<DAsyncId>();
+    //                 return;
+    //             }
+    //
+    //             throw FailException.ForFailure("YieldAsync called too many times");
+    //         });
+    //
+    //     DTask task = M1();
+    //
+    //     // Act
+    //     await _sut.StartAsync(task);
+    //     await _sut.ResumeAsync(id2);
+    //     await _sut.ResumeAsync(id1);
+    //     await _sut.ResumeAsync(id3);
+    //     await _sut.ResumeAsync(id4);
+    //
+    //     // Assert
+    // }
+    
+    private static ref DAsyncId NonReservedId => ref Arg.Is<DAsyncId>(id => id != default && !id.IsFlow);
+
+    private static ref IDAsyncFlowCompletionContext CompletionContextWithFlowId => ref Arg.Is<IDAsyncFlowCompletionContext>(ctx => ctx.FlowId.IsFlow);
+
+    private static async Task<Exception?> GetExceptionAsync(Func<ValueTask> act)
+    {
+        try
+        {
+            await act();
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
+    }
+}

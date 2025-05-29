@@ -13,12 +13,6 @@ internal sealed partial class DAsyncFlow : IDAsyncFlowContext
 
     private bool TryGetFlowProperty<TProperty>(DAsyncPropertyKey<TProperty> key, [MaybeNullWhen(false)] out TProperty value)
     {
-        if (_flowProperties is null)
-        {
-            value = default;
-            return false;
-        }
-        
         return _flowProperties.TryGetProperty(key, out value);
     }
 }

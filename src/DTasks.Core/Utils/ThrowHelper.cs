@@ -10,4 +10,10 @@ internal static class ThrowHelper
         if (argument is null)
             throw new ArgumentNullException(paramName);
     }
+    
+    internal static void ThrowIfNullOrWhiteSpace([NotNull] string? argument, [CallerArgumentExpression(nameof(argument))] string? paramName = null)
+    {
+        if (string.IsNullOrWhiteSpace(argument))
+            throw new ArgumentNullException(paramName, $"'{paramName}' cannot be null or whitespace.");
+    }
 }

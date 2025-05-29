@@ -31,7 +31,7 @@ public sealed class DTasksGenerator : IIncrementalGenerator
         ConfigurationSourceBuilder sourceBuilder = new(sb);
         
         sourceBuilder.Begin();
-        sourceBuilder.AddInfrastructureBuilderInvocations(invocations.Distinct()); // TODO: Move in pipeline
+        sourceBuilder.AddInfrastructureBuilderInvocations(invocations.Distinct());
         sourceBuilder.End();
 
         string source = sb.ToString();

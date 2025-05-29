@@ -12,7 +12,7 @@ internal sealed class JsonStateMachineSerializer(
     StateMachineReferenceResolver referenceResolver,
     JsonSerializerOptions serializerOptions) : IStateMachineSerializer
 {
-    public void SerializeStateMachine<TStateMachine>(IBufferWriter<byte> buffer, ISuspensionContext context, DAsyncId parentId, ref TStateMachine stateMachine)
+    public void SerializeStateMachine<TStateMachine>(IBufferWriter<byte> buffer, ISuspensionContext context, ref TStateMachine stateMachine)
         where TStateMachine : notnull
     {
         referenceResolver.InitForWriting();
@@ -20,7 +20,7 @@ internal sealed class JsonStateMachineSerializer(
         IStateMachineSuspender<TStateMachine> suspender = (IStateMachineSuspender<TStateMachine>)inspector.GetSuspender(typeof(TStateMachine));
         TypeId typeId = typeResolver.GetTypeId(typeof(TStateMachine));
 
-        stateMachineWriter.SerializeStateMachine(ref stateMachine, typeId, context, parentId, suspender);
+        stateMachineWriter.SerializeStateMachine(ref stateMachine, typeId, context, suspender);
         referenceResolver.Clear();
     }
 

@@ -35,7 +35,7 @@ internal sealed class DehydratedRunnable<TStateMachine>(
 
     public override DAsyncLink Resume(IResumptionContext context)
     {
-        FakeStateMachineReader reader = new(_values, context.Surrogator);
+        FakeStateMachineReader reader = new(_values, surrogator);
 
         var converter = (IFakeStateMachineResumer)inspector.GetResumer(typeof(TStateMachine));
         IDAsyncRunnable runnable = converter.Resume(reader);
@@ -45,7 +45,7 @@ internal sealed class DehydratedRunnable<TStateMachine>(
 
     public override DAsyncLink Resume<TResult>(IResumptionContext context, TResult result)
     {
-        FakeStateMachineReader reader = new(_values, context.Surrogator);
+        FakeStateMachineReader reader = new(_values, surrogator);
 
         var converter = (IFakeStateMachineResumer)inspector.GetResumer(typeof(TStateMachine));
         IDAsyncRunnable runnable = converter.Resume(reader, result);

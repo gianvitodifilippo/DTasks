@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using DTasks.Infrastructure.State;
 using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
@@ -14,97 +15,103 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
             switch (_state)
             {
                 case FlowState.Starting:
-                    Assert.NotNull(_runnable);
-
-                    GetVoidTaskResult();
-                    object? resultOrException = Consume(ref _resultOrException);
-                    if (resultOrException is null)
-                    {
-                        _state = FlowState.Running;
-                        Consume(ref _runnable).Run(this);
-                    }
-                    else if (resultOrException is Exception exception)
-                    {
-                        _valueTaskSource.SetException(exception);
-                    }
-                    else
-                    {
-                        Debug.Assert(resultOrException == s_resultSentinel, $"'{nameof(_resultOrException)}' should be either null, an exception or the result sentinel.");
-                        _valueTaskSource.SetResult(default);
-                    }
+                    MoveNextOnStart();
                     break;
-
-                case FlowState.Running: // After awaiting a regular awaitable or a completed d-awaitable
-                    Assert.NotNull(_stateMachine);
-
-                    _stateMachine.MoveNext();
+                
+                case FlowState.Running:
+                    MoveNextOnRun();
                     break;
-
-                case FlowState.Dehydrating: // After awaiting Stack.DehydrateAsync
-                    Assert.NotNull(_continuation);
-
-                    GetVoidValueTaskResult();
-                    _suspendingAwaiterOrType = null;
-                    _state = FlowState.Running;
-                    Consume(ref _continuation).Invoke(this);
+                
+                case FlowState.Dehydrating: // Right now we handle indirections, might need a new state when handling nested methods
+                    MoveNextOnDehydrate();
                     break;
-
-                case FlowState.Hydrating: // After awaiting Stack.HydrateAsync
-                    (DAsyncId parentId, IDAsyncRunnable runnable) = GetLinkValueTaskResult();
-                    if (parentId != default)
-                    {
-                        _parentId = parentId; // TODO: Remove this and implement a better solution. It is like this only to support handles
-                    }
-
-                    _state = FlowState.Running;
-                    runnable.Run(this);
+                
+                case FlowState.Hydrating:
+                    MoveNextOnHydrate();
                     break;
-
-                case FlowState.Suspending: // After awaiting a method that results in suspending the d-async flow
-                    GetVoidTaskResult();
-                    AwaitOnSuspend();
+                
+                case FlowState.Suspending:
+                    MoveNextOnSuspending();
                     break;
-
-                case FlowState.Returning: // After awaiting a method that results in completing the current run
-                    GetVoidTaskResult();
-                    _valueTaskSource.SetResult(default);
-                    break;
-
-                case FlowState.Aggregating: // After awaiting WhenAllAsync, WhenAnyAsync, etc
-                    Assert.NotNull(_aggregateRunnable);
-
-                    GetVoidTaskResult();
-                    _state = FlowState.Running;
-                    Consume(ref _aggregateRunnable).Run(this);
-                    break;
-
-                case FlowState.Awaiting:
-                    Task? awaitedTask = Consume(ref _awaitedTask);
-                    object? resultBuilder = Consume(ref _resultBuilder);
-
-                    Assert.NotNull(awaitedTask);
-                    Assert.Is<IDAsyncResultBuilder<Task>>(resultBuilder);
-
-                    try
-                    {
-                        GetVoidTaskResult();
-                        Unsafe.As<IDAsyncResultBuilder<Task>>(resultBuilder).SetResult(awaitedTask);
-                    }
-                    catch (Exception ex)
-                    {
-                        Unsafe.As<IDAsyncResultBuilder<Task>>(resultBuilder).SetException(ex);
-                    }
+                
+                case FlowState.Returning:
+                    MoveNextOnReturning();
                     break;
 
                 default:
-                    Debug.Fail($"Invalid state after await: '{_state}'.");
+                    Debug.Fail($"Unexpected state on MoveNext: {_state}.");
                     break;
             }
         }
         catch (Exception ex)
         {
-            _valueTaskSource.SetException(ex);
+            SetInfrastructureException(ex);
         }
+    }
+
+    private void MoveNextOnStart()
+    {
+        GetVoidTaskResult();
+        object? resultOrException = Consume(ref _resultOrException);
+        IDAsyncRunnable runnable = ConsumeNotNull(ref _runnable);
+        
+        if (resultOrException is null)
+        {
+            Run(runnable);
+            return;
+        }
+        
+        if (resultOrException is Exception exception)
+        {
+            _valueTaskSource.SetException(exception);
+            return;
+        }
+
+        Debug.Assert(resultOrException == s_resultSentinel, """
+            _resultOrException may only be:
+            - s_resultSentinel: when the host called SetResult()
+            - an exception: when the host called SetException()
+            - null: otherwise
+            """);
+
+        _valueTaskSource.SetResult(default);
+    }
+
+    private void MoveNextOnRun()
+    {
+        Assert.NotNull(_stateMachine);
+        
+        _stateMachine.MoveNext();
+    }
+
+    private void MoveNextOnDehydrate()
+    {
+        GetVoidValueTaskResult();
+        IndirectionContinuation continuation = ConsumeNotNull(ref _continuation);
+        _suspendingAwaiterOrType = null;
+
+        continuation.Invoke(this);
+    }
+
+    private void MoveNextOnHydrate()
+    {
+        (_parentId, IDAsyncRunnable runnable) = GetLinkValueTaskResult();
+        
+        Run(runnable);
+    }
+
+    private void MoveNextOnSuspending()
+    {
+        GetVoidTaskResult();
+        
+        AwaitOnSuspend();
+    }
+
+    private void MoveNextOnReturning()
+    {
+        GetVoidTaskResult();
+        
+        _valueTaskSource.SetResult(default);
     }
 
     [ExcludeFromCodeCoverage]
@@ -125,7 +132,7 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
         Hydrating, // Awaiting HydrateAsync
         Suspending, // Awaiting suspension callback
         Returning, // Returning from the runnable
-        Aggregating, // Running multiple aggregated runnables
-        Awaiting // Awaiting a custom task
+        // Aggregating, // Running multiple aggregated runnables
+        // Awaiting // Awaiting a custom task
     }
 }

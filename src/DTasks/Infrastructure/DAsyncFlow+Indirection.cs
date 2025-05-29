@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using DTasks.Inspection;
 using DTasks.Utils;
 
@@ -6,49 +6,53 @@ namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow
 {
-    private void RunIndirection(FlowContinuation continuation)
-    {
-        _continuation = continuation;
-        _suspendingAwaiterOrType = typeof(HostIndirectionAwaiter);
-        HostIndirectionStateMachine stateMachine = default;
+    // Indirections is the way we hide the id of a d-async method from the outside.
+    // If we let outside the id it was stored with, it could potentially be used to resume execution
+    // many times, instead of just once. If we, instead, generate a once-only id which is exposed,
+    // e.g., through SuspensionHandler.Yield, which refers to a state machine containing no fields,
+    // but just a link to its parent, the original d-async state machine that was suspended.
 
-        Dehydrate(_parentId, _id, ref stateMachine);
-    }
+    private static readonly IndirectionContinuation s_yieldIndirection = static flow => flow.AwaitOnYield();
+    private static readonly IndirectionContinuation s_delayIndirection = static flow => flow.AwaitOnDelay();
+    private static readonly IndirectionContinuation s_callbackIndirection = static flow => flow.AwaitOnCallback();
+    
+    private delegate void IndirectionContinuation(DAsyncFlow flow);
 
-    private struct HostIndirectionRunnableBuilder
+
+    private struct IndirectionRunnableBuilder
     {
         public IDAsyncRunnable Task { get; private set; }
 
         public void Start<TStateMachine>(ref TStateMachine stateMachine)
         {
             // TODO: Inspector should support non-generic start method
-            Assert.Is<HostIndirectionStateMachine>(stateMachine);
+            Assert.Is<IndirectionStateMachine>(stateMachine);
 
-            Task = Unsafe.As<TStateMachine, HostIndirectionStateMachine>(ref stateMachine).Awaiter.Runnable;
+            Task = Unsafe.As<TStateMachine, IndirectionStateMachine>(ref stateMachine).Awaiter.Runnable;
         }
 
-        public static HostIndirectionRunnableBuilder Create() => default;
+        public static IndirectionRunnableBuilder Create() => default;
     }
 
-    private readonly struct HostIndirectionAwaiter(IDAsyncRunnable runnable)
+    private readonly struct IndirectionAwaiter(IDAsyncRunnable runnable)
     {
         public IDAsyncRunnable Runnable => runnable;
 
-        public static HostIndirectionAwaiter FromResult() => new(DTask.CompletedDTask);
+        public static IndirectionAwaiter FromResult() => new(DTask.CompletedDTask);
 
-        public static HostIndirectionAwaiter FromResult<TResult>(TResult result) => new(DTask.FromResult(result));
+        public static IndirectionAwaiter FromResult<TResult>(TResult result) => new(DTask.FromResult(result));
 
-        public static HostIndirectionAwaiter FromException(Exception exception) => new(DTask.FromException(exception));
+        public static IndirectionAwaiter FromException(Exception exception) => new(DTask.FromException(exception));
     }
 
 #pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
-    private struct HostIndirectionStateMachine
+    private struct IndirectionStateMachine
     {
         [DAsyncRunnableBuilderField]
-        public HostIndirectionRunnableBuilder Builder;
+        public IndirectionRunnableBuilder Builder;
 
         [DAsyncAwaiterField]
-        public HostIndirectionAwaiter Awaiter;
+        public IndirectionAwaiter Awaiter;
     }
 #pragma warning restore CS0649 // Field is never assigned to, and will always have its default value
 }

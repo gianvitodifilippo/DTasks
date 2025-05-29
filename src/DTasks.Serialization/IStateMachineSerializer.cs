@@ -6,7 +6,7 @@ namespace DTasks.Serialization;
 
 public interface IStateMachineSerializer
 {
-    void SerializeStateMachine<TStateMachine>(IBufferWriter<byte> buffer, ISuspensionContext context, DAsyncId parentId, ref TStateMachine stateMachine)
+    void SerializeStateMachine<TStateMachine>(IBufferWriter<byte> buffer, ISuspensionContext context, ref TStateMachine stateMachine)
         where TStateMachine : notnull;
 
     DAsyncLink DeserializeStateMachine(IResumptionContext context, ReadOnlySpan<byte> bytes);

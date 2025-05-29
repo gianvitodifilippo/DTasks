@@ -2,6 +2,7 @@
 
 namespace DTasks.Execution;
 
+// TODO: Originally, we needed this type to add support to RegisterAsync, but we might get away with extension methods on CancellationToken
 public readonly struct DCancellationToken : IEquatable<DCancellationToken>
 {
     private readonly DCancellationTokenSource? _source;

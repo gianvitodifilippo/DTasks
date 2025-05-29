@@ -79,9 +79,11 @@ public partial class JsonStateMachineSerializerTests
             .GetSuspender(typeof(StateMachine2))
             .Returns(suspender2);
 
+        context.ParentId.Returns(parentId1, parentId2);
+
         // Act
-        _sut.SerializeStateMachine(buffer1, context, parentId1, ref stateMachine1);
-        _sut.SerializeStateMachine(buffer2, context, parentId2, ref stateMachine2);
+        _sut.SerializeStateMachine(buffer1, context, ref stateMachine1);
+        _sut.SerializeStateMachine(buffer2, context, ref stateMachine2);
 
         // Assert
         string stateMachine1Json = Encoding.UTF8.GetString(buffer1.WrittenSpan);
@@ -103,8 +105,6 @@ public partial class JsonStateMachineSerializerTests
 
         ref StateMachine1 stateMachine1 = ref resumer1.StateMachine;
         ref StateMachine2 stateMachine2 = ref resumer2.StateMachine;
-
-        context.Surrogator.Returns(_surrogator);
 
         _inspector
             .GetResumer(typeof(StateMachine1))
