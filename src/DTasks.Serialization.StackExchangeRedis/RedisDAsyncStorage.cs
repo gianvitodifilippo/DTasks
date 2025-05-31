@@ -20,4 +20,10 @@ public sealed class RedisDAsyncStorage(IDatabase database) : IDAsyncStorage
     {
         await database.StringSetAsync(key.ToString(), bytes);
     }
+
+    public async Task DeleteAsync<TKey>(TKey key, CancellationToken cancellationToken = default)
+        where TKey : notnull
+    {
+        await database.KeyDeleteAsync(key.ToString());
+    }
 }

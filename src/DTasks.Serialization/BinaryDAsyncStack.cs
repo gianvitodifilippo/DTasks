@@ -22,6 +22,7 @@ public sealed class BinaryDAsyncStack(IStateMachineSerializer stateMachineSerial
         if (!loadResult.HasValue)
             throw new InvalidOperationException("Invalid id."); // TODO: Improve error message
 
+        await storage.DeleteAsync(context.Id, cancellationToken);
         return stateMachineSerializer.DeserializeStateMachine(context, loadResult.Value.Span);
     }
 
@@ -31,6 +32,7 @@ public sealed class BinaryDAsyncStack(IStateMachineSerializer stateMachineSerial
         if (!loadResult.HasValue)
             throw new InvalidOperationException("Invalid id.");
 
+        await storage.DeleteAsync(context.Id, cancellationToken);
         return stateMachineSerializer.DeserializeStateMachine(context, loadResult.Value.Span, result);
     }
 
@@ -40,12 +42,8 @@ public sealed class BinaryDAsyncStack(IStateMachineSerializer stateMachineSerial
         if (!loadResult.HasValue)
             throw new InvalidOperationException("Invalid id.");
 
+        await storage.DeleteAsync(context.Id, cancellationToken);
         return stateMachineSerializer.DeserializeStateMachine(context, loadResult.Value.Span, exception);
-    }
-
-    public ValueTask<DAsyncId> DeleteAsync(DAsyncId id, CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
     }
 
     public ValueTask FlushAsync(CancellationToken cancellationToken = default)

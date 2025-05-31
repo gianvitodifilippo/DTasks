@@ -131,6 +131,15 @@ public partial class JsonStateMachineSerializerTests
             reader.ReadField(nameof(StateMachine1.local3), ref StateMachine.local3);
             return Substitute.For<IDAsyncRunnable>();
         }
+
+        public IDAsyncRunnable Resume(ref JsonStateMachineReader reader, Exception exception)
+        {
+            reader.ReadField(nameof(StateMachine1.__this), ref StateMachine.__this);
+            reader.ReadField(nameof(StateMachine1.local1), ref StateMachine.local1);
+            reader.ReadField(nameof(StateMachine1.local2), ref StateMachine.local2);
+            reader.ReadField(nameof(StateMachine1.local3), ref StateMachine.local3);
+            return Substitute.For<IDAsyncRunnable>();
+        }
     }
 
     internal class StateMachine2Suspender : IStateMachineSuspender<StateMachine2>
@@ -160,6 +169,16 @@ public partial class JsonStateMachineSerializerTests
         }
 
         public IDAsyncRunnable Resume<TResult>(ref JsonStateMachineReader reader, TResult result)
+        {
+            reader.ReadField(nameof(StateMachine2.__this), ref StateMachine.__this);
+            reader.ReadField(nameof(StateMachine2.local1), ref StateMachine.local1);
+            reader.ReadField(nameof(StateMachine2.local2), ref StateMachine.local2);
+            reader.ReadField(nameof(StateMachine2.local3), ref StateMachine.local3);
+            reader.ReadField(nameof(StateMachine2.local4), ref StateMachine.local4);
+            return Substitute.For<IDAsyncRunnable>();
+        }
+
+        public IDAsyncRunnable Resume(ref JsonStateMachineReader reader, Exception exception)
         {
             reader.ReadField(nameof(StateMachine2.__this), ref StateMachine.__this);
             reader.ReadField(nameof(StateMachine2.local1), ref StateMachine.local1);

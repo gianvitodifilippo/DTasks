@@ -7,4 +7,6 @@ internal interface IStateMachineResumer
     IDAsyncRunnable Resume(ref JsonStateMachineReader reader);
 
     IDAsyncRunnable Resume<TResult>(ref JsonStateMachineReader reader, TResult result);
+
+    IDAsyncRunnable Resume(ref JsonStateMachineReader reader, Exception exception);
 }

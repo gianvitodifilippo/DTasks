@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks.Sources;
 using DTasks.Execution;
 using DTasks.Infrastructure.DependencyInjection;
@@ -24,10 +25,9 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private AsyncTaskMethodBuilder _builder;
     private ManualResetValueTaskSourceCore<VoidDTaskResult> _valueTaskSource;
     private CancellationToken _cancellationToken;
-    
-    private InfrastructureErrorHandler? _errorHandler;
-    private IndirectionErrorHandler? _indirectionErrorHandler;
-    private IndirectionContinuation? _continuation;
+
+    private bool _hasError;
+    private ErrorMessageProvider? _errorMessageProvider;
     private IDAsyncRunnable? _runnable;
     private object? _resultOrException;
     private DAsyncId _id;
@@ -36,6 +36,7 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private object? _suspendingAwaiterOrType;
     private TimeSpan? _delay;
     private ISuspensionCallback? _suspensionCallback;
+    private DehydrateContinuation? _dehydrateContinuation;
     
     private TaskAwaiter _voidTa;
     private ValueTaskAwaiter _voidVta;
@@ -119,6 +120,7 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     {
         ValidateState();
 
+        _id = DAsyncId.NewFlow();
         Assign(ref _runnable, runnable);
         InitializeFlow(cancellationToken);
         AwaitOnStart();
@@ -131,8 +133,9 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         Validate(id);
         ValidateState();
 
+        _id = id;
         InitializeFlow(cancellationToken);
-        AwaitHydrate(id);
+        AwaitHydrate();
         
         return new ValueTask(this, _valueTaskSource.Version);
     }
@@ -142,8 +145,9 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         Validate(id);
         ValidateState();
 
+        _id = id;
         InitializeFlow(cancellationToken);
-        AwaitHydrate(id, result);
+        AwaitHydrate(result);
 
         return new ValueTask(this, _valueTaskSource.Version);
     }
@@ -153,8 +157,9 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         Validate(id);
         ValidateState();
 
+        _id = id;
         InitializeFlow(cancellationToken);
-        AwaitHydrate(id, exception);
+        AwaitHydrate(exception);
         
         return new ValueTask(this, _valueTaskSource.Version);
     }
@@ -163,70 +168,9 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     {
         // _clearFlowProperties = true;
         _flowComponentProvider.BeginScope();
-        _id = DAsyncId.NewFlow();
         _cancellationToken = cancellationToken;
         _host.OnInitialize(this);
         // CancellationProvider.RegisterHandler(this);
-    }
-
-    private void ResumeParent()
-    {
-        DAsyncId parentId = _parentId;
-        _parentId = default;
-
-        if (parentId.IsFlow)
-        {
-            _id = parentId;
-            AwaitOnSucceed();
-            return;
-        }
-        
-        AwaitHydrate(parentId);
-    }
-
-    private void ResumeParent<TResult>(TResult result)
-    {
-        DAsyncId parentId = _parentId;
-        _parentId = default;
-
-        if (parentId.IsFlow)
-        {
-            _id = parentId;
-            AwaitOnSucceed(result);
-            return;
-        }
-        
-        AwaitHydrate(parentId, result);
-    }
-
-    private void ResumeParent(Exception exception)
-    {
-        DAsyncId parentId = _parentId;
-        _parentId = default;
-
-        if (parentId.IsFlow)
-        {
-            _id = parentId;
-            AwaitOnFail(exception);
-            return;
-        }
-        
-        AwaitHydrate(parentId, exception);
-    }
-
-    private void ResumeParent(OperationCanceledException exception)
-    {
-        DAsyncId parentId = _parentId;
-        _parentId = default;
-
-        if (parentId.IsFlow)
-        {
-            _id = parentId;
-            AwaitOnCancel(exception);
-            return;
-        }
-        
-        AwaitHydrate(parentId, exception);
     }
 
     private void ValidateState()
@@ -292,7 +236,7 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     [Conditional("DEBUG")]
     private void AssertState<TInterface>(FlowState state)
     {
-        Debug.Assert(_state == state, $"{typeof(TInterface).Name} should be exposed only when the state is '{state}'.");
+        Debug.Assert(_state == state, $"{typeof(TInterface).Name} should be exposed only when the state is '{state}'");
     }
 
     public static DAsyncFlow Create(IDAsyncFlowPool pool, IDAsyncInfrastructure infrastructure)

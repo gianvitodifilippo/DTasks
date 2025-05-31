@@ -9,4 +9,7 @@ public interface IDAsyncStorage
 
     Task SaveAsync<TKey>(TKey key, ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default)
         where TKey : notnull;
+
+    Task DeleteAsync<TKey>(TKey key, CancellationToken cancellationToken = default)
+        where TKey : notnull;
 }

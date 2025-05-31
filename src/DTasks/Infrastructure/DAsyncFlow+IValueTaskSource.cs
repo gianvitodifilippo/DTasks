@@ -30,28 +30,46 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
 
     private void SetInfrastructureException(Exception innerException)
     {
-        InfrastructureErrorHandler errorHandler = Consume(ref _errorHandler) ?? ErrorHandlers.Default;
-        string message = errorHandler(this);
+        ErrorMessageProvider messageProvider = Consume(ref _errorMessageProvider) ?? ErrorMessages.Default;
+        string message = messageProvider(this);
         
         DAsyncInfrastructureException exception = new(message, innerException);
+        
+        _hasError = true;
         _valueTaskSource.SetException(exception);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void Reset()
     {
-        Assert.Null(_errorHandler);
-        Assert.Null(_indirectionErrorHandler);
-        Assert.Null(_continuation);
-        Assert.Null(_resultOrException);
-        Assert.Null(_runnable);
-        Assert.Null(_stateMachine);
-        Assert.Null(_suspendingAwaiterOrType);
-        Assert.Null(_delay);
-        Assert.Null(_suspensionCallback);
-        
-        // _cancellationProvider?.UnregisterHandler(this);
-        // _host.OnFinalize(this);
+        if (_hasError)
+        {
+            _errorMessageProvider = null;
+            _resultOrException = null;
+            _runnable = null;
+            _stateMachine = null;
+            _suspendingAwaiterOrType = null;
+            _delay = null;
+            _suspensionCallback = null;
+            _dehydrateContinuation = null;
+        }
+        else
+        {
+            Assert.Null(_errorMessageProvider);
+            Assert.Null(_resultOrException);
+            Assert.Null(_runnable);
+            Assert.Null(_stateMachine);
+            Assert.Null(_suspendingAwaiterOrType);
+            Assert.Null(_delay);
+            Assert.Null(_suspensionCallback);
+            Assert.Null(_dehydrateContinuation);
+        }
+
+        _heap = null;
+        _stack = null;
+        _surrogator = null;
+        _cancellationProvider = null;
+        _suspensionHandler = null;
 
         _state = FlowState.Pending;
         _cancellationToken = CancellationToken.None;
@@ -59,15 +77,11 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
         _valueTaskSource.Reset();
         _parentId = default;
         _id = default;
+        
+        // _cancellationProvider?.UnregisterHandler(this);
+        _host.OnFinalize(this);
 
-        // _stateMachine = null;
         // _parent = null;
-
-        _heap = null;
-        _stack = null;
-        _surrogator = null;
-        _cancellationProvider = null;
-        _suspensionHandler = null;
 
         // _surrogates.Clear();
         // _tasks.Clear();

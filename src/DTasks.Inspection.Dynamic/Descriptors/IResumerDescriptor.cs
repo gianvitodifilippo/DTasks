@@ -10,5 +10,7 @@ internal interface IResumerDescriptor
 
     MethodInfo ResumeWithResultMethod { get; }
 
+    MethodInfo ResumeWithExceptionMethod { get; }
+
     IReaderDescriptor Reader { get; }
 }

@@ -30,7 +30,7 @@ internal sealed class JsonDAsyncSerializerFactory
 
     public IDAsyncSerializer CreateSerializer()
     {
-        return new JsonDAsyncSerializer(_typeResolver, _options);
+        return new JsonDAsyncSerializer(_options);
     }
 
     public IStateMachineSerializer CreateStateMachineSerializer(IDAsyncFlowScope flowScope)

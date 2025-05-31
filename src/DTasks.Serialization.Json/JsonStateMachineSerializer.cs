@@ -52,6 +52,14 @@ internal sealed class JsonStateMachineSerializer(
 
     public DAsyncLink DeserializeStateMachine(IResumptionContext context, ReadOnlySpan<byte> bytes, Exception exception)
     {
-        throw new NotImplementedException();
+        referenceResolver.InitForReading();
+        JsonStateMachineReader stateMachineReader = new(bytes, serializerOptions);
+        DAsyncLink link = stateMachineReader.DeserializeStateMachine(inspector, typeResolver, exception, static delegate (IStateMachineResumer resumer, Exception exception, ref JsonStateMachineReader reader)
+        {
+            return resumer.Resume(ref reader, exception);
+        });
+
+        referenceResolver.Clear();
+        return link;
     }
 }

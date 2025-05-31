@@ -38,7 +38,7 @@ internal sealed class CallbackDAsyncRunnable(ISuspensionCallback callback) : IDA
     public void Run(IDAsyncRunner runner) => runner.Features.GetRequiredFeature<IDAsyncSuspensionFeature>().Suspend(callback);
 }
 
-internal sealed class ResumingDTask : DTask
+internal sealed class SucceedSuspendedDTask : DTask
 {
     // This is an awaitable runnable that does not invoke its continuation right away, because its awaiter
     // is not complete, but the continuation will be invoked by its awaiter and the Succeed call
@@ -46,4 +46,25 @@ internal sealed class ResumingDTask : DTask
     public override DTaskStatus Status => DTaskStatus.Suspended;
 
     protected override void Run(IDAsyncRunner runner) => runner.Succeed();
+}
+
+internal sealed class SucceedSuspendedDTask<TResult>(TResult result) : DTask<TResult>
+{
+    public override DTaskStatus Status => DTaskStatus.Suspended;
+
+    protected override void Run(IDAsyncRunner runner) => runner.Succeed(result);
+}
+
+internal sealed class FailSuspendedDTask(Exception exception) : DTask
+{
+    public override DTaskStatus Status => DTaskStatus.Suspended;
+
+    protected override void Run(IDAsyncRunner runner) => runner.Fail(exception);
+}
+
+internal sealed class CancelSuspendedDTask(OperationCanceledException exception) : DTask
+{
+    public override DTaskStatus Status => DTaskStatus.Suspended;
+
+    protected override void Run(IDAsyncRunner runner) => runner.Cancel(exception);
 }

@@ -1,7 +1,7 @@
-﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using DTasks.Execution;
 using DTasks.Infrastructure.State;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
@@ -10,7 +10,7 @@ internal sealed partial class DAsyncFlow
     private void AwaitOnStart()
     {
         _state = FlowState.Starting;
-        Assign(ref _errorHandler, ErrorHandlers.OnStart);
+        Assign(ref _errorMessageProvider, ErrorMessages.OnStart);
         
         Task task;
         try
@@ -28,8 +28,8 @@ internal sealed partial class DAsyncFlow
 
     private void AwaitOnSuspend()
     {
-        _state = FlowState.Returning;
-        Assign(ref _errorHandler, ErrorHandlers.OnSuspend);
+        _state = FlowState.Terminating;
+        Assign(ref _errorMessageProvider, ErrorMessages.OnSuspend);
         
         Task task;
         try
@@ -47,8 +47,8 @@ internal sealed partial class DAsyncFlow
 
     private void AwaitOnSucceed()
     {
-        _state = FlowState.Returning;
-        Assign(ref _errorHandler, ErrorHandlers.OnComplete);
+        _state = FlowState.Terminating;
+        Assign(ref _errorMessageProvider, ErrorMessages.OnComplete);
         
         Task task;
         try
@@ -66,8 +66,8 @@ internal sealed partial class DAsyncFlow
 
     private void AwaitOnSucceed<TResult>(TResult result)
     {
-        _state = FlowState.Returning;
-        Assign(ref _errorHandler, ErrorHandlers.OnComplete);
+        _state = FlowState.Terminating;
+        Assign(ref _errorMessageProvider, ErrorMessages.OnComplete);
         
         Task task;
         try
@@ -85,8 +85,8 @@ internal sealed partial class DAsyncFlow
 
     private void AwaitOnFail(Exception exception)
     {
-        _state = FlowState.Returning;
-        Assign(ref _errorHandler, ErrorHandlers.OnComplete);
+        _state = FlowState.Terminating;
+        Assign(ref _errorMessageProvider, ErrorMessages.OnComplete);
         
         Task task;
         try
@@ -104,8 +104,8 @@ internal sealed partial class DAsyncFlow
 
     private void AwaitOnCancel(OperationCanceledException exception)
     {
-        _state = FlowState.Returning;
-        Assign(ref _errorHandler, ErrorHandlers.OnComplete);
+        _state = FlowState.Terminating;
+        Assign(ref _errorMessageProvider, ErrorMessages.OnComplete);
         
         Task task;
         try
@@ -121,35 +121,10 @@ internal sealed partial class DAsyncFlow
         Await(task);
     }
 
-    private void AwaitRedirect(IndirectionContinuation continuation, IndirectionErrorHandler? errorHandler)
-    {
-        _state = FlowState.Dehydrating;
-        Assign(ref _continuation, continuation);
-        Assign(ref _indirectionErrorHandler, errorHandler);
-        Assign(ref _errorHandler, ErrorHandlers.Redirect);
-        Assign(ref _suspendingAwaiterOrType, typeof(IndirectionAwaiter));
-        _parentId = _id;
-        _id = DAsyncId.New();
-        IndirectionStateMachine stateMachine = default;
-        
-        ValueTask task;
-        try
-        {
-            task = Stack.DehydrateAsync(this, ref stateMachine, _cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            SetInfrastructureException(ex);
-            return;
-        }
-        
-        Await(task);
-    }
-
     private void AwaitOnYield()
     {
         _state = FlowState.Suspending;
-        Assign(ref _errorHandler, ErrorHandlers.OnYield);
+        Assign(ref _errorMessageProvider, ErrorMessages.OnYield);
 
         Task task;
         try
@@ -168,7 +143,7 @@ internal sealed partial class DAsyncFlow
     private void AwaitOnDelay()
     {
         _state = FlowState.Suspending;
-        Assign(ref _errorHandler, ErrorHandlers.OnDelay);
+        Assign(ref _errorMessageProvider, ErrorMessages.OnDelay);
         TimeSpan delay = ConsumeNotNull(ref _delay);
 
         Task task;
@@ -188,7 +163,7 @@ internal sealed partial class DAsyncFlow
     private void AwaitOnCallback()
     {
         _state = FlowState.Suspending;
-        Assign(ref _errorHandler, ErrorHandlers.SuspensionCallback);
+        Assign(ref _errorMessageProvider, ErrorMessages.SuspensionCallback);
         ISuspensionCallback callback = ConsumeNotNull(ref _suspensionCallback);
 
         Task task;
@@ -205,11 +180,30 @@ internal sealed partial class DAsyncFlow
         Await(task);
     }
 
-    private void AwaitHydrate(DAsyncId id)
+    private void AwaitDehydrate<TStateMachine>(ref TStateMachine stateMachine)
+        where TStateMachine : notnull
+    {
+        _state = FlowState.Dehydrating;
+        Assign(ref _errorMessageProvider, ErrorMessages.Dehydrate);
+        
+        ValueTask task;
+        try
+        {
+            task = Stack.DehydrateAsync(this, ref stateMachine, _cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            SetInfrastructureException(ex);
+            return;
+        }
+        
+        Await(task);
+    }
+
+    private void AwaitHydrate()
     {
         _state = FlowState.Hydrating;
-        Assign(ref _errorHandler, ErrorHandlers.Hydrate);
-        _id = id;
+        Assign(ref _errorMessageProvider, ErrorMessages.Hydrate);
 
         ValueTask<DAsyncLink> task;
         try
@@ -225,11 +219,10 @@ internal sealed partial class DAsyncFlow
         Await(task);
     }
 
-    private void AwaitHydrate<TResult>(DAsyncId id, TResult result)
+    private void AwaitHydrate<TResult>(TResult result)
     {
         _state = FlowState.Hydrating;
-        Assign(ref _errorHandler, ErrorHandlers.Hydrate);
-        _id = id;
+        Assign(ref _errorMessageProvider, ErrorMessages.Hydrate);
 
         ValueTask<DAsyncLink> task;
         try
@@ -245,11 +238,10 @@ internal sealed partial class DAsyncFlow
         Await(task);
     }
 
-    private void AwaitHydrate(DAsyncId id, Exception exception)
+    private void AwaitHydrate(Exception exception)
     {
         _state = FlowState.Hydrating;
-        Assign(ref _errorHandler, ErrorHandlers.Hydrate);
-        _id = id;
+        Assign(ref _errorMessageProvider, ErrorMessages.Hydrate);
 
         ValueTask<DAsyncLink> task;
         try
@@ -265,11 +257,30 @@ internal sealed partial class DAsyncFlow
         Await(task);
     }
 
-    private void Return()
+    private void AwaitFlush()
     {
-        _state = FlowState.Returning;
-        Await(Task.CompletedTask);
+        _state = FlowState.Flushing;
+        Assign(ref _errorMessageProvider, ErrorMessages.Flush);
+
+        ValueTask task;
+        try
+        {
+            task = Stack.FlushAsync(_cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            SetInfrastructureException(ex);
+            return;
+        }
+        
+        Await(task);
     }
+
+    // private void Return()
+    // {
+    //     _state = FlowState.Returning;
+    //     Await(Task.CompletedTask);
+    // }
 
     private void Await(Task task)
     {
@@ -297,8 +308,7 @@ internal sealed partial class DAsyncFlow
         TaskAwaiter voidTa = Consume(ref _voidTa);
         voidTa.GetResult();
         
-        _errorHandler = null;
-        _indirectionErrorHandler = null;
+        _errorMessageProvider = null;
     }
 
     private void GetVoidValueTaskResult()
@@ -306,7 +316,7 @@ internal sealed partial class DAsyncFlow
         ValueTaskAwaiter voidVta = Consume(ref _voidVta);
         voidVta.GetResult();
         
-        _errorHandler = null;
+        _errorMessageProvider = null;
     }
 
     private DAsyncLink GetLinkValueTaskResult()
@@ -314,7 +324,9 @@ internal sealed partial class DAsyncFlow
         ValueTaskAwaiter<DAsyncLink> linkVta = Consume(ref _linkVta);
         DAsyncLink result = linkVta.GetResult();
         
-        _errorHandler = null;
+        _errorMessageProvider = null;
         return result;
     }
+
+    private delegate void DehydrateContinuation(DAsyncFlow flow);
 }

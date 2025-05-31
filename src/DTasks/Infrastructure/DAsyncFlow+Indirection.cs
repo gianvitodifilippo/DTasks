@@ -7,18 +7,22 @@ namespace DTasks.Infrastructure;
 internal sealed partial class DAsyncFlow
 {
     // Indirections is the way we hide the id of a d-async method from the outside.
-    // If we let outside the id it was stored with, it could potentially be used to resume execution
-    // many times, instead of just once. If we, instead, generate a once-only id which is exposed,
-    // e.g., through SuspensionHandler.Yield, which refers to a state machine containing no fields,
+    // If we let outside the id it was assigned, it could potentially be used to resume execution
+    // many times, instead of just once. Instead, we generate a once-only id which is exposed,
+    // e.g., through SuspensionHandler.Yield. This id refers to a state machine containing no fields,
     // but just a link to its parent, the original d-async state machine that was suspended.
 
-    private static readonly IndirectionContinuation s_yieldIndirection = static flow => flow.AwaitOnYield();
-    private static readonly IndirectionContinuation s_delayIndirection = static flow => flow.AwaitOnDelay();
-    private static readonly IndirectionContinuation s_callbackIndirection = static flow => flow.AwaitOnCallback();
+    private void RunIndirection(DehydrateContinuation continuation)
+    {
+        Assign(ref _dehydrateContinuation, continuation);
+        Assign(ref _suspendingAwaiterOrType, typeof(IndirectionAwaiter));
+        IndirectionStateMachine stateMachine = default;
+        _parentId = _id;
+        _id = DAsyncId.New();
+        
+        AwaitDehydrate(ref stateMachine);
+    }
     
-    private delegate void IndirectionContinuation(DAsyncFlow flow);
-
-
     private struct IndirectionRunnableBuilder
     {
         public IDAsyncRunnable Task { get; private set; }

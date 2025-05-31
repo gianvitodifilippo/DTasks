@@ -8,7 +8,7 @@ internal sealed partial class DAsyncFlow : IDAsyncFlowCompletionContext
     {
         get
         {
-            AssertState<IDAsyncFlowCompletionContext>(FlowState.Returning);
+            AssertState<IDAsyncFlowCompletionContext>(FlowState.Terminating);
             
             return _id;
         }

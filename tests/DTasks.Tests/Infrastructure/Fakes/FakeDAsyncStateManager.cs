@@ -20,7 +20,6 @@ internal sealed class FakeDAsyncStateManager(
         where TStateMachine : notnull
     {
         _ = stack.DehydrateAsync(new SuspensionContext(context), ref stateMachine, cancellationToken);
-        _ = typeResolver.GetTypeId(typeof(TStateMachine)); // State machine types should be always registered
         
         DAsyncId id = context.Id;
         DAsyncId parentId = context.ParentId;
@@ -75,15 +74,6 @@ internal sealed class FakeDAsyncStateManager(
         DAsyncLink link = runnable.Resume(context, exception);
         Debug.WriteLine($"Hydrated runnable {id} with parent {link.ParentId}.");
         return new(link);
-    }
-
-    public ValueTask<DAsyncId> DeleteAsync(DAsyncId id, CancellationToken cancellationToken = default)
-    {
-        _ = stack.DeleteAsync(id, cancellationToken);
-        
-        DehydratedRunnable runnable = storage.Read(id);
-
-        return new(runnable.ParentId);
     }
 
     public ValueTask FlushAsync(CancellationToken cancellationToken = default)
@@ -145,5 +135,5 @@ internal interface IFakeStateMachineResumer
 
     IDAsyncRunnable Resume<TResult>(FakeStateMachineReader reader, TResult result);
 
-    // IDAsyncRunnable Resume(FakeStateMachineReader reader, Exception exception);
+    IDAsyncRunnable Resume(FakeStateMachineReader reader, Exception exception);
 }

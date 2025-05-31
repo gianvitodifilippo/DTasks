@@ -18,7 +18,7 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
     private const byte FlowIdMask = 0b_10000000;
 
 #if DEBUG_TESTS
-    private static int s_idCount = 0;
+    private static readonly AsyncLocal<int> s_idCountLocal = new();
 #elif !NET6_0_OR_GREATER
     private static readonly ThreadLocal<Random> s_randomLocal = new(static () => new Random());
 #endif
@@ -163,8 +163,8 @@ public readonly struct DAsyncId : IEquatable<DAsyncId>
     private static void Randomize(Span<byte> bytes)
     {
 #if DEBUG_TESTS
-        s_idCount++;
-        string stringId = s_idCount.ToString("0000000000000000");
+        string stringId = s_idCountLocal.Value.ToString("0000000000000000");
+        s_idCountLocal.Value++;
         bool hasConverted = Convert.TryFromBase64String(stringId, bytes, out int bytesWritten);
         Debug.Assert(hasConverted && bytesWritten == ByteCount);
 #elif NET6_0_OR_GREATER

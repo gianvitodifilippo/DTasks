@@ -39,7 +39,6 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
             // To avoid possible stack dives, invoke the continuation asynchronously.
             // Awaiting a completed Task gets the job done and saves us the bother of flowing the execution context, as the state machine box takes care of that.
 
-            _state = FlowState.Running;
             Await(Task.CompletedTask);
         }
         else
@@ -62,35 +61,59 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 
     void IDAsyncMethodBuilder.SetResult()
     {
-        ResumeParent();
+        _stateMachine = null;
+        _id = _parentId;
+        _parentId = default;
+        
+        if (_id.IsFlow)
+        {
+            AwaitOnSucceed();
+            return;
+        }
+        
+        AwaitHydrate();
     }
 
     void IDAsyncMethodBuilder.SetResult<TResult>(TResult result)
     {
-        ResumeParent(result);
+        _stateMachine = null;
+        _id = _parentId;
+        _parentId = default;
+        
+        if (_id.IsFlow)
+        {
+            AwaitOnSucceed(result);
+            return;
+        }
+
+        AwaitHydrate(result);
     }
 
     void IDAsyncMethodBuilder.SetException(Exception exception)
     {
-        if (exception is OperationCanceledException operationCanceledException)
+        _stateMachine = null;
+        _id = _parentId;
+        _parentId = default;
+        
+        if (_id.IsFlow)
         {
-            ResumeParent(operationCanceledException);
+            if (exception is OperationCanceledException operationCanceledException)
+            {
+                AwaitOnCancel(operationCanceledException);
+            }
+            else
+            {
+                AwaitOnFail(exception);
+            }
+
+            return;
         }
-        else
-        {
-            ResumeParent(exception);
-        }
+        
+        AwaitHydrate(exception);
     }
 
     void IDAsyncMethodBuilder.SetState<TStateMachine>(ref TStateMachine stateMachine)
     {
-        throw new NotImplementedException();
-        // DAsyncId parentId = _parentId;
-        // DAsyncId id = _id;
-        //
-        // _parentId = _id;
-        // _id = DAsyncId.New();
-        //
-        // Dehydrate(parentId, id, ref stateMachine);
+        AwaitDehydrate(ref stateMachine);
     }
 }

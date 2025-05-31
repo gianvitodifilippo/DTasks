@@ -55,6 +55,11 @@ internal sealed class DehydratedRunnable<TStateMachine>(
 
     public override DAsyncLink Resume(IResumptionContext context, Exception exception)
     {
-        throw new NotImplementedException();
+        FakeStateMachineReader reader = new(_values, surrogator);
+
+        var converter = (IFakeStateMachineResumer)inspector.GetResumer(typeof(TStateMachine));
+        IDAsyncRunnable runnable = converter.Resume(reader, exception);
+
+        return new DAsyncLink(parentId, runnable);
     }
 }

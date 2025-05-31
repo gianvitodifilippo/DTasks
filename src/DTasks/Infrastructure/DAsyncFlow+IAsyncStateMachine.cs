@@ -22,7 +22,7 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
                     MoveNextOnRun();
                     break;
                 
-                case FlowState.Dehydrating: // Right now we handle indirections, might need a new state when handling nested methods
+                case FlowState.Dehydrating:
                     MoveNextOnDehydrate();
                     break;
                 
@@ -31,11 +31,15 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
                     break;
                 
                 case FlowState.Suspending:
-                    MoveNextOnSuspending();
+                    MoveNextOnSuspend();
                     break;
                 
-                case FlowState.Returning:
-                    MoveNextOnReturning();
+                case FlowState.Terminating:
+                    MoveNextOnReturn();
+                    break;
+                
+                case FlowState.Flushing:
+                    MoveNextOnFlush();
                     break;
 
                 default:
@@ -57,7 +61,7 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
         
         if (resultOrException is null)
         {
-            Run(runnable);
+            runnable.Run(this);
             return;
         }
         
@@ -87,8 +91,11 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
     private void MoveNextOnDehydrate()
     {
         GetVoidValueTaskResult();
-        IndirectionContinuation continuation = ConsumeNotNull(ref _continuation);
+        DehydrateContinuation continuation = ConsumeNotNull(ref _dehydrateContinuation);
+        _stateMachine = null;
         _suspendingAwaiterOrType = null;
+        // _parentId = _id;
+        // _id = DAsyncId.New();
 
         continuation.Invoke(this);
     }
@@ -97,19 +104,26 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
     {
         (_parentId, IDAsyncRunnable runnable) = GetLinkValueTaskResult();
         
-        Run(runnable);
+        runnable.Run(this);
     }
 
-    private void MoveNextOnSuspending()
+    private void MoveNextOnSuspend()
     {
         GetVoidTaskResult();
         
         AwaitOnSuspend();
     }
 
-    private void MoveNextOnReturning()
+    private void MoveNextOnReturn()
     {
         GetVoidTaskResult();
+
+        AwaitFlush();
+    }
+
+    private void MoveNextOnFlush()
+    {
+        GetVoidValueTaskResult();
         
         _valueTaskSource.SetResult(default);
     }
@@ -131,7 +145,8 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
         Dehydrating, // Awaiting DehydrateAsync
         Hydrating, // Awaiting HydrateAsync
         Suspending, // Awaiting suspension callback
-        Returning, // Returning from the runnable
+        Terminating, // Awaiting a termination hook on the host
+        Flushing, // Awaiting FlushAsync
         // Aggregating, // Running multiple aggregated runnables
         // Awaiting // Awaiting a custom task
     }

@@ -5,7 +5,7 @@ using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json;
 
-internal sealed class JsonDAsyncSerializer(IDAsyncTypeResolver typeResolver, JsonSerializerOptions serializerOptions) : IDAsyncSerializer
+internal sealed class JsonDAsyncSerializer(JsonSerializerOptions serializerOptions) : IDAsyncSerializer
 {
     public void Serialize<TValue>(IBufferWriter<byte> buffer, TValue value)
     {
@@ -24,6 +24,7 @@ internal sealed class JsonDAsyncSerializer(IDAsyncTypeResolver typeResolver, Jso
                 false
 #endif
         });
+        writer.Dispose();
 
         JsonSerializer.Serialize(writer, value, serializerOptions);
     }

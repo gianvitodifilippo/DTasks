@@ -8,11 +8,14 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Start(IDAsyncStateMachine stateMachine)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
+        if (_state is not FlowState.Hydrating)
+        {
+            _parentId = _id;
+            _id = DAsyncId.New();
+        }
 
+        _state = FlowState.Running;
         Assign(ref _stateMachine, stateMachine);
-        _parentId = _id;
-        _id = DAsyncId.New();
         
         stateMachine.Start(this);
         stateMachine.MoveNext();
@@ -20,147 +23,129 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Succeed()
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-
-        if (_stateMachine is not null)
+        if (_state is FlowState.Hydrating)
         {
-            _stateMachine.Suspend();
-            return;
+            _id = _parentId;
+            _parentId = default;
         }
         
-        if (_id.IsFlow)
+        if (_stateMachine is null)
         {
             AwaitOnSucceed();
             return;
         }
-
-        ResumeParent();
+        
+        Assign(ref _dehydrateContinuation, static flow => flow.AwaitHydrate());
+        _stateMachine.Suspend();
     }
 
     void IDAsyncRunner.Succeed<TResult>(TResult result)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
-        if (_id.IsFlow)
+        if (_state is FlowState.Hydrating)
+        {
+            _id = _parentId;
+            _parentId = default;
+        }
+
+        if (_stateMachine is null)
         {
             AwaitOnSucceed(result);
             return;
         }
         
-        ResumeParent(result);
+        Assign(ref _dehydrateContinuation, flow => flow.AwaitHydrate(result));
+        _stateMachine.Suspend();
     }
-
+    
     void IDAsyncRunner.Fail(Exception exception)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
-        if (_id.IsFlow)
+        if (_state is FlowState.Hydrating)
+        {
+            _id = _parentId;
+            _parentId = default;
+        }
+
+        if (_stateMachine is null)
         {
             AwaitOnFail(exception);
             return;
         }
         
-        ResumeParent(exception);
+        Assign(ref _dehydrateContinuation, flow => flow.AwaitHydrate(exception));
+        _stateMachine.Suspend();
     }
-
+    
     void IDAsyncRunner.Cancel(OperationCanceledException exception)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
-        if (_id.IsFlow)
+        if (_state is FlowState.Hydrating)
+        {
+            _id = _parentId;
+            _parentId = default;
+        }
+
+        if (_stateMachine is null)
         {
             AwaitOnCancel(exception);
             return;
         }
         
-        ResumeParent(exception);
+        Assign(ref _dehydrateContinuation, flow => flow.AwaitHydrate(exception as Exception));
+        _stateMachine.Suspend();
     }
 
     void IDAsyncRunner.Yield()
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
-        AwaitRedirect(s_yieldIndirection, errorHandler: null);
+        RunIndirection(static flow => flow.AwaitOnYield());
     }
 
     void IDAsyncRunner.Delay(TimeSpan delay)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
         Assign(ref _delay, delay);
-        AwaitRedirect(s_delayIndirection, ErrorHandlers.Indirection.Delay);
+        RunIndirection(static flow => flow.AwaitOnDelay());
     }
 
     void IDAsyncRunner.WhenAll(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder builder)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
         throw new NotImplementedException();
     }
 
     void IDAsyncRunner.WhenAll<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<TResult[]> builder)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
         throw new NotImplementedException();
     }
 
     void IDAsyncRunner.WhenAny(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask> builder)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
         throw new NotImplementedException();
     }
 
     void IDAsyncRunner.WhenAny<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask<TResult>> builder)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
         throw new NotImplementedException();
     }
 
     void IDAsyncRunner.Background(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask> builder)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
         throw new NotImplementedException();
     }
 
     void IDAsyncRunner.Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask<TResult>> builder)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
         throw new NotImplementedException();
     }
 
     void IDAsyncRunner.Await(Task task, IDAsyncResultBuilder<Task> builder)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
         throw new NotImplementedException();
     }
 
     void IDAsyncRunnerInternal.Handle(DAsyncId id, IDAsyncResultBuilder builder)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
         throw new NotImplementedException();
     }
 
     void IDAsyncRunnerInternal.Handle<TResult>(DAsyncId id, IDAsyncResultBuilder<TResult> builder)
     {
-        AssertState<IDAsyncRunner>(FlowState.Running);
-        
         throw new NotImplementedException();
-    }
-
-    private void Run(IDAsyncRunnable runnable)
-    {
-        _state = FlowState.Running;
-        runnable.Run(this);
-        
-        // IMPORTANT: Since runnable may invoke methods that await, it's crucial that calling this method
-        // is the last thing that happens inside IAsyncStateMachine.MoveNext, otherwise we may run into
-        // concurrency problems
     }
 }

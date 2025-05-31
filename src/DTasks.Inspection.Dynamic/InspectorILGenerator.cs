@@ -53,11 +53,17 @@ internal readonly ref struct InspectorILGenerator(
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [typeof(TypeId)]);
 
-    private static readonly MethodInfo s_createFromResultMethod = typeof(IAwaiterManager).GetRequiredMethod(
+    private static readonly MethodInfo s_createFromResultGenericMethod = typeof(IAwaiterManager).GetRequiredMethod(
         name: nameof(IAwaiterManager.CreateFromResult),
         genericParameterCount: 1,
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [typeof(TypeId), Type.MakeGenericMethodParameter(0)]);
+
+    private static readonly MethodInfo s_createFromExceptionMethod = typeof(IAwaiterManager).GetRequiredMethod(
+        name: nameof(IAwaiterManager.CreateFromException),
+        genericParameterCount: 0,
+        bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+        parameterTypes: [typeof(TypeId), typeof(Exception)]);
 
     private static readonly MethodInfo s_getTypeFromHandleMethod = typeof(Type).GetRequiredMethod(
         name: nameof(Type.GetTypeFromHandle),
@@ -160,6 +166,11 @@ internal readonly ref struct InspectorILGenerator(
         il.Emit(OpCodes.Ldarg_2);
     }
 
+    public void LoadException()
+    {
+        il.Emit(OpCodes.Ldarg_2);
+    }
+
     public void LoadStateMachineLocal()
     {
         if (stateMachineDescriptor.IsValueType)
@@ -246,9 +257,14 @@ internal readonly ref struct InspectorILGenerator(
 
     public void CallCreateFromResultMethod(Type resultType)
     {
-        MethodInfo createFromResultMethod = s_createFromResultMethod.MakeGenericMethod(resultType);
+        MethodInfo createFromResultMethod = s_createFromResultGenericMethod.MakeGenericMethod(resultType);
 
         il.Emit(OpCodes.Callvirt, createFromResultMethod);
+    }
+
+    public void CallCreateFromExceptionMethod()
+    {
+        il.Emit(OpCodes.Callvirt, s_createFromExceptionMethod);
     }
 
     public void CallBuilderCreateMethod()
@@ -279,6 +295,29 @@ internal readonly ref struct InspectorILGenerator(
         MethodInfo fromResultMethod = s_fromResultGenericMethod.MakeGenericMethod(resultType);
 
         il.Emit(OpCodes.Call, fromResultMethod);
+    }
+
+    public void CallFromExceptionMethod()
+    {
+        MethodInfo fromExceptionMethod = typeof(DTask).GetRequiredMethod(
+            name: nameof(DTask.FromException),
+            genericParameterCount: 0,
+            bindingAttr: BindingFlags.Static | BindingFlags.Public,
+            parameterTypes: [typeof(Exception)]);
+        
+        il.Emit(OpCodes.Call, fromExceptionMethod);
+    }
+
+    public void CallFromExceptionMethod(Type resultType)
+    {
+        Type taskType = typeof(DTask<>).MakeGenericType(resultType);
+        MethodInfo fromExceptionMethod = taskType.GetRequiredMethod(
+            name: nameof(DTask.FromException),
+            genericParameterCount: 0,
+            bindingAttr: BindingFlags.Static | BindingFlags.Public,
+            parameterTypes: [typeof(Exception)]);
+        
+        il.Emit(OpCodes.Call, fromExceptionMethod);
     }
 
     public void CallGetTypeFromHandleMethod()

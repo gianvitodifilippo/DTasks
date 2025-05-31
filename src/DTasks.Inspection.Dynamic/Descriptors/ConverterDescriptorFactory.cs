@@ -52,6 +52,7 @@ internal sealed class ConverterDescriptorFactory(
         bool hasSuspendMethod = false;
         MethodInfo? resumeWithVoidMethod = null;
         MethodInfo? resumeWithResultMethod = null;
+        MethodInfo? resumeWithExceptionMethod = null;
         Type? writerParameterType = null;
         Type? readerParameterType = null;
 
@@ -78,7 +79,7 @@ internal sealed class ConverterDescriptorFactory(
                     break;
 
                 case 2:
-                    if (!HasResumeWithResultMethod(method, parameters))
+                    if (!HasResumeWithResultMethod(method, parameters) && !HasResumeWithExceptionMethod(method, parameters))
                         return False(out factory);
                     break;
 
@@ -87,7 +88,7 @@ internal sealed class ConverterDescriptorFactory(
             }
         }
 
-        if (!hasSuspendMethod || resumeWithVoidMethod is null || resumeWithResultMethod is null)
+        if (!hasSuspendMethod || resumeWithVoidMethod is null || resumeWithResultMethod is null || resumeWithExceptionMethod is null)
             return False(out factory);
 
         if (readerParameterType is null || writerParameterType is null)
@@ -113,7 +114,7 @@ internal sealed class ConverterDescriptorFactory(
         if (!WriterDescriptor.TryCreate(writerType, out WriterDescriptor? writer))
             return False(out factory);
 
-        ResumerDescriptor resumerDescriptor = new(resumerType, resumeWithVoidMethod, resumeWithResultMethod, reader);
+        ResumerDescriptor resumerDescriptor = new(resumerType, resumeWithVoidMethod, resumeWithResultMethod, resumeWithExceptionMethod, reader);
         factory = new(suspenderType, writerParameterType, writer, resumerDescriptor);
         return true;
 
@@ -188,6 +189,30 @@ internal sealed class ConverterDescriptorFactory(
                 return false;
 
             resumeWithResultMethod = method;
+            return true;
+        }
+
+        bool HasResumeWithExceptionMethod(MethodInfo method, ParameterInfo[] parameters)
+        {
+            Debug.Assert(parameters.Length == 2);
+
+            if (parameters[1].ParameterType != typeof(Exception))
+                return false;
+
+            if (method.ReturnType != typeof(IDAsyncRunnable))
+                return false;
+
+            if (resumeWithExceptionMethod is not null)
+                return false;
+
+            if (readerParameterType is null)
+            {
+                readerParameterType = parameters[0].ParameterType;
+            }
+            else if (readerParameterType != parameters[0].ParameterType)
+                return false;
+
+            resumeWithExceptionMethod = method;
             return true;
         }
 
