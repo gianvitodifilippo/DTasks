@@ -39,7 +39,6 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
         _valueTaskSource.SetException(exception);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void Reset()
     {
         if (_hasError)

@@ -1,4 +1,8 @@
-﻿namespace DTasks.Infrastructure;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using DTasks.Utils;
+
+namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 {
@@ -8,10 +12,29 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Start(IDAsyncStateMachine stateMachine)
     {
+        IDAsyncStateMachine? previousStateMachine = Consume(ref _stateMachine);
+        if (previousStateMachine is not null)
+        {
+            _stateMachine = stateMachine;
+            Assign(ref _dehydrateContinuation, static self =>
+            {
+                IDAsyncStateMachine? stateMachine = self._stateMachine;
+                Assert.NotNull(stateMachine);
+                
+                self._state = FlowState.Running;
+                self._parentId = self._id;
+                self._id = self._idFactory.NewId();
+                stateMachine.Start(self);
+                stateMachine.MoveNext();
+            });
+            previousStateMachine.Suspend();
+            return;
+        }
+        
         if (_state is not FlowState.Hydrating)
         {
             _parentId = _id;
-            _id = DAsyncId.New();
+            _id = _idFactory.NewId();
         }
 
         _state = FlowState.Running;
@@ -29,13 +52,23 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
             _parentId = default;
         }
         
-        if (_stateMachine is null)
+        if (_id.IsFlow)
         {
             AwaitOnSucceed();
             return;
         }
+
+        if (_stateMachine is null)
+        {
+            AwaitHydrate();
+            return;
+        }
         
-        Assign(ref _dehydrateContinuation, static flow => flow.AwaitHydrate());
+        Assign(ref _dehydrateContinuation, static self =>
+        {
+            self._stateMachine = null;
+            self.AwaitHydrate();
+        });
         _stateMachine.Suspend();
     }
 
@@ -47,13 +80,23 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
             _parentId = default;
         }
 
-        if (_stateMachine is null)
+        if (_id.IsFlow)
         {
             AwaitOnSucceed(result);
             return;
         }
+
+        if (_stateMachine is null)
+        {
+            AwaitHydrate(result);
+            return;
+        }
         
-        Assign(ref _dehydrateContinuation, flow => flow.AwaitHydrate(result));
+        Assign(ref _dehydrateContinuation, self =>
+        {
+            self._stateMachine = null;
+            self.AwaitHydrate(result);
+        });
         _stateMachine.Suspend();
     }
     
@@ -65,13 +108,23 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
             _parentId = default;
         }
 
-        if (_stateMachine is null)
+        if (_id.IsFlow)
         {
             AwaitOnFail(exception);
             return;
         }
+
+        if (_stateMachine is null)
+        {
+            AwaitHydrate();
+            return;
+        }
         
-        Assign(ref _dehydrateContinuation, flow => flow.AwaitHydrate(exception));
+        Assign(ref _dehydrateContinuation, self =>
+        {
+            self._stateMachine = null;
+            self.AwaitHydrate(exception);
+        });
         _stateMachine.Suspend();
     }
     
@@ -83,23 +136,56 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
             _parentId = default;
         }
 
-        if (_stateMachine is null)
+        if (_id.IsFlow)
         {
             AwaitOnCancel(exception);
             return;
         }
+
+        if (_stateMachine is null)
+        {
+            AwaitHydrate();
+            return;
+        }
         
-        Assign(ref _dehydrateContinuation, flow => flow.AwaitHydrate(exception as Exception));
+        Assign(ref _dehydrateContinuation, self =>
+        {
+            self._stateMachine = null;
+            self.AwaitHydrate(exception as Exception);
+        });
         _stateMachine.Suspend();
     }
 
     void IDAsyncRunner.Yield()
     {
-        RunIndirection(static flow => flow.AwaitOnYield());
+        IDAsyncStateMachine? stateMachine = Consume(ref _stateMachine);
+        if (stateMachine is not null)
+        {
+            Assign(ref _dehydrateContinuation, static self =>
+            {
+                self.RunIndirection(static self => self.AwaitOnYield());
+            });
+            stateMachine.Suspend();
+            return;
+        }
+        
+        RunIndirection(static self => self.AwaitOnYield());
     }
 
     void IDAsyncRunner.Delay(TimeSpan delay)
     {
+        IDAsyncStateMachine? stateMachine = Consume(ref _stateMachine);
+        if (stateMachine is not null)
+        {
+            Assign(ref _delay, delay);
+            Assign(ref _dehydrateContinuation, static self =>
+            {
+                self.RunIndirection(static self => self.AwaitOnDelay());
+            });
+            stateMachine.Suspend();
+            return;
+        }
+        
         Assign(ref _delay, delay);
         RunIndirection(static flow => flow.AwaitOnDelay());
     }

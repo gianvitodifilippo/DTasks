@@ -31,10 +31,10 @@ internal class DTaskSurrogate
         _ => new DTaskHandle(Id)
     };
 
-    public static DTaskSurrogate Create(DTask task)
+    public static DTaskSurrogate Create(DTask task, DAsyncIdFactory idFactory)
     {
         DTaskSurrogate surrogate = task.Accept(s_factory);
-        surrogate.Id = DAsyncId.New();
+        surrogate.Id = idFactory.NewId();
         surrogate.Status = task.Status;
         return surrogate;
     }

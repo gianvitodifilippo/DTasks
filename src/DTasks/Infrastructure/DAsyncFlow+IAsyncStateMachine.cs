@@ -92,10 +92,7 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
     {
         GetVoidValueTaskResult();
         DehydrateContinuation continuation = ConsumeNotNull(ref _dehydrateContinuation);
-        _stateMachine = null;
         _suspendingAwaiterOrType = null;
-        // _parentId = _id;
-        // _id = DAsyncId.New();
 
         continuation.Invoke(this);
     }

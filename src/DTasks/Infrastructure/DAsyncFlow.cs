@@ -16,6 +16,7 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
 {
     private readonly IDAsyncFlowPool _pool;
     private readonly IDAsyncInfrastructure _infrastructure;
+    private readonly DAsyncIdFactory _idFactory;
     private readonly HostComponentProvider _hostComponentProvider;
     private readonly FlowComponentProvider _flowComponentProvider;
     private readonly DTaskSurrogateConverter _taskSurrogateConverter;
@@ -53,10 +54,11 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private string? _stackTrace;
 #endif
 
-    private DAsyncFlow(IDAsyncFlowPool pool, IDAsyncInfrastructure infrastructure)
+    public DAsyncFlow(IDAsyncFlowPool pool, IDAsyncInfrastructure infrastructure, DAsyncIdFactory idFactory)
     {
         _pool = pool;
         _infrastructure = infrastructure;
+        _idFactory = idFactory;
         _hostComponentProvider = infrastructure.RootProvider.CreateHostProvider(this);
         _flowComponentProvider = _hostComponentProvider.CreateFlowProvider(this);
         _taskSurrogateConverter = new DTaskSurrogateConverter(this);
@@ -120,7 +122,7 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     {
         ValidateState();
 
-        _id = DAsyncId.NewFlow();
+        _id = _idFactory.NewFlowId();
         Assign(ref _runnable, runnable);
         InitializeFlow(cancellationToken);
         AwaitOnStart();
@@ -237,16 +239,5 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private void AssertState<TInterface>(FlowState state)
     {
         Debug.Assert(_state == state, $"{typeof(TInterface).Name} should be exposed only when the state is '{state}'");
-    }
-
-    public static DAsyncFlow Create(IDAsyncFlowPool pool, IDAsyncInfrastructure infrastructure)
-    {
-        DAsyncFlow flow = new(pool, infrastructure);
-
-#if DEBUG
-        GC.ReRegisterForFinalize(flow);
-#endif
-
-        return flow;
     }
 }

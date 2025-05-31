@@ -35,7 +35,7 @@ internal sealed class DAsyncFlowPool : IDAsyncFlowPool
 
     private sealed class Policy(DAsyncFlowPool pool) : IPooledObjectPolicy<DAsyncFlow>
     {
-        public DAsyncFlow Create() => DAsyncFlow.Create(pool, pool._infrastructure);
+        public DAsyncFlow Create() => new(pool, pool._infrastructure, DAsyncIdFactory.Default);
 
         public bool Return(DAsyncFlow obj) => true;
     }

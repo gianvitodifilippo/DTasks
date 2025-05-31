@@ -51,10 +51,10 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
             {
                 ((IDAsyncAwaiter)awaiter).Continue(this);
             }
-            catch
+            catch (Exception ex)
             {
                 _suspendingAwaiterOrType = null;
-                throw;
+                SetInfrastructureException(ex);
             }
         }
     }

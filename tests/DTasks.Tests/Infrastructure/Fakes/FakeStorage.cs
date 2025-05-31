@@ -20,6 +20,7 @@ internal class FakeStorage
     {
         DehydratedRunnable runnable = _runnables[id];
         _runnables.Remove(id);
+        _ids.Remove(id);
         return runnable;
     }
 
