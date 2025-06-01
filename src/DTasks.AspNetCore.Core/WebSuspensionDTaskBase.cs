@@ -4,7 +4,7 @@ using DTasks.Configuration;
 using DTasks.Execution;
 using DTasks.Extensions.DependencyInjection.Infrastructure.Features;
 using DTasks.Infrastructure;
-using DTasks.Infrastructure.Features;
+using DTasks.Infrastructure.Execution;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -37,7 +37,7 @@ internal abstract class WebSuspensionDTaskBase<TResult>(IResumptionEndpoint? res
         
         _hasRun = true;
         
-        IDAsyncSuspensionFeature suspensionFeature = runner.Features.GetRequiredFeature<IDAsyncSuspensionFeature>();
+        ISuspensionFeature suspensionFeature = runner.Features.GetRequiredFeature<ISuspensionFeature>();
         IServiceProvider services = runner.Features.GetRequiredFeature<IServiceProviderFeature>().Services;
         
         var register = services.GetRequiredService<IWebSuspensionRegister>();

@@ -32,15 +32,15 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
 
     bool IDAsyncSurrogator.TryRestore<T, TAction>(TypeId typeId, scoped ref TAction action)
     {
-        // Type objectType = typeId == default
-        //     ? typeof(T)
-        //     : TypeResolver.GetType(typeId);
-        //
-        // if (objectType == typeof(DTask))
-        // {
-        //     action.RestoreAs(typeof(DTaskSurrogate), _taskSurrogateConverter);
-        //     return true;
-        // }
+        Type objectType = typeId == default
+            ? typeof(T)
+            : TypeResolver.GetType(typeId);
+        
+        if (objectType == typeof(DTask))
+        {
+            action.RestoreAs(typeof(DTaskSurrogate), _taskSurrogateConverter);
+            return true;
+        }
         //
         // if (objectType.IsGenericType && objectType.GetGenericTypeDefinition() == typeof(DTask<>))
         // {
@@ -65,21 +65,20 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
     {
         public T Convert<TSurrogate, T>(TSurrogate surrogate)
         {
-            throw new NotImplementedException();
-            // TODO: Unify this logic with that of RestorationActionExtensions.FuncSurrogateConverterWrapper
-            // if (surrogate is not DTaskSurrogate taskSurrogate)
-            //     throw new ArgumentException($"Expected a surrogate of type '{nameof(DTaskSurrogate)}'.", nameof(surrogate));
+            if (surrogate is not DTaskSurrogate taskSurrogate)
+                throw new ArgumentException($"Expected a surrogate of type '{nameof(DTaskSurrogate)}'.", nameof(surrogate));
 
             // if (!flow._tasks.TryGetValue(taskSurrogate.Id, out DTask? task))
             // {
             //     task = taskSurrogate.ToDTask();
             //     flow._tasks.Add(taskSurrogate.Id, task);
             // }
+            DTask task = taskSurrogate.ToDTask();
 
-            // if (task is not T value)
-            //     throw new InvalidOperationException("Attempted to restore a surrogate to a value of the wrong type.");
+            if (task is not T value)
+                throw new InvalidOperationException("Attempted to restore a surrogate to a value of the wrong type.");
 
-            // return value;
+            return value;
         }
     }
 }

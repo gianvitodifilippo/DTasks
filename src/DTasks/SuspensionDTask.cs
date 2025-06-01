@@ -1,6 +1,6 @@
 ﻿using DTasks.Execution;
 using DTasks.Infrastructure;
-using DTasks.Infrastructure.Features;
+using DTasks.Infrastructure.Execution;
 
 namespace DTasks;
 
@@ -23,7 +23,7 @@ internal sealed class SuspensionDTask<TCallback, TResult>(TCallback callback) : 
 
     protected override void Run(IDAsyncRunner runner)
     {
-        IDAsyncSuspensionFeature suspensionFeature = runner.Features.GetRequiredFeature<IDAsyncSuspensionFeature>();
+        ISuspensionFeature suspensionFeature = runner.Features.GetRequiredFeature<ISuspensionFeature>();
         suspensionFeature.Suspend(this);
     }
 }

@@ -1,5 +1,5 @@
 using DTasks.Execution;
-using DTasks.Infrastructure.Features;
+using DTasks.Infrastructure.Execution;
 
 namespace DTasks.Infrastructure.Fakes;
 
@@ -35,7 +35,7 @@ internal sealed class DelayDAsyncRunnable(TimeSpan delay) : IDAsyncRunnable
 
 internal sealed class CallbackDAsyncRunnable(ISuspensionCallback callback) : IDAsyncRunnable
 {
-    public void Run(IDAsyncRunner runner) => runner.Features.GetRequiredFeature<IDAsyncSuspensionFeature>().Suspend(callback);
+    public void Run(IDAsyncRunner runner) => runner.Features.GetRequiredFeature<ISuspensionFeature>().Suspend(callback);
 }
 
 internal sealed class SucceedSuspendedDTask : DTask

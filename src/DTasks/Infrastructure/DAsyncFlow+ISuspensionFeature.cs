@@ -1,16 +1,16 @@
 using DTasks.Execution;
-using DTasks.Infrastructure.Features;
+using DTasks.Infrastructure.Execution;
 
 namespace DTasks.Infrastructure;
 
-internal sealed partial class DAsyncFlow : IDAsyncSuspensionFeature
+internal sealed partial class DAsyncFlow : ISuspensionFeature
 {
     private void RunSuspendIndirection()
     {
         RunIndirection(static self => self.AwaitCallbackInvoke());
     }
     
-    void IDAsyncSuspensionFeature.Suspend(ISuspensionCallback callback)
+    void ISuspensionFeature.Suspend(ISuspensionCallback callback)
     {
         IDAsyncStateMachine? stateMachine = Consume(ref _stateMachine);
         Assign(ref _suspensionCallback, callback);

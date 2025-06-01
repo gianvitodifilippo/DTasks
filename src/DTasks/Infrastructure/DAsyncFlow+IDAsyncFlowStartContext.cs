@@ -9,12 +9,14 @@ internal sealed partial class DAsyncFlow : IDAsyncFlowStartContext
     void IDAsyncFlowStartContext.SetResult()
     {
         AssertState<IDAsyncFlowStartContext>(FlowState.Starting);
+        
         SetResultOrException(s_resultSentinel);
     }
 
     void IDAsyncFlowStartContext.SetException(Exception exception)
     {
         AssertState<IDAsyncFlowStartContext>(FlowState.Starting);
+        
         SetResultOrException(exception);
     }
 

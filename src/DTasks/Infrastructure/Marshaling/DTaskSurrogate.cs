@@ -27,7 +27,8 @@ internal class DTaskSurrogate
     internal virtual DTask ToDTask() => Status switch
     {
         DTaskStatus.Succeeded => DTask.CompletedDTask,
-        // TODO: Other statuses
+        DTaskStatus.Faulted => DTask.FromException(Exception!),
+        DTaskStatus.Canceled => throw new NotImplementedException(),
         _ => new DTaskHandle(Id)
     };
 
@@ -82,7 +83,8 @@ internal class DTaskSurrogate<TResult> : DTaskSurrogate
     internal override DTask ToDTask() => Status switch
     {
         DTaskStatus.Succeeded => DTask.FromResult(Result) as DTask,
-        // TODO: Other statuses
+        DTaskStatus.Faulted => DTask<TResult>.FromException(Exception!),
+        DTaskStatus.Canceled => throw new NotImplementedException(),
         _ => new DTaskHandle<TResult>(Id)
     };
 }

@@ -1,4 +1,5 @@
 using DTasks.Infrastructure.Marshaling;
+using Xunit.Sdk;
 
 namespace DTasks.Infrastructure.Fakes;
 
@@ -10,6 +11,9 @@ internal class FakeStateMachineWriter(Dictionary<string, object?> values, IDAsyn
         if (surrogator.TrySurrogate(in value, ref action))
             return;
 
+        if (value is DTask)
+            throw FailException.ForFailure("DTasks should be surrogated.");
+        
         values.Add(fieldName, value);
     }
 }

@@ -2,7 +2,7 @@ using DTasks.AspNetCore.Execution;
 using DTasks.Execution;
 using DTasks.Extensions.DependencyInjection.Infrastructure.Features;
 using DTasks.Infrastructure;
-using DTasks.Infrastructure.Features;
+using DTasks.Infrastructure.Execution;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.AspNetCore;

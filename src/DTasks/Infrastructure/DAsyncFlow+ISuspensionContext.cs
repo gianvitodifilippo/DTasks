@@ -10,6 +10,9 @@ internal sealed partial class DAsyncFlow : ISuspensionContext
         get
         {
             AssertState<ISuspensionContext>(FlowState.Dehydrating);
+
+            if (IsMarshaling)
+                return _marshalingId.Value;
             
             return _id;
         }
@@ -20,6 +23,9 @@ internal sealed partial class DAsyncFlow : ISuspensionContext
         get
         {
             AssertState<ISuspensionContext>(FlowState.Dehydrating);
+
+            if (IsMarshaling)
+                return default;
             
             return _parentId;
         }

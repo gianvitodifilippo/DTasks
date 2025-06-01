@@ -39,6 +39,7 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private TimeSpan? _delay;
     private ISuspensionCallback? _suspensionCallback;
     private DehydrateContinuation? _dehydrateContinuation;
+    private DAsyncId? _marshalingId;
     
     private TaskAwaiter _voidTa;
     private ValueTaskAwaiter _voidVta;
@@ -246,17 +247,17 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         Debug.Assert(_state == state, $"{typeof(TInterface).Name} should be exposed only when the state is '{state}'. It was '{_state}'.");
     }
 
-    [Conditional("DEBUG")]
-    private void AssertState<TInterface>(params IEnumerable<FlowState> states)
-    {
-        Debug.Assert(states.Contains(_state), GetErrorMessage(_state, states));
-
-        static string GetErrorMessage(FlowState state, IEnumerable<FlowState> states)
-        {
-            string allowedStates = string.Join(" or ", states.Select(state => $"'{state}'"));
-            return $"{typeof(TInterface).Name} should be exposed only when the state is {allowedStates}. It was '{state}'.";
-        }
-    }
+    // [Conditional("DEBUG")]
+    // private void AssertState<TInterface>(params IEnumerable<FlowState> states)
+    // {
+    //     Debug.Assert(states.Contains(_state), GetErrorMessage(_state, states));
+    //
+    //     static string GetErrorMessage(FlowState state, IEnumerable<FlowState> states)
+    //     {
+    //         string allowedStates = string.Join(" or ", states.Select(state => $"'{state}'"));
+    //         return $"{typeof(TInterface).Name} should be exposed only when the state is {allowedStates}. It was '{state}'.";
+    //     }
+    // }
     
     private delegate void DehydrateContinuation(DAsyncFlow flow);
 }

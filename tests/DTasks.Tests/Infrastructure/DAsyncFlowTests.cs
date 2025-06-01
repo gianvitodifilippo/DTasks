@@ -861,7 +861,7 @@ public sealed class DAsyncFlowTests
     }
 
     [Fact]
-    public async Task MarshalingDTask_Throws_WhenNotAwaitedOrAggregated()
+    public async Task MarshalingDTask_Throws_WhenNotAwaitedOrMarshaled()
     {
         // Arrange
         static async DTask M1()
@@ -878,6 +878,50 @@ public sealed class DAsyncFlowTests
         
         // Assert
         await act.Should().ThrowAsync<MarshalingException>();
+    }
+
+    [Fact]
+    public async Task MarshalingDTask_SurrogatesTask_WhenExplicitlyMarshaled()
+    {
+        // Arrange (1)
+        static async DTask<DTaskStatus> M1()
+        {
+            DTask task = M2();
+            await task.MarshalDAsync();
+            await DTask.Yield();
+            return task.Status;
+        }
+
+        static async DTask M2()
+        {
+        }
+
+        DTask task = M1();
+        DAsyncId m1Id = _idFactory.GetTestId(1);
+        DAsyncId m2Id = _idFactory.GetTestId(2);
+        DAsyncId yieldId = _idFactory.GetTestId(3);
+        
+        // Act (1)
+        await _sut.StartAsync(task, _cancellationToken);
+        
+        // Assert (1)
+        await _stack.Received(1).DehydrateAsync(Suspending(m2Id, default), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Suspending(m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Suspending(yieldId, m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _suspensionHandler.Received(1).OnYieldAsync(yieldId, _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
+        
+        // Arrange (2)
+        _stack.ClearReceivedCalls();
+        _host.ClearReceivedCalls();
+        
+        // Act (2)
+        await _sut.ResumeAsync(yieldId, _cancellationToken);
+        
+        // Assert (2)
+        await _stack.Received(1).HydrateAsync(Resuming(yieldId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Resuming(m1Id), _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, DTaskStatus.Pending, _cancellationToken);
     }
     
     //
