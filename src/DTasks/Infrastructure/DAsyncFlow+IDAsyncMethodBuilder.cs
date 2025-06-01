@@ -6,6 +6,8 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 {
     void IDAsyncMethodBuilder.AwaitOnCompleted<TAwaiter>(ref TAwaiter awaiter)
     {
+        AssertState<IDAsyncMethodBuilder>(FlowState.Running);
+        
         if (awaiter is IDAsyncAwaiter)
         {
             AwaitContinue(ref awaiter);
@@ -19,6 +21,8 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 
     void IDAsyncMethodBuilder.AwaitUnsafeOnCompleted<TAwaiter>(ref TAwaiter awaiter)
     {
+        AssertState<IDAsyncMethodBuilder>(FlowState.Running);
+
         if (awaiter is IDAsyncAwaiter)
         {
             AwaitContinue(ref awaiter);
@@ -61,7 +65,9 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 
     void IDAsyncMethodBuilder.SetResult()
     {
-        _stateMachine = null;
+        AssertState<IDAsyncMethodBuilder>(FlowState.Running);
+
+        SetNull(ref _stateMachine);
         _id = _parentId;
         _parentId = default;
         
@@ -76,7 +82,9 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 
     void IDAsyncMethodBuilder.SetResult<TResult>(TResult result)
     {
-        _stateMachine = null;
+        AssertState<IDAsyncMethodBuilder>(FlowState.Running);
+
+        SetNull(ref _stateMachine);
         _id = _parentId;
         _parentId = default;
         
@@ -91,7 +99,9 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 
     void IDAsyncMethodBuilder.SetException(Exception exception)
     {
-        _stateMachine = null;
+        AssertState<IDAsyncMethodBuilder>(FlowState.Running);
+
+        SetNull(ref _stateMachine);
         _id = _parentId;
         _parentId = default;
         
@@ -114,6 +124,8 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 
     void IDAsyncMethodBuilder.SetState<TStateMachine>(ref TStateMachine stateMachine)
     {
+        AssertState<IDAsyncMethodBuilder>(FlowState.Running);
+
         AwaitDehydrate(ref stateMachine);
     }
 }

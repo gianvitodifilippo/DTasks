@@ -35,6 +35,7 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private DAsyncId _parentId;
     private IDAsyncStateMachine? _stateMachine;
     private object? _suspendingAwaiterOrType;
+    private IDAsyncStateMachine? _childStateMachine;
     private TimeSpan? _delay;
     private ISuspensionCallback? _suspensionCallback;
     private DehydrateContinuation? _dehydrateContinuation;
@@ -235,9 +236,29 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         field = value;
     }
 
+    [DebuggerStepThrough]
+    private static void SetNull<T>(ref T? field)
+        where T : class
+    {
+        Assert.NotNull(field);
+
+        field = null;
+    }
+
+    [DebuggerStepThrough]
+    private static void SetNull<T>(ref T? field)
+        where T : struct
+    {
+        Assert.NotNull(field);
+
+        field = null;
+    }
+
     [Conditional("DEBUG")]
     private void AssertState<TInterface>(FlowState state)
     {
         Debug.Assert(_state == state, $"{typeof(TInterface).Name} should be exposed only when the state is '{state}'");
     }
+    
+    private delegate void DehydrateContinuation(DAsyncFlow flow);
 }

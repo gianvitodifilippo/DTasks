@@ -48,6 +48,7 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
             _runnable = null;
             _stateMachine = null;
             _suspendingAwaiterOrType = null;
+            _childStateMachine = null;
             _delay = null;
             _suspensionCallback = null;
             _dehydrateContinuation = null;
@@ -59,6 +60,7 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
             Assert.Null(_runnable);
             Assert.Null(_stateMachine);
             Assert.Null(_suspendingAwaiterOrType);
+            Assert.Null(_childStateMachine);
             Assert.Null(_delay);
             Assert.Null(_suspensionCallback);
             Assert.Null(_dehydrateContinuation);

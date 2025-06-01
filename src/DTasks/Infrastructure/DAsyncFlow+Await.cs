@@ -160,7 +160,7 @@ internal sealed partial class DAsyncFlow
         Await(task);
     }
 
-    private void AwaitOnCallback()
+    private void AwaitCallbackInvoke()
     {
         _state = FlowState.Suspending;
         Assign(ref _errorMessageProvider, ErrorMessages.SuspensionCallback);
@@ -327,6 +327,4 @@ internal sealed partial class DAsyncFlow
         _errorMessageProvider = null;
         return result;
     }
-
-    private delegate void DehydrateContinuation(DAsyncFlow flow);
 }

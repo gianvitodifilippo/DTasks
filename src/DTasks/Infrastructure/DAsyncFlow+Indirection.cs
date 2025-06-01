@@ -12,6 +12,16 @@ internal sealed partial class DAsyncFlow
     // e.g., through SuspensionHandler.Yield. This id refers to a state machine containing no fields,
     // but just a link to its parent, the original d-async state machine that was suspended.
 
+    private void RunYieldIndirection()
+    {
+        RunIndirection(static self => self.AwaitOnYield());
+    }
+
+    private void RunDelayIndirection()
+    {
+        RunIndirection(static self => self.AwaitOnDelay());
+    }
+
     private void RunIndirection(DehydrateContinuation continuation)
     {
         Assign(ref _dehydrateContinuation, continuation);
