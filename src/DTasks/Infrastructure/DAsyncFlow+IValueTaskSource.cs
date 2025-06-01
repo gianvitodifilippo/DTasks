@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Sources;
+using DTasks.Marshaling;
 using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
@@ -28,12 +29,15 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
         _valueTaskSource.OnCompleted(continuation, state, token, flags);
     }
 
-    private void SetInfrastructureException(Exception innerException)
+    private void HandleException(Exception exception)
     {
-        ErrorMessageProvider messageProvider = Consume(ref _errorMessageProvider) ?? ErrorMessages.Default;
-        string message = messageProvider(this);
-        
-        DAsyncInfrastructureException exception = new(message, innerException);
+        if (exception is not MarshalingException)
+        {
+            ErrorMessageProvider messageProvider = Consume(ref _errorMessageProvider) ?? ErrorMessages.Default;
+            string message = messageProvider(this);
+
+            exception = new DAsyncInfrastructureException(message, exception);
+        }
         
         _hasError = true;
         _valueTaskSource.SetException(exception);

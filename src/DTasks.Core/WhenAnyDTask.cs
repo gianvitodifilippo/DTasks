@@ -11,25 +11,9 @@ internal sealed class WhenAnyDTask(IEnumerable<DTask> tasks) : DTask<DTask>, IDA
 
     public override DTaskStatus Status => _status;
 
-    protected override DTask ResultCore
-    {
-        get
-        {
-            Assert.Is<DTask>(_stateObject);
+    protected override DTask ResultCore => Reinterpret.Cast<DTask>(_stateObject);
 
-            return Unsafe.As<DTask>(_stateObject);
-        }
-    }
-
-    protected override Exception ExceptionCore
-    {
-        get
-        {
-            Assert.Is<Exception>(_stateObject);
-
-            return Unsafe.As<Exception>(_stateObject);
-        }
-    }
+    protected override Exception ExceptionCore => Reinterpret.Cast<Exception>(_stateObject);
 
     protected override void Run(IDAsyncRunner runner) => runner.WhenAny(tasks, this);
 
@@ -53,25 +37,9 @@ internal sealed class WhenAnyDTask<TResult>(IEnumerable<DTask<TResult>> tasks) :
 
     public override DTaskStatus Status => _status;
 
-    protected override DTask<TResult> ResultCore
-    {
-        get
-        {
-            Assert.Is<DTask<TResult>>(_stateObject);
+    protected override DTask<TResult> ResultCore => Reinterpret.Cast<DTask<TResult>>(_stateObject);
 
-            return Unsafe.As<DTask<TResult>>(_stateObject);
-        }
-    }
-
-    protected override Exception ExceptionCore
-    {
-        get
-        {
-            Assert.Is<Exception>(_stateObject);
-
-            return Unsafe.As<Exception>(_stateObject);
-        }
-    }
+    protected override Exception ExceptionCore => Reinterpret.Cast<Exception>(_stateObject);
 
     protected override void Run(IDAsyncRunner runner) => runner.WhenAny(tasks, this);
 

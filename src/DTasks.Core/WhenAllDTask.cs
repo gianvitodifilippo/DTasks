@@ -41,25 +41,9 @@ internal sealed class WhenAllDTask<TResult>(IEnumerable<DTask<TResult>> tasks) :
 
     public override DTaskStatus Status => _status;
 
-    protected override TResult[] ResultCore
-    {
-        get
-        {
-            Assert.Is<TResult[]>(_stateObject);
+    protected override TResult[] ResultCore => Reinterpret.Cast<TResult[]>(_stateObject);
 
-            return Unsafe.As<TResult[]>(_stateObject);
-        }
-    }
-
-    protected override Exception ExceptionCore
-    {
-        get
-        {
-            Assert.Is<Exception>(_stateObject);
-
-            return Unsafe.As<Exception>(_stateObject);
-        }
-    }
+    protected override Exception ExceptionCore => Reinterpret.Cast<Exception>(_stateObject);
 
     protected override void Run(IDAsyncRunner runner) => runner.WhenAll(tasks, this);
 

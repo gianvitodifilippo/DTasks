@@ -46,15 +46,7 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
 
         public override DTaskStatus Status => _status;
 
-        protected override Exception ExceptionCore
-        {
-            get
-            {
-                Assert.Is<Exception>(_stateObject);
-
-                return Unsafe.As<Exception>(_stateObject);
-            }
-        }
+        protected override Exception ExceptionCore => Reinterpret.Cast<Exception>(_stateObject);
 
         protected override TResult ResultCore => _result!;
 
@@ -63,9 +55,8 @@ internal abstract class DTaskBuilder<TResult> : DTask<TResult>
             get
             {
                 Debug.Assert(IsRunning);
-                Assert.Is<IDAsyncMethodBuilder>(_stateObject);
 
-                return Unsafe.As<IDAsyncMethodBuilder>(_stateObject);
+                return Reinterpret.Cast<IDAsyncMethodBuilder>(_stateObject);
             }
         }
 

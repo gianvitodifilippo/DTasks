@@ -71,35 +71,11 @@ internal sealed class BackgroundDTask<TTask>(IDAsyncRunnable runnable) : DTask<T
 
     public override DTaskStatus Status => _status;
 
-    protected override TTask ResultCore
-    {
-        get
-        {
-            Assert.Is<TTask>(_stateObject);
+    protected override TTask ResultCore => Reinterpret.Cast<TTask>(_stateObject);
 
-            return Unsafe.As<TTask>(_stateObject);
-        }
-    }
+    protected override Exception ExceptionCore => Reinterpret.Cast<Exception>(_stateObject);
 
-    protected override Exception ExceptionCore
-    {
-        get
-        {
-            Assert.Is<Exception>(_stateObject);
-
-            return Unsafe.As<Exception>(_stateObject);
-        }
-    }
-
-    public IDAsyncRunnable Runnable
-    {
-        get
-        {
-            Assert.Is<IDAsyncRunnable>(_stateObject);
-
-            return Unsafe.As<IDAsyncRunnable>(_stateObject);
-        }
-    }
+    public IDAsyncRunnable Runnable => Reinterpret.Cast<IDAsyncRunnable>(_stateObject);
 
     protected override void Run(IDAsyncRunner runner)
     {

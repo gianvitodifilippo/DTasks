@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using DTasks.Execution;
 using DTasks.Infrastructure.State;
+using DTasks.Marshaling;
 using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
@@ -19,7 +20,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         
@@ -38,7 +39,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         
@@ -57,7 +58,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         
@@ -76,7 +77,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         
@@ -95,7 +96,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         
@@ -114,7 +115,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         
@@ -133,7 +134,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         
@@ -153,7 +154,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         
@@ -173,7 +174,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         
@@ -193,7 +194,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         
@@ -212,7 +213,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         
@@ -231,7 +232,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         
@@ -250,7 +251,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         
@@ -269,7 +270,7 @@ internal sealed partial class DAsyncFlow
         }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
             return;
         }
         

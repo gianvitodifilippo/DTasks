@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Marshaling;
 using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
@@ -10,17 +11,14 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
 
     bool IDAsyncSurrogator.TrySurrogate<T, TAction>(in T value, scoped ref TAction action)
     {
-        // if (value is DTask task)
-        // {
-        //     if (!_surrogates.TryGetValue(task, out DTaskSurrogate? taskSurrogate))
-        //     {
-        //         taskSurrogate = DTaskSurrogate.Create(task);
-        //         _surrogates.Add(task, taskSurrogate);
-        //     }
-        //
-        //     taskSurrogate.Write<T, TAction>(ref action, TypeResolver);
-        //     return true;
-        // }
+        if (value is DTask task)
+        {
+            if (!Surrogates.TryGetValue(task, out DTaskSurrogate? taskSurrogate))
+                throw new MarshalingException($"DTask '{task}' cannot be marshaled, as it was not awaited directly or through another awaitable.");
+        
+            taskSurrogate.Write<T, TAction>(ref action, TypeResolver);
+            return true;
+        }
         //
         // if (value is HandleRunnable handleRunnable)
         // {

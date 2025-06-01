@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using DTasks.Infrastructure.State;
+using DTasks.Marshaling;
 using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
@@ -17,27 +18,27 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
                 case FlowState.Starting:
                     MoveNextOnStart();
                     break;
-                
+
                 case FlowState.Running:
                     MoveNextOnRun();
                     break;
-                
+
                 case FlowState.Dehydrating:
                     MoveNextOnDehydrate();
                     break;
-                
+
                 case FlowState.Hydrating:
                     MoveNextOnHydrate();
                     break;
-                
+
                 case FlowState.Suspending:
                     MoveNextOnSuspend();
                     break;
-                
+
                 case FlowState.Terminating:
                     MoveNextOnReturn();
                     break;
-                
+
                 case FlowState.Flushing:
                     MoveNextOnFlush();
                     break;
@@ -47,9 +48,14 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
                     break;
             }
         }
+        catch (MarshalingException ex)
+        {
+            _hasError = true;
+            _valueTaskSource.SetException(ex);
+        }
         catch (Exception ex)
         {
-            SetInfrastructureException(ex);
+            HandleException(ex);
         }
     }
 

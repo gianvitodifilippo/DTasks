@@ -8,6 +8,7 @@ using DTasks.Infrastructure.Execution;
 using DTasks.Infrastructure.Fakes;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
+using DTasks.Marshaling;
 using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReceivedExtensions;
 
@@ -858,6 +859,27 @@ public sealed class DAsyncFlowTests
         await _stack.Received(1).HydrateAsync(Resuming(m1Id), _cancellationToken);
         await _host.Received(1).OnSucceedAsync(CompletionContext, _cancellationToken);
     }
+
+    [Fact]
+    public async Task MarshalingDTask_Throws_WhenNotAwaitedOrAggregated()
+    {
+        // Arrange
+        static async DTask M1()
+        {
+            DTask task = DTask.CompletedDTask;
+            await DTask.Yield();
+            _ = task.Status; // Keeps 'task' among the state machine fields
+        }
+
+        DTask task = M1();
+        
+        // Act
+        Func<Task> act = async () => await _sut.StartAsync(task, _cancellationToken);
+        
+        // Assert
+        await act.Should().ThrowAsync<MarshalingException>();
+    }
+    
     //
     // [Fact]
     // public async Task RunsDTaskThatAwaitsWhenAll()

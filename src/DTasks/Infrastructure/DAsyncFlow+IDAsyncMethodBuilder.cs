@@ -1,4 +1,5 @@
-﻿using DTasks.Utils;
+﻿using DTasks.Marshaling;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
@@ -50,15 +51,15 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
             Assign(ref _suspendingAwaiterOrType, typeof(TAwaiter).IsValueType
                 ? typeof(TAwaiter)
                 : awaiter);
-        
+
             try
             {
                 ((IDAsyncAwaiter)awaiter).Continue(this);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not MarshalingException)
             {
                 _suspendingAwaiterOrType = null;
-                SetInfrastructureException(ex);
+                HandleException(ex);
             }
         }
     }
@@ -67,7 +68,7 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
     {
         AssertState<IDAsyncMethodBuilder>(FlowState.Running);
 
-        SetNull(ref _stateMachine);
+        _stateMachine = null;
         _id = _parentId;
         _parentId = default;
         
@@ -84,7 +85,7 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
     {
         AssertState<IDAsyncMethodBuilder>(FlowState.Running);
 
-        SetNull(ref _stateMachine);
+        _stateMachine = null;
         _id = _parentId;
         _parentId = default;
         
@@ -101,7 +102,7 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
     {
         AssertState<IDAsyncMethodBuilder>(FlowState.Running);
 
-        SetNull(ref _stateMachine);
+        _stateMachine = null;
         _id = _parentId;
         _parentId = default;
         

@@ -9,6 +9,7 @@ public static class Reinterpret
         where TTo : class
     {
         Assert.Is<TTo>(value);
+        
         return Unsafe.As<TTo>(value);
     }
 }

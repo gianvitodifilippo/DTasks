@@ -50,6 +50,8 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private IDAsyncSurrogator? _surrogator;
     private IDAsyncCancellationProvider? _cancellationProvider;
     private IDAsyncSuspensionHandler? _suspensionHandler;
+    
+    private Dictionary<DTask, DTaskSurrogate>? _surrogates;
 
 #if DEBUG
     private string? _stackTrace;
@@ -84,6 +86,8 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
 
     private IDAsyncSuspensionHandler SuspensionHandler => _suspensionHandler ??= _infrastructure.GetSuspensionHandler(_flowComponentProvider);
 
+    private Dictionary<DTask, DTaskSurrogate> Surrogates => _surrogates ??= [];
+    
 #if DEBUG
     public void Initialize(IDAsyncHost host, string? stackTrace)
     {
@@ -236,28 +240,22 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         field = value;
     }
 
-    [DebuggerStepThrough]
-    private static void SetNull<T>(ref T? field)
-        where T : class
-    {
-        Assert.NotNull(field);
-
-        field = null;
-    }
-
-    [DebuggerStepThrough]
-    private static void SetNull<T>(ref T? field)
-        where T : struct
-    {
-        Assert.NotNull(field);
-
-        field = null;
-    }
-
     [Conditional("DEBUG")]
     private void AssertState<TInterface>(FlowState state)
     {
-        Debug.Assert(_state == state, $"{typeof(TInterface).Name} should be exposed only when the state is '{state}'");
+        Debug.Assert(_state == state, $"{typeof(TInterface).Name} should be exposed only when the state is '{state}'. It was '{_state}'.");
+    }
+
+    [Conditional("DEBUG")]
+    private void AssertState<TInterface>(params IEnumerable<FlowState> states)
+    {
+        Debug.Assert(states.Contains(_state), GetErrorMessage(_state, states));
+
+        static string GetErrorMessage(FlowState state, IEnumerable<FlowState> states)
+        {
+            string allowedStates = string.Join(" or ", states.Select(state => $"'{state}'"));
+            return $"{typeof(TInterface).Name} should be exposed only when the state is {allowedStates}. It was '{state}'.";
+        }
     }
     
     private delegate void DehydrateContinuation(DAsyncFlow flow);
