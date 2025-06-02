@@ -12,7 +12,7 @@ internal interface IDAsyncInfrastructure
     
     RootComponentProvider RootProvider { get; }
     
-    IDAsyncRootScope RootScope { get; }
+    IDAsyncRootScope RootScope { get; } // TODO: Remove and pass it as separate field to RootComponentProvider
     
     IDAsyncTypeResolver TypeResolver { get; }
     

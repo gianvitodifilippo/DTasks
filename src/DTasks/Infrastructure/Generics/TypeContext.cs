@@ -17,6 +17,10 @@ internal sealed class TypeContext<T> : ITypeContext
     }
     
     public Type Type => typeof(T);
+    
+    public Type GenericType => throw NotGeneric();
+
+    public bool IsGeneric => false;
 
     public void Execute<TAction>(ref TAction action)
         where TAction : ITypeAction
@@ -29,4 +33,18 @@ internal sealed class TypeContext<T> : ITypeContext
     {
         return action.Invoke<T>();
     }
+
+    public void ExecuteGeneric<TAction>(ref TAction action)
+        where TAction : IGenericTypeAction
+    {
+        throw NotGeneric();
+    }
+
+    public TReturn ExecuteGeneric<TAction, TReturn>(ref TAction action)
+        where TAction : IGenericTypeAction<TReturn>
+    {
+        throw NotGeneric();
+    }
+    
+    private static InvalidOperationException NotGeneric() => new InvalidOperationException("Type context is not generic.");
 }

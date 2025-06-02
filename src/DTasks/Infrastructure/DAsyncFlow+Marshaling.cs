@@ -19,6 +19,9 @@ internal sealed partial class DAsyncFlow
     //     parameterTypes: [typeof(Dictionary<,>).MakeGenericType(typeof(int), Type.MakeGenericMethodParameter(0)), typeof(int)]);
 
     internal static void ConfigureMarshaling(IMarshalingConfigurationBuilder builder) => builder
+        .RegisterSurrogatableType<object>()
+        .RegisterSurrogatableType<IDAsyncRunnable>()
+        .RegisterSurrogatableType<DTask>()
         .RegisterTypeId(typeof(IndirectionStateMachine), nameof(IndirectionStateMachine));
         // .RegisterSurrogatableType<object>()
         // .RegisterSurrogatableType<DTask>()

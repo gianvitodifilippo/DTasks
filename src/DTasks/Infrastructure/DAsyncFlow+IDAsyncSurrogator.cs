@@ -1,4 +1,6 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using DTasks.Infrastructure.Generics;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Marshaling;
 using DTasks.Utils;
@@ -13,6 +15,18 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
     {
         if (value is DTask task)
         {
+            Type taskType = task.GetType();
+            ITypeContext typeContext = FindBestDTaskTypeContext(taskType);
+
+            if (typeContext.Type == typeof(DTask))
+            {
+                
+            }
+            else if (typeContext.IsGeneric && typeContext.GenericType == typeof(DTask<>))
+            {
+                
+            }
+            
             if (!Surrogates.TryGetValue(task, out DTaskSurrogate? taskSurrogate))
                 throw new MarshalingException($"DTask '{task}' cannot be marshaled, as it was not awaited directly or through another awaitable.");
         
@@ -80,5 +94,24 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
 
             return value;
         }
+    }
+
+    private ITypeContext FindBestDTaskTypeContext(Type taskType)
+    {
+        // TODO: Create a custom component for this logic
+
+        Type? type = taskType;
+        while (type is not null)
+        {
+            foreach (ITypeContext context in _infrastructure.RootScope.SurrogatableTypeContexts)
+            {
+                if (context.Type == type)
+                    return context;
+            }
+            
+            type = type.BaseType;
+        }
+
+        throw new InvalidOperationException($"Expected '{nameof(DTask)}' to have been registered as a surrogatable type.");
     }
 }

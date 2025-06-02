@@ -5,7 +5,7 @@ namespace DTasks.Infrastructure.Marshaling.Configuration;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IInfrastructureMarshalingBuilder
 {
-    IInfrastructureMarshalingBuilder SurrogateDTaskOf<T>();
+    IInfrastructureMarshalingBuilder SurrogateDTaskOf<TResult>();
     
-    IInfrastructureMarshalingBuilder AwaitWhenAllOf<T>();
+    IInfrastructureMarshalingBuilder AwaitWhenAllOf<TResult>();
 }

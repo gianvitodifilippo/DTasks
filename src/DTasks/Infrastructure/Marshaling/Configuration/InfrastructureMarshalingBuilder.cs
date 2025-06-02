@@ -4,15 +4,15 @@ namespace DTasks.Infrastructure.Marshaling.Configuration;
 
 internal sealed class InfrastructureMarshalingBuilder(IMarshalingConfigurationBuilder builder) : IInfrastructureMarshalingBuilder
 {
-    public IInfrastructureMarshalingBuilder SurrogateDTaskOf<T>()
+    public IInfrastructureMarshalingBuilder SurrogateDTaskOf<TResult>()
     {
-        builder.RegisterSurrogatableType<DTask<T>>();
+        builder.RegisterSurrogatableType(DTaskTypeContext<TResult>.Instance);
         return this;
     }
 
-    public IInfrastructureMarshalingBuilder AwaitWhenAllOf<T>()
+    public IInfrastructureMarshalingBuilder AwaitWhenAllOf<TResult>()
     {
-        DAsyncFlow.RegisterGenericTypeIds(builder, typeof(T));
+        DAsyncFlow.RegisterGenericTypeIds(builder, typeof(TResult));
         return this;
     }
 }
