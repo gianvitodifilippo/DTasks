@@ -3,14 +3,14 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace DTasks.Extensions.DependencyInjection.Infrastructure.Marshaling;
 
-internal class KeyedServiceSurrogate<TKey> : ServiceSurrogate, IKeyedServiceToken
+internal class KeyedServiceSurrogate<TKey> : ServiceSurrogate, IKeyedServiceSurrogate
     where TKey : notnull
 {
     [DisallowNull]
     public TKey? Key { get; set; }
 
     [DisallowNull]
-    object? IKeyedServiceToken.Key
+    object? IKeyedServiceSurrogate.Key
     {
         get => Key;
         set

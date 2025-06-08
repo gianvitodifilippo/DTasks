@@ -11,14 +11,17 @@ internal sealed partial class DAsyncFlow : IMarshalingFeature
     
     void IMarshalingFeature.Marshal(DTask task)
     {
-        Dictionary<DTask, DTaskSurrogate> surrogates = Surrogates;
-        if (surrogates.ContainsKey(task))
+        if (task.Status is not DTaskStatus.Pending)
+            throw new ArgumentException("Only pending DTask objects can be explicitly marshaled.", nameof(task));
+        
+        Dictionary<DTask, DAsyncId> handleIds = HandleIds;
+        if (handleIds.ContainsKey(task))
             return;
 
-        DTaskSurrogate surrogate = DTaskSurrogate.Create(task, _idFactory);
-        surrogates.Add(task, surrogate);
+        DAsyncId id = _idFactory.NewId();
+        handleIds.Add(task, id);
 
-        Assign(ref _marshalingId, surrogate.Id);
+        Assign(ref _marshalingId, id);
         ((IDAsyncRunnable)task).Run(this);
     }
 

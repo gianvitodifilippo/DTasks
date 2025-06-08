@@ -19,7 +19,6 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private readonly DAsyncIdFactory _idFactory;
     private readonly HostComponentProvider _hostComponentProvider;
     private readonly FlowComponentProvider _flowComponentProvider;
-    private readonly DTaskSurrogateConverter _taskSurrogateConverter;
     private readonly Dictionary<object, object?> _flowProperties;
     
     private FlowState _state;
@@ -52,7 +51,7 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private IDAsyncCancellationProvider? _cancellationProvider;
     private IDAsyncSuspensionHandler? _suspensionHandler;
     
-    private Dictionary<DTask, DTaskSurrogate>? _surrogates;
+    private Dictionary<DTask, DAsyncId>? _handleIds;
 
 #if DEBUG
     private string? _stackTrace;
@@ -65,7 +64,6 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         _idFactory = idFactory;
         _hostComponentProvider = infrastructure.RootProvider.CreateHostProvider(this);
         _flowComponentProvider = _hostComponentProvider.CreateFlowProvider(this);
-        _taskSurrogateConverter = new DTaskSurrogateConverter(this);
         _flowProperties = [];
         
         _state = FlowState.Idling;
@@ -87,7 +85,7 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
 
     private IDAsyncSuspensionHandler SuspensionHandler => _suspensionHandler ??= _infrastructure.GetSuspensionHandler(_flowComponentProvider);
 
-    private Dictionary<DTask, DTaskSurrogate> Surrogates => _surrogates ??= [];
+    private Dictionary<DTask, DAsyncId> HandleIds => _handleIds ??= [];
     
 #if DEBUG
     public void Initialize(IDAsyncHost host, string? stackTrace)

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 namespace DTasks.Infrastructure.Marshaling;
 
@@ -10,16 +11,16 @@ public abstract class DAsyncSurrogator : IDAsyncSurrogator
     {
     }
 
-    public abstract bool TrySurrogate<T, TAction>(in T value, scoped ref TAction action)
-        where TAction : struct, ISurrogationAction
+    public abstract bool TrySurrogate<T, TMarshaller>(in T value, scoped ref TMarshaller marshaller)
+        where TMarshaller : IMarshaller
 #if NET9_0_OR_GREATER
         , allows ref struct;
 #else
         ;
 #endif
 
-    public abstract bool TryRestore<T, TAction>(TypeId typeId, scoped ref TAction action)
-        where TAction : struct, IRestorationAction
+    public abstract bool TryRestore<T, TUnmarshaller>(TypeId typeId, scoped ref TUnmarshaller unmarshaller, [MaybeNullWhen(false)] out T value)
+        where TUnmarshaller : IUnmarshaller
 #if NET9_0_OR_GREATER
         , allows ref struct;
 #else
@@ -38,32 +39,37 @@ public abstract class DAsyncSurrogator : IDAsyncSurrogator
 
     private sealed class DefaultDAsyncSurrogator : DAsyncSurrogator
     {
-        public override bool TrySurrogate<T, TAction>(in T value, scoped ref TAction action) => false;
+        public override bool TrySurrogate<T, TMarshaller>(in T value, scoped ref TMarshaller marshaller) => false;
 
-        public override bool TryRestore<T, TAction>(TypeId typeId, scoped ref TAction action) => false;
+        public override bool TryRestore<T, TUnmarshaller>(TypeId typeId, scoped ref TUnmarshaller unmarshaller, [MaybeNullWhen(false)] out T value)
+        {
+            value = default;
+            return false;
+        }
     }
 
     private sealed class AggregateDAsyncSurrogator(ImmutableArray<IDAsyncSurrogator> surrogators) : DAsyncSurrogator
     {
-        public override bool TrySurrogate<T, TAction>(in T value, scoped ref TAction action)
+        public override bool TrySurrogate<T, TMarshaller>(in T value, scoped ref TMarshaller marshaller)
         {
             foreach (IDAsyncSurrogator surrogator in surrogators)
             {
-                if (surrogator.TrySurrogate(in value, ref action))
+                if (surrogator.TrySurrogate(in value, ref marshaller))
                     return true;
             }
 
             return false;
         }
 
-        public override bool TryRestore<T, TAction>(TypeId typeId, scoped ref TAction action)
+        public override bool TryRestore<T, TUnmarshaller>(TypeId typeId, scoped ref TUnmarshaller unmarshaller, [MaybeNullWhen(false)] out T value)
         {
             foreach (IDAsyncSurrogator surrogator in surrogators)
             {
-                if (surrogator.TryRestore<T, TAction>(typeId, ref action))
+                if (surrogator.TryRestore(typeId, ref unmarshaller, out value))
                     return true;
             }
 
+            value = default;
             return false;
         }
     }

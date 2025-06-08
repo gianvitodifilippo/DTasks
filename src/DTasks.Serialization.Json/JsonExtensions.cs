@@ -8,9 +8,11 @@ namespace DTasks.Serialization.Json;
 
 internal static class JsonExtensions
 {
-    public static void WriteTypeId(this Utf8JsonWriter writer, string propertyName, TypeId typeId)
+    private static ReadOnlySpan<byte> TypeIdPropertyName => "@dtasks.tid"u8;
+    
+    public static void WriteTypeIdProperty(this Utf8JsonWriter writer, TypeId typeId)
     {
-        writer.WriteString(propertyName, typeId.ToString());
+        writer.WriteString(TypeIdPropertyName, typeId.ToString());
     }
 
     public static void WriteDAsyncId(this Utf8JsonWriter writer, string propertyName, DAsyncId id)

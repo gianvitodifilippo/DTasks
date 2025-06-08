@@ -39,5 +39,7 @@ public static class DAsyncMarshaling
             ThrowHelper.ThrowIfNull(continuation);
             DTask.ThrowInvalidAwait();
         }
+        
+        public static MarshalDTaskAwaitable FromResult() => default;
     }
 }

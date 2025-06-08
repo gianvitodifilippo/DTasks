@@ -905,8 +905,9 @@ public sealed class DAsyncFlowTests
         await _sut.StartAsync(task, _cancellationToken);
         
         // Assert (1)
-        await _stack.Received(1).DehydrateAsync(Suspending(m2Id, default), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
         await _stack.Received(1).DehydrateAsync(Suspending(m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Suspending(m2Id, default), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Resuming(m1Id), _cancellationToken);
         await _stack.Received(1).DehydrateAsync(Suspending(yieldId, m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
         await _suspensionHandler.Received(1).OnYieldAsync(yieldId, _cancellationToken);
         await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);

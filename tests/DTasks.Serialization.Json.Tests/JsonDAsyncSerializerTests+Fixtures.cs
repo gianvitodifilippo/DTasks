@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -263,8 +264,8 @@ public partial class JsonStateMachineSerializerTests
 
             string stateMachine1Json = $$"""
                 {
-                  "$typeId": "{{StateMachine1.TypeId}}",
-                  "$parentId": "{{Convert.ToBase64String(parentId1Bytes)}}",
+                  "@dtasks.tid": "{{StateMachine1.TypeId}}",
+                  "@dtasks.pid": "{{Convert.ToBase64String(parentId1Bytes)}}",
                   "__this": {
                     "@dtasks.tid": null,
                     "surrogate": "{{surrogate1}}"
@@ -280,8 +281,8 @@ public partial class JsonStateMachineSerializerTests
 
             string stateMachine2Json = $$"""
                 {
-                  "$typeId": "{{StateMachine2.TypeId}}",
-                  "$parentId": "{{Convert.ToBase64String(parentId2Bytes)}}",
+                  "@dtasks.tid": "{{StateMachine2.TypeId}}",
+                  "@dtasks.pid": "{{Convert.ToBase64String(parentId2Bytes)}}",
                   "__this": {
                     "@dtasks.tid": null,
                     "surrogate": "{{surrogate2}}"
@@ -351,58 +352,56 @@ public partial class JsonStateMachineSerializerTests
         string StateMachine1Json,
         string StateMachine2Json);
 
-    private class MockDAsyncSurrogator(JsonDTaskConverterFixture fixture) : IDAsyncSurrogator, ISurrogateConverter
+    private class MockDAsyncSurrogator(JsonDTaskConverterFixture fixture) : IDAsyncSurrogator
     {
-        public bool TrySurrogate<T, TAction>(in T value, scoped ref TAction action)
-            where TAction : struct, ISurrogationAction
+        public bool TrySurrogate<T, TMarshaller>(in T value, scoped ref TMarshaller marshaller)
+            where TMarshaller : IMarshaller
 #if NET9_0_OR_GREATER
             , allows ref struct
 #endif
         {
             if (ReferenceEquals(value, fixture.Services.Service1))
             {
-                action.SurrogateAs(default, nameof(Service1));
+                marshaller.WriteSurrogate(default, nameof(Service1));
                 return true;
             }
 
             if (ReferenceEquals(value, fixture.Services.Service2))
             {
-                action.SurrogateAs(default, nameof(Service2));
+                marshaller.WriteSurrogate(default, nameof(Service2));
                 return true;
             }
 
             return false;
         }
 
-        public bool TryRestore<T, TAction>(TypeId typeId, scoped ref TAction action)
-            where TAction : struct, IRestorationAction
+        public bool TryRestore<T, TUnmarshaller>(TypeId typeId, scoped ref TUnmarshaller unmarshaller, [MaybeNullWhen(false)] out T value)
+            where TUnmarshaller : IUnmarshaller
 #if NET9_0_OR_GREATER
             , allows ref struct
 #endif
         {
             if (typeof(T) == typeof(Service1))
             {
-                action.RestoreAs(typeof(string), this);
+                string surrogate = unmarshaller.ReadSurrogate<string>(typeof(string));
+                if (surrogate != nameof(Service1))
+                    throw FailException.ForFailure($"Expected Service1 to have been surrogated as the string \"{nameof(Service1)}\".");
+                
+                value = (T)(object)fixture.Services.Service1;
                 return true;
             }
-
             if (typeof(T) == typeof(Service2))
             {
-                action.RestoreAs(typeof(string), this);
+                string surrogate = unmarshaller.ReadSurrogate<string>(typeof(string));
+                if (surrogate != nameof(Service2))
+                    throw FailException.ForFailure($"Expected Service2 to have been surrogated as the string \"{nameof(Service2)}\".");
+                
+                value = (T)(object)fixture.Services.Service2;
                 return true;
             }
 
+            value = default;
             return false;
-        }
-
-        public T Convert<TSurrogate, T>(TSurrogate surrogate)
-        {
-            return surrogate switch
-            {
-                nameof(Service1) => (T)(object)fixture.Services.Service1,
-                nameof(Service2) => (T)(object)fixture.Services.Service2,
-                _ => throw new ArgumentException("Invalid surrogate", nameof(surrogate))
-            };
         }
     }
 }

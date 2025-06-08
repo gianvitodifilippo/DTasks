@@ -2,4 +2,4 @@ using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Infrastructure.Fakes;
 
-internal sealed record FakeSurrogatedValue(TypeId TypeId, object? Value);
+internal sealed record FakeSurrogatedArray(TypeId TypeId, object?[] Items);

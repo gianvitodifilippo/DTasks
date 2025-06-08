@@ -59,7 +59,8 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
                 self._state = FlowState.Running;
                 self._marshalingId = null;
-                self._stateMachine.MoveNext();
+                Assign(ref self._dehydrateContinuation, static self => self.AwaitHydrate());
+                self._stateMachine.Suspend();
             });
             stateMachine.Start(this);
             stateMachine.Suspend();

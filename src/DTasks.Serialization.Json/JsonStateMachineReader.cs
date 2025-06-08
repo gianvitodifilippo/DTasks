@@ -19,13 +19,13 @@ internal ref struct JsonStateMachineReader(ReadOnlySpan<byte> bytes, JsonSeriali
         _reader.ExpectToken(JsonTokenType.StartObject);
 
         _reader.MoveNext();
-        _reader.ExpectPropertyName("$typeId");
+        _reader.ExpectPropertyName("@dtasks.tid");
 
         _reader.MoveNext();
         TypeId typeId = _reader.ReadTypeId();
 
         _reader.MoveNext();
-        _reader.ExpectPropertyName("$parentId");
+        _reader.ExpectPropertyName("@dtasks.pid");
 
         _reader.MoveNext();
         DAsyncId parentId = _reader.ReadDAsyncId();

@@ -5,26 +5,28 @@ namespace DTasks.Infrastructure.Fakes;
 
 internal class FakeStateMachineReader(Dictionary<string, object?> values, IDAsyncSurrogator surrogator)
 {
-    public bool ReadField<TField>(string fieldName, ref TField value)
+    public bool ReadField<TField>(string fieldName, ref TField? value)
     {
         if (!values.Remove(fieldName, out object? untypedValue))
             return false;
 
         if (untypedValue is FakeSurrogatedValue surrogatedValue)
         {
-            FakeRestorationAction<TField> action =
-#if NET9_0_OR_GREATER
-                new(surrogatedValue, ref value);
-#else
-                new(surrogatedValue);
-#endif
-
-            if (!surrogator.TryRestore<TField, FakeRestorationAction<TField>>(surrogatedValue.TypeId, ref action))
+            FakeValueUnmarshaller unmarshaller = new(surrogatedValue.Value);
+            
+            if (!surrogator.TryRestore(surrogatedValue.TypeId, ref unmarshaller, out value))
                 throw FailException.ForFailure("Surrogator should be able to restore its own surrogate.");
+            
+            return true;
+        }
 
-#if !NET9_0_OR_GREATER
-            value = action.Value!;
-#endif
+        if (untypedValue is FakeSurrogatedArray surrogatedArray)
+        {
+            FakeArrayUnmarshaller unmarshaller = new(surrogatedArray.Items);
+
+            if (!surrogator.TryRestore(surrogatedArray.TypeId, ref unmarshaller, out value))
+                throw FailException.ForFailure("Surrogator should be able to restore its own surrogate.");
+            
             return true;
         }
 
@@ -33,37 +35,54 @@ internal class FakeStateMachineReader(Dictionary<string, object?> values, IDAsyn
     }
 }
 
-
-#if NET9_0_OR_GREATER
-internal readonly ref struct FakeRestorationAction<TField>(FakeSurrogatedValue surrogatedValue, ref TField value) : IRestorationAction
+internal sealed class FakeValueUnmarshaller(object? value) : IUnmarshaller
 {
-    private readonly ref TField _value = ref value;
-
-    public void RestoreAs<TConverter>(Type surrogateType, scoped ref TConverter converter)
-        where TConverter : struct, ISurrogateConverter
+    public TSurrogate ReadSurrogate<TSurrogate>(Type surrogateType)
     {
-        RestoreAs(surrogateType, converter);
+        if (value is not TSurrogate surrogate)
+            throw FailException.ForFailure($"Value was not of type '{typeof(TSurrogate).FullName}'.");
+
+        return surrogate;
     }
 
-    public void RestoreAs(Type surrogateType, ISurrogateConverter converter)
+    public void BeginArray()
     {
-        _value = surrogatedValue.Convert<TField>(surrogateType, converter);
+        throw FailException.ForFailure("Value was not marshaled as an array.");
+    }
+
+    public void EndArray()
+    {
+        throw FailException.ForFailure("Value was not marshaled as an array.");
+    }
+
+    public T ReadItem<T>()
+    {
+        throw FailException.ForFailure("Value was not marshaled as an array.");
     }
 }
-#else
-internal struct FakeRestorationAction<TField>(FakeSurrogatedValue surrogatedValue) : IRestorationAction
-{
-    public TField? Value { get; private set; }
 
-    public void RestoreAs<TConverter>(Type surrogateType, scoped ref TConverter converter)
-        where TConverter : struct, ISurrogateConverter
+internal sealed class FakeArrayUnmarshaller(object?[] items) : IUnmarshaller
+{
+    private int _readCount;
+    
+    public TSurrogate ReadSurrogate<TSurrogate>(Type surrogateType)
     {
-        RestoreAs(surrogateType, converter);
+        throw FailException.ForFailure("Value was not marshaled as an object.");
     }
 
-    public void RestoreAs(Type surrogateType, ISurrogateConverter converter)
+    public void BeginArray()
     {
-        Value = surrogatedValue.Convert<TField>(surrogateType, converter);
+    }
+
+    public void EndArray()
+    {
+    }
+
+    public T ReadItem<T>()
+    {
+        if (items[_readCount++] is not T value)
+            throw FailException.ForFailure($"Item was not of type '{typeof(T).FullName}'.");
+
+        return value;
     }
 }
-#endif

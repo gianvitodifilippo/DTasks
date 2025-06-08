@@ -8,11 +8,11 @@ internal class ChildDAsyncSurrogator(
     IDAsyncTypeResolver typeResolver,
     IRootDAsyncSurrogator rootSurrogator) : ServiceProviderDAsyncSurrogator(provider, register, typeResolver), IChildServiceMapper
 {
-    protected override bool TrySurrogate<T, TAction>(in T value, scoped ref TAction action)
+    public override bool TrySurrogate<T, TAction>(in T value, scoped ref TAction marshaller)
     {
         return
-            base.TrySurrogate(in value, ref action) ||
-            rootSurrogator.TrySurrogate(in value, ref action);
+            base.TrySurrogate(in value, ref marshaller) ||
+            rootSurrogator.TrySurrogate(in value, ref marshaller);
     }
 
     public new void MapService(object service, ServiceSurrogate surrogate) => base.MapService(service, surrogate);

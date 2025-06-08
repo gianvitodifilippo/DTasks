@@ -132,7 +132,7 @@ public partial class JsonStateMachineSerializerTests
         stateMachine2.local1.Should().BeSameAs(stateMachine2.local2!.Reference);
         stateMachine2.local2.PolymorphicReference.Should().BeSameAs(stateMachine2.local3!.PolymorphicReference);
     }
-
+    
     [Fact]
     public void CreateInspector_ShouldCreateWorkingInspector()
     {

@@ -1,11 +1,12 @@
 ﻿using System.Collections.Frozen;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using DTasks.Infrastructure.Marshaling;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Extensions.DependencyInjection.Infrastructure.Marshaling;
 
-internal class ServiceProviderDAsyncSurrogator : IDAsyncSurrogator, ISurrogateConverter
+internal class ServiceProviderDAsyncSurrogator : IDAsyncSurrogator
 {
     private static readonly FrozenSet<Type> s_surrogateTypes = FrozenSet.ToFrozenSet([
         typeof(ServiceSurrogate),
@@ -33,18 +34,8 @@ internal class ServiceProviderDAsyncSurrogator : IDAsyncSurrogator, ISurrogateCo
         _surrogates.Add(service, surrogate);
     }
 
-    bool IDAsyncSurrogator.TrySurrogate<T, TAction>(in T value, scoped ref TAction action)
-    {
-        return TrySurrogate(in value, ref action);
-    }
-
-    bool IDAsyncSurrogator.TryRestore<T, TAction>(TypeId typeId, scoped ref TAction action)
-    {
-        return TryRestore<T, TAction>(typeId, ref action);
-    }
-
-    protected virtual bool TrySurrogate<T, TAction>(in T value, scoped ref TAction action)
-        where TAction : struct, ISurrogationAction
+    public virtual bool TrySurrogate<T, TMarshaller>(in T value, scoped ref TMarshaller marshaller)
+        where TMarshaller : IMarshaller
 #if NET9_0_OR_GREATER
         , allows ref struct
 #endif
@@ -57,27 +48,27 @@ internal class ServiceProviderDAsyncSurrogator : IDAsyncSurrogator, ISurrogateCo
         {
             case KeyedServiceSurrogate<string> keyedSurrogate:
                 typeId = _typeResolver.GetTypeId(typeof(KeyedServiceSurrogate<string>));
-                action.SurrogateAs(typeId, keyedSurrogate);
+                marshaller.WriteSurrogate(typeId, keyedSurrogate);
                 break;
 
             case KeyedServiceSurrogate<int> keyedSurrogate:
                 typeId = _typeResolver.GetTypeId(typeof(KeyedServiceSurrogate<int>));
-                action.SurrogateAs(typeId, keyedSurrogate);
+                marshaller.WriteSurrogate(typeId, keyedSurrogate);
                 break;
 
             default:
                 Debug.Assert(surrogate.GetType() == typeof(ServiceSurrogate), $"Unexpected surrogate of type '{surrogate.GetType().Name}'.");
 
                 typeId = _typeResolver.GetTypeId(typeof(ServiceSurrogate));
-                action.SurrogateAs(typeId, surrogate);
+                marshaller.WriteSurrogate(typeId, surrogate);
                 break;
         }
 
         return true;
     }
 
-    private bool TryRestore<T, TAction>(TypeId typeId, scoped ref TAction action)
-        where TAction : struct, IRestorationAction
+    public bool TryRestore<T, TUnmarshaller>(TypeId typeId, scoped ref TUnmarshaller unmarshaller, [MaybeNullWhen(false)] out T value)
+        where TUnmarshaller : IUnmarshaller
 #if NET9_0_OR_GREATER
         , allows ref struct
 #endif
@@ -85,23 +76,20 @@ internal class ServiceProviderDAsyncSurrogator : IDAsyncSurrogator, ISurrogateCo
         Type surrogateType = _typeResolver.GetType(typeId);
 
         if (!s_surrogateTypes.Contains(surrogateType))
+        {
+            value = default;
             return false;
+        }
 
-        action.RestoreAs(surrogateType, this);
-        return true;
-    }
+        ServiceSurrogate surrogate = unmarshaller.ReadSurrogate<ServiceSurrogate>(surrogateType);
+        if (!_register.IsDAsyncService(surrogate.TypeId, out Type? serviceType))
+            throw new InvalidOperationException("Invalid surrogate.");
 
-    public T Convert<TSurrogate, T>(TSurrogate surrogate)
-    {
-        if (surrogate is not ServiceSurrogate serviceToken || !_register.IsDAsyncService(serviceToken.TypeId, out Type? serviceType))
-            throw new ArgumentException("Invalid surrogate.", nameof(surrogate));
-
-        object service = serviceToken is IKeyedServiceToken { Key: var serviceKey }
+        object service = surrogate is IKeyedServiceSurrogate { Key: var serviceKey }
             ? _provider.GetRequiredKeyedService(serviceType, serviceKey)
             : _provider.GetRequiredService(serviceType);
-
-        return service is not T value
-            ? throw new InvalidOperationException("The surrogate is not compatible with the type of the required value.")
-            : value;
+        
+        value = (T)service;
+        return true;
     }
 }

@@ -69,8 +69,6 @@ public abstract class DTask : IDAsyncRunnable
 
     protected virtual CancellationToken CancellationTokenCore => throw new NotImplementedException($"If a DTask can be '{DTaskStatus.Canceled}', then it should override {nameof(CancellationTokenCore)}.");
 
-    internal virtual TReturn Accept<TReturn>(IDTaskVisitor<TReturn> visitor) => visitor.Visit(this);
-
     void IDAsyncRunnable.Run(IDAsyncRunner runner) => Run(runner);
 
     protected abstract void Run(IDAsyncRunner runner);
@@ -218,8 +216,6 @@ public abstract class DTask<TResult> : DTask
     }
 
     protected virtual TResult ResultCore => throw new NotImplementedException($"If a DTask can be '{DTaskStatus.Succeeded}', then it should override {nameof(ResultCore)}.");
-
-    internal override TReturn Accept<TReturn>(IDTaskVisitor<TReturn> visitor) => visitor.Visit(this);
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     public new Awaiter GetAwaiter() => new(this);

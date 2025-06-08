@@ -63,6 +63,13 @@ public partial class DynamicStateMachineInspectorTests
             method.DeclaringType == typeof(IAwaiterManager);
     }
 
+    private static Expression<Predicate<MethodInfo>> CreateFromExceptionMethod()
+    {
+        return method =>
+            method.Name == nameof(IAwaiterManager.CreateFromException) &&
+            method.DeclaringType == typeof(IAwaiterManager);
+    }
+
     private static Expression<Predicate<MethodInfo>> BuilderCreateMethod()
     {
         return method =>
@@ -90,6 +97,13 @@ public partial class DynamicStateMachineInspectorTests
             method.Name == nameof(DTask.FromResult) &&
             method.GetGenericArguments()[0].IsGenericParameter &&
             method.DeclaringType == typeof(DTask);
+    }
+
+    private static Expression<Predicate<MethodInfo>> DTaskFromExceptionMethod(Type resultType)
+    {
+        return method =>
+            method.Name == nameof(DTask.FromException) &&
+            method.DeclaringType == typeof(DTask<>).MakeGenericType(resultType);
     }
 
     private static Expression<Predicate<MethodInfo>> GetTypeFromHandleMethod()

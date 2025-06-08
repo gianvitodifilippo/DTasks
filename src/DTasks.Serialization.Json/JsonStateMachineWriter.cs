@@ -28,8 +28,8 @@ internal readonly ref struct JsonStateMachineWriter(IBufferWriter<byte> buffer, 
         where TStateMachine : notnull
     {
         _writer.WriteStartObject();
-        _writer.WriteTypeId("$typeId", typeId);
-        _writer.WriteDAsyncId("$parentId", context.ParentId);
+        _writer.WriteTypeIdProperty(typeId);
+        _writer.WriteDAsyncId("@dtasks.pid", context.ParentId);
         suspender.Suspend(ref stateMachine, context, in this);
         _writer.WriteEndObject();
         _writer.Flush();

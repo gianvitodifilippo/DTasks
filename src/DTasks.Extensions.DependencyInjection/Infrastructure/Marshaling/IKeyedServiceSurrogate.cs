@@ -2,7 +2,7 @@
 
 namespace DTasks.Extensions.DependencyInjection.Infrastructure.Marshaling;
 
-internal interface IKeyedServiceToken
+internal interface IKeyedServiceSurrogate
 {
     [DisallowNull]
     object? Key { get; set; }

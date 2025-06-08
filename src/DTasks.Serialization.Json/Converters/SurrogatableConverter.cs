@@ -1,9 +1,8 @@
-﻿using System.Text.Json;
+﻿using System.Buffers;
+using System.Diagnostics;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using DTasks.Infrastructure.Marshaling;
-#if NET9_0_OR_GREATER
-using System.Runtime.CompilerServices;
-#endif
 
 namespace DTasks.Serialization.Json.Converters;
 
@@ -18,30 +17,44 @@ internal sealed class SurrogatableConverter<TSurrogatable>(IDAsyncSurrogator sur
         reader.MoveNext();
 
 #if NET9_0_OR_GREATER
-        RestorationAction restorationAction = new(ref reader, options);
-        if (!surrogator.TryRestore<TSurrogatable, RestorationAction>(typeId, ref restorationAction))
+        JsonUnmarshaller unmarshaller = new(ref reader, options);
+        if (!surrogator.TryRestore(typeId, ref unmarshaller, out TSurrogatable? value))
             throw new InvalidOperationException("Could not restore a surrogated value."); // TODO: Make consistent with similar errors in solution
 
-        reader.ExpectToken(JsonTokenType.EndObject);
-
-        return restorationAction.Value;
-#else
-        if (!surrogator.TryRestore<TSurrogatable>(typeId, out RestorationResult result))
-            throw new InvalidOperationException("Could not restore a surrogated value."); // TODO: Make consistent with similar errors in solution
-
-        object? surrogate = JsonSerializer.Deserialize(ref reader, result.SurrogateType, options);
         reader.MoveNext();
-
         reader.ExpectToken(JsonTokenType.EndObject);
 
-        return result.Converter.Convert<object?, TSurrogatable>(surrogate);
+        return value;
+#else
+        Utf8JsonReader peekingReader = reader;
+        int bufferSize = GetBufferSize(ref peekingReader);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+        try
+        {
+            Span<byte> bufferSpan = buffer.AsSpan(0, bufferSize);
+            FillBuffer(ref bufferSpan, ref reader);
+            
+            Debug.Assert(bufferSpan.Length == 0, "The buffer should have been filled.");
+            Debug.Assert(reader.BytesConsumed == peekingReader.BytesConsumed, "Expected the reader to have consumed as many bytes as its copy.");
+            JsonUnmarshaller unmarshaller = new(buffer, bufferSize, reader.CurrentState.Options, options);
+            if (!surrogator.TryRestore(typeId, ref unmarshaller, out TSurrogatable? value))
+                throw new InvalidOperationException("Could not restore a surrogated value."); // TODO: Make consistent with similar errors in solution
+            
+            reader.MoveNext();
+            reader.ExpectToken(JsonTokenType.EndObject);
+            return value;
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
 #endif
     }
 
     public override void Write(Utf8JsonWriter writer, TSurrogatable value, JsonSerializerOptions options)
     {
-        SurrogationAction surrogationAction = new(writer, options);
-        if (surrogator.TrySurrogate(in value, ref surrogationAction))
+        JsonMarshaller marshaller = new(writer, options);
+        if (surrogator.TrySurrogate(in value, ref marshaller))
             return;
 
         WriteNonSurrogated(writer, value);
@@ -88,55 +101,127 @@ internal sealed class SurrogatableConverter<TSurrogatable>(IDAsyncSurrogator sur
             return false;
         }
     }
-
-#if NET9_0_OR_GREATER
-    private ref struct RestorationAction(
-        ref Utf8JsonReader reader,
-        JsonSerializerOptions options) : IRestorationAction
+    
+#if !NET9_0_OR_GREATER
+    private static int GetBufferSize(ref Utf8JsonReader reader)
     {
-        private ref ReinterpretMeAsUtf8JsonReader _reader = ref Unsafe.As<Utf8JsonReader, ReinterpretMeAsUtf8JsonReader>(ref reader);
-
-        public TSurrogatable? Value { get; private set; }
-
-        public void RestoreAs<TConverter>(Type surrogateType, scoped ref TConverter converter)
-            where TConverter : struct, ISurrogateConverter
+        return reader.TokenType switch
         {
-            object? surrogate = ReadSurrogate(surrogateType);
-            Value = converter.Convert<object?, TSurrogatable>(surrogate);
-        }
+            JsonTokenType.StartObject => GetObjectBufferSize(ref reader),
+            JsonTokenType.StartArray => GetArrayBufferSize(ref reader),
+            JsonTokenType.String => reader.ValueSpan.Length + 2 * "\""u8.Length,
+            JsonTokenType.EndObject or JsonTokenType.EndArray => throw new JsonException($"Unexpected token type '{reader.TokenType}'."),
+            _ => reader.ValueSpan.Length
+        };
 
-        public void RestoreAs(Type surrogateType, ISurrogateConverter converter)
+        static int GetObjectBufferSize(ref Utf8JsonReader reader)
         {
-            object? surrogate = ReadSurrogate(surrogateType);
-            Value = converter.Convert<object?, TSurrogatable>(surrogate);
-        }
+            int length = "{}"u8.Length;
 
-        private object? ReadSurrogate(Type surrogateType)
-        {
-            ref Utf8JsonReader reader = ref Unsafe.As<ReinterpretMeAsUtf8JsonReader, Utf8JsonReader>(ref _reader);
-            object? surrogate = JsonSerializer.Deserialize(ref reader, surrogateType, options);
             reader.MoveNext();
-            return surrogate;
+            while (reader.TokenType != JsonTokenType.EndObject)
+            {
+                reader.ExpectToken(JsonTokenType.PropertyName);
+                length += reader.ValueSpan.Length + 2 * "\""u8.Length + ":"u8.Length;
+                reader.MoveNext();
+
+                length += GetBufferSize(ref reader);
+                reader.MoveNext();
+            }
+            
+            return length;
         }
 
-        // The compiler won't let us store a reference to the Utf8JsonReader, since it is a ref struct.
-        // This allows us to bypass that check. At the same time, we must make sure that we don't misuse the reference.
-        private struct ReinterpretMeAsUtf8JsonReader;
+        static int GetArrayBufferSize(ref Utf8JsonReader reader)
+        {
+            int length = "[]"u8.Length;
+
+            reader.MoveNext();
+            while (reader.TokenType != JsonTokenType.EndArray)
+            {
+                length += GetBufferSize(ref reader) + ","u8.Length;
+                reader.MoveNext();
+            }
+            
+            return length;
+        }
+    }
+
+    private static void FillBuffer(ref Span<byte> buffer, ref Utf8JsonReader reader)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.StartObject:
+                FillBufferWithObject(ref buffer, ref reader);
+                break;
+            
+            case JsonTokenType.StartArray:
+                FillBufferWithArray(ref buffer, ref reader);
+                break;
+            
+            case JsonTokenType.String:
+                "\""u8.CopyTo(buffer);
+                buffer = buffer["\""u8.Length..];
+                reader.ValueSpan.CopyTo(buffer);
+                buffer = buffer[reader.ValueSpan.Length..];
+                "\""u8.CopyTo(buffer);
+                buffer = buffer["\""u8.Length..];
+                break;
+            
+            case JsonTokenType.EndObject:
+            case JsonTokenType.EndArray:
+                throw new JsonException($"Unexpected token type '{reader.TokenType}'.");
+            
+            default:
+                reader.ValueSpan.CopyTo(buffer);
+                break;
+        }
+
+        static void FillBufferWithObject(ref Span<byte> buffer, ref Utf8JsonReader reader)
+        {
+            "{"u8.CopyTo(buffer);
+            buffer = buffer["{"u8.Length..];
+            
+            reader.MoveNext();
+            while (reader.TokenType != JsonTokenType.EndObject)
+            {
+                reader.ExpectToken(JsonTokenType.PropertyName);
+                "\""u8.CopyTo(buffer);
+                buffer = buffer["\""u8.Length..];
+                reader.ValueSpan.CopyTo(buffer);
+                buffer = buffer[reader.ValueSpan.Length..];
+                "\":"u8.CopyTo(buffer);
+                buffer = buffer["\":"u8.Length..];
+                
+                FillBuffer(ref buffer, ref reader);
+                reader.MoveNext();
+                
+                ","u8.CopyTo(buffer);
+                buffer = buffer[","u8.Length..];
+            }
+            
+            "}"u8.CopyTo(buffer);
+            buffer = buffer["}"u8.Length..];
+        }
+
+        static void FillBufferWithArray(ref Span<byte> buffer, ref Utf8JsonReader reader)
+        {
+            "["u8.CopyTo(buffer);
+            buffer = buffer["["u8.Length..];
+            
+            reader.MoveNext();
+            while (reader.TokenType != JsonTokenType.EndArray)
+            {
+                FillBuffer(ref buffer, ref reader);
+                reader.MoveNext();
+                
+                ","u8.CopyTo(buffer);
+                buffer = buffer[","u8.Length..];
+            }
+            
+            "]"u8.CopyTo(buffer);
+            buffer = buffer["}"u8.Length..];
+        }
     }
 #endif
-
-    private readonly struct SurrogationAction(Utf8JsonWriter writer, JsonSerializerOptions options) : ISurrogationAction
-    {
-        public void SurrogateAs<TSurrogate>(TypeId typeId, TSurrogate surrogate)
-        {
-            writer.WriteStartObject();
-
-            writer.WriteTypeId("@dtasks.tid", typeId);
-
-            writer.WritePropertyName("surrogate");
-            JsonSerializer.Serialize(writer, surrogate, options);
-
-            writer.WriteEndObject();
-        }
-    }
 }

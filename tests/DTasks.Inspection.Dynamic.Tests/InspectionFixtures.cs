@@ -65,6 +65,12 @@ public static class InspectionFixtures
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [readerParameterType, Type.MakeGenericMethodParameter(0)]);
 
+    public static MethodInfo GetResumeWithExceptionMethod(Type resumerType, Type readerParameterType) => resumerType.GetRequiredMethod(
+        name: InspectionConstants.ResumeMethodName,
+        genericParameterCount: 0,
+        bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+        parameterTypes: [readerParameterType, typeof(Exception)]);
+
     public class AsyncMethodContainer
     {
         private int _field = 0;
@@ -117,6 +123,8 @@ public static class InspectionFixtures
         IDAsyncRunnable Resume(ClassReader reader);
 
         IDAsyncRunnable Resume<TResult>(ClassReader reader, TResult result);
+
+        IDAsyncRunnable Resume(ClassReader reader, Exception exception);
     }
 
     public interface IStateMachineSuspender2<TStateMachine>
@@ -129,6 +137,8 @@ public static class InspectionFixtures
         IDAsyncRunnable Resume(StructReader reader);
 
         IDAsyncRunnable Resume<TResult>(StructReader reader, TResult result);
+
+        IDAsyncRunnable Resume(StructReader reader, Exception exception);
     }
 
     public interface IStateMachineSuspender3<TStateMachine>
@@ -141,6 +151,8 @@ public static class InspectionFixtures
         IDAsyncRunnable Resume(ref StructReader reader);
 
         IDAsyncRunnable Resume<TResult>(ref StructReader reader, TResult result);
+
+        IDAsyncRunnable Resume(ref StructReader reader, Exception exception);
     }
 
     public interface IStateMachineSuspender4<TStateMachine>
@@ -153,6 +165,8 @@ public static class InspectionFixtures
         IDAsyncRunnable Resume(ReaderWithSpecializedMethod reader);
 
         IDAsyncRunnable Resume<TResult>(ReaderWithSpecializedMethod reader, TResult result);
+
+        IDAsyncRunnable Resume(ReaderWithSpecializedMethod reader, Exception exception);
     }
 
     public class ClassWriter

@@ -29,16 +29,16 @@ public class ServiceProviderDAsyncSurrogatorTests
     {
         // Arrange
         Service service = new();
-        ISurrogationAction action = Substitute.For<ISurrogationAction>();
+        var marshaller = Substitute.For<IMarshaller>();
 
         RootDAsyncSurrogator sut = new(_provider, _register, _typeResolver);
 
         // Act
-        bool result = sut.TrySurrogate(in service, action);
+        bool result = sut.TrySurrogate(in service, ref marshaller);
 
         // Assert
         result.Should().BeFalse();
-        action.ReceivedCalls().Should().BeEmpty();
+        marshaller.ReceivedCalls().Should().BeEmpty();
     }
 
     [Fact]
@@ -47,18 +47,18 @@ public class ServiceProviderDAsyncSurrogatorTests
         // Arrange
         Service service = new();
         ServiceSurrogate surrogate = new();
-        ISurrogationAction action = Substitute.For<ISurrogationAction>();
+        var marshaller = Substitute.For<IMarshaller>();
 
         RootDAsyncSurrogator sut = new(_provider, _register, _typeResolver);
 
         sut.MapService(service, surrogate);
 
         // Act
-        bool result = sut.TrySurrogate(in service, action);
+        bool result = sut.TrySurrogate(in service, ref marshaller);
 
         // Assert
         result.Should().BeTrue();
-        action.Received().SurrogateAs(s_surrogateTypeId, surrogate);
+        marshaller.Received().WriteSurrogate(s_surrogateTypeId, surrogate);
     }
 
     [Fact]
@@ -66,17 +66,17 @@ public class ServiceProviderDAsyncSurrogatorTests
     {
         // Arrange
         Service service = new();
-        ISurrogationAction action = Substitute.For<ISurrogationAction>();
+        var marshaller = Substitute.For<IMarshaller>();
 
         RootDAsyncSurrogator root = new(_provider, _register, _typeResolver);
         ChildDAsyncSurrogator sut = new(_provider, _register, _typeResolver, root);
 
         // Act
-        bool result = sut.TrySurrogate(in service, action);
+        bool result = sut.TrySurrogate(in service, ref marshaller);
 
         // Assert
         result.Should().BeFalse();
-        action.ReceivedCalls().Should().BeEmpty();
+        marshaller.ReceivedCalls().Should().BeEmpty();
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class ServiceProviderDAsyncSurrogatorTests
         // Arrange
         Service service = new();
         ServiceSurrogate surrogate = new();
-        ISurrogationAction action = Substitute.For<ISurrogationAction>();
+        var marshaller = Substitute.For<IMarshaller>();
 
         RootDAsyncSurrogator root = new(_provider, _register, _typeResolver);
         ChildDAsyncSurrogator sut = new(_provider, _register, _typeResolver, root);
@@ -93,11 +93,11 @@ public class ServiceProviderDAsyncSurrogatorTests
         root.MapService(service, surrogate);
 
         // Act
-        bool result = sut.TrySurrogate(in service, action);
+        bool result = sut.TrySurrogate(in service, ref marshaller);
 
         // Assert
         result.Should().BeTrue();
-        action.Received().SurrogateAs(s_surrogateTypeId, surrogate);
+        marshaller.Received().WriteSurrogate(s_surrogateTypeId, surrogate);
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class ServiceProviderDAsyncSurrogatorTests
         // Arrange
         Service service = new();
         ServiceSurrogate surrogate = new();
-        ISurrogationAction action = Substitute.For<ISurrogationAction>();
+        var marshaller = Substitute.For<IMarshaller>();
 
         RootDAsyncSurrogator root = new(_provider, _register, _typeResolver);
         ChildDAsyncSurrogator sut = new(_provider, _register, _typeResolver, root);
@@ -114,62 +114,100 @@ public class ServiceProviderDAsyncSurrogatorTests
         sut.MapService(service, surrogate);
 
         // Act
-        bool result = sut.TrySurrogate(in service, action);
+        bool result = sut.TrySurrogate(in service, ref marshaller);
 
         // Assert
         result.Should().BeTrue();
-        action.Received().SurrogateAs(s_surrogateTypeId, surrogate);
+        marshaller.Received().WriteSurrogate(s_surrogateTypeId, surrogate);
     }
 
     [Fact]
     public void TryRestore_ReturnsFalse_WhenTokenIsOfTheWrongType()
     {
         // Arrange
-        IRestorationAction action = Substitute.For<IRestorationAction>();
+        var unmarshaller = Substitute.For<IUnmarshaller>();
 
         RootDAsyncSurrogator sut = new(_provider, _register, _typeResolver);
 
         // Act
-        bool result = sut.TryRestore<Service>(default, action);
+        bool result = sut.TryRestore(default, ref unmarshaller, out Service? service);
 
         // Assert
         result.Should().BeFalse();
-        action.ReceivedCalls().Should().BeEmpty();
+        unmarshaller.ReceivedCalls().Should().BeEmpty();
     }
 
     [Fact]
     public void TryRestore_ReturnsTrue_WhenTokenIsServiceToken()
     {
         // Arrange
-        IRestorationAction action = Substitute.For<IRestorationAction>();
+        var unmarshaller = Substitute.For<IUnmarshaller>();
+        Service expectedService = new();
+
+        _typeResolver.GetType(s_surrogateTypeId).Returns(typeof(ServiceSurrogate));
+
+        unmarshaller
+            .ReadSurrogate<ServiceSurrogate>(typeof(ServiceSurrogate))
+            .Returns(new ServiceSurrogate { TypeId = s_serviceTypeId });
+
+        _provider
+            .GetService(typeof(Service))
+            .Returns(expectedService);
+
+        _register
+            .IsDAsyncService(s_serviceTypeId, out Arg.Any<Type?>())
+            .Returns(call =>
+            {
+                call[1] = typeof(Service);
+                return true;
+            });
 
         RootDAsyncSurrogator sut = new(_provider, _register, _typeResolver);
 
         // Act
-        bool result = sut.TryRestore<Service>(s_surrogateTypeId, action);
+        bool result = sut.TryRestore(s_surrogateTypeId, ref unmarshaller, out Service? service);
 
         // Assert
         result.Should().BeTrue();
-        action.Received().RestoreAs(typeof(ServiceSurrogate), Arg.Any<ISurrogateConverter>());
+        service.Should().BeSameAs(expectedService);
+        unmarshaller.Received().ReadSurrogate<ServiceSurrogate>(typeof(ServiceSurrogate));
     }
 
     [Fact]
     public void TryRestore_ReturnsTrue_WhenTokenIsKeyedServiceToken()
     {
         // Arrange
-        IRestorationAction action = Substitute.For<IRestorationAction>();
+        var unmarshaller = Substitute.For<IUnmarshaller>();
+        string key = "key";
+        Service expectedService = new();
 
-        _typeResolver.GetTypeId(typeof(KeyedServiceSurrogate<string>)).Returns(s_surrogateTypeId);
         _typeResolver.GetType(s_surrogateTypeId).Returns(typeof(KeyedServiceSurrogate<string>));
+
+        unmarshaller
+            .ReadSurrogate<ServiceSurrogate>(typeof(KeyedServiceSurrogate<string>))
+            .Returns(new KeyedServiceSurrogate<string> { TypeId = s_serviceTypeId, Key = key });
+
+        _provider
+            .GetRequiredKeyedService(typeof(Service), key)
+            .Returns(expectedService);
+
+        _register
+            .IsDAsyncService(s_serviceTypeId, out Arg.Any<Type?>())
+            .Returns(call =>
+            {
+                call[1] = typeof(Service);
+                return true;
+            });
 
         RootDAsyncSurrogator sut = new(_provider, _register, _typeResolver);
 
         // Act
-        bool result = sut.TryRestore<Service>(s_surrogateTypeId, action);
+        bool result = sut.TryRestore(s_surrogateTypeId, ref unmarshaller, out Service? service);
 
         // Assert
         result.Should().BeTrue();
-        action.Received().RestoreAs(typeof(KeyedServiceSurrogate<string>), Arg.Any<ISurrogateConverter>());
+        service.Should().BeSameAs(expectedService);
+        unmarshaller.Received().ReadSurrogate<ServiceSurrogate>(typeof(KeyedServiceSurrogate<string>));
     }
 
     private sealed class Service;
