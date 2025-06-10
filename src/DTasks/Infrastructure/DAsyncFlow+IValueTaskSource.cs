@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
 using System.Threading.Tasks.Sources;
 using DTasks.Marshaling;
 using DTasks.Utils;
@@ -56,6 +56,10 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
             _delay = null;
             _suspensionCallback = null;
             _dehydrateContinuation = null;
+            _resultBuilder = null;
+            _handleResultHandler = null;
+            _handleId = default;
+            _nodeProperties?.Clear();
         }
         else
         {
@@ -68,6 +72,10 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
             Assert.Null(_delay);
             Assert.Null(_suspensionCallback);
             Assert.Null(_dehydrateContinuation);
+            Assert.Null(_resultBuilder);
+            Assert.Null(_handleResultHandler);
+            Assert.Default(_handleId);
+            Debug.Assert(_nodeProperties is null or { Count: 0 });
         }
 
         _heap = null;
@@ -83,8 +91,13 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
         _parentId = default;
         _id = default;
         
+        _handleIds?.Clear();
+        _completedTasks?.Clear();
+        
         // _cancellationProvider?.UnregisterHandler(this);
-        _host.OnFinalize(this);
+        
+        // TODO: Invoke this before Reset
+        // _host.OnFinalize(this);
 
         // _parent = null;
 

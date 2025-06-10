@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 using DTasks.Utils;
 
 namespace DTasks.Inspection.Dynamic;
@@ -50,7 +51,7 @@ public static class InspectionFixtures
             name: InspectionConstants.SuspendMethodName,
             genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [stateMachineType.MakeByRefType(), typeof(ISuspensionContext), writerParameterType]);
+            parameterTypes: [stateMachineType.MakeByRefType(), typeof(IDehydrationContext), writerParameterType]);
     }
 
     public static MethodInfo GetResumeWithVoidMethod(Type resumerType, Type readerParameterType) => resumerType.GetRequiredMethod(
@@ -115,7 +116,7 @@ public static class InspectionFixtures
 
     public interface IStateMachineSuspender1<TStateMachine>
     {
-        void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext, ClassWriter writer);
+        void Suspend(ref TStateMachine stateMachine, IDehydrationContext dehydrationContext, ClassWriter writer);
     }
 
     public interface IStateMachineResumer1
@@ -129,7 +130,7 @@ public static class InspectionFixtures
 
     public interface IStateMachineSuspender2<TStateMachine>
     {
-        void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext, StructWriter writer);
+        void Suspend(ref TStateMachine stateMachine, IDehydrationContext dehydrationContext, StructWriter writer);
     }
 
     public interface IStateMachineResumer2
@@ -143,7 +144,7 @@ public static class InspectionFixtures
 
     public interface IStateMachineSuspender3<TStateMachine>
     {
-        void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext, ref StructWriter writer);
+        void Suspend(ref TStateMachine stateMachine, IDehydrationContext dehydrationContext, ref StructWriter writer);
     }
 
     public interface IStateMachineResumer3
@@ -157,7 +158,7 @@ public static class InspectionFixtures
 
     public interface IStateMachineSuspender4<TStateMachine>
     {
-        void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext, WriterWithSpecializedMethod writer);
+        void Suspend(ref TStateMachine stateMachine, IDehydrationContext dehydrationContext, WriterWithSpecializedMethod writer);
     }
 
     public interface IStateMachineResumer4

@@ -1,17 +1,24 @@
 using System.Buffers;
-using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
 
 namespace DTasks.Serialization;
 
 public interface IStateMachineSerializer
 {
-    void SerializeStateMachine<TStateMachine>(IBufferWriter<byte> buffer, ISuspensionContext context, ref TStateMachine stateMachine)
+    void Serialize<TStateMachine>(IDehydrationContext context, IBufferWriter<byte> buffer, ref TStateMachine stateMachine)
         where TStateMachine : notnull;
 
-    DAsyncLink DeserializeStateMachine(IResumptionContext context, ReadOnlySpan<byte> bytes);
+    void SerializeComplete(DAsyncId id, IBufferWriter<byte> buffer);
 
-    DAsyncLink DeserializeStateMachine<TResult>(IResumptionContext context, ReadOnlySpan<byte> bytes, TResult result);
+    void SerializeComplete<TResult>(DAsyncId id, IBufferWriter<byte> buffer, TResult result);
 
-    DAsyncLink DeserializeStateMachine(IResumptionContext context, ReadOnlySpan<byte> bytes, Exception exception);
+    void SerializeComplete(DAsyncId id, IBufferWriter<byte> buffer, Exception exception);
+
+    DAsyncLink Deserialize(IHydrationContext context, ReadOnlySpan<byte> bytes);
+
+    DAsyncLink Deserialize<TResult>(IHydrationContext context, ReadOnlySpan<byte> bytes, TResult result);
+
+    DAsyncLink Deserialize(IHydrationContext context, ReadOnlySpan<byte> bytes, Exception exception);
+    
+    bool Link(ILinkContext context, Span<byte> bytes);
 }

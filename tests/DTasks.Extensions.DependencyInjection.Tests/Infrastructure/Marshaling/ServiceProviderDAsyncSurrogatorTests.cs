@@ -1,4 +1,5 @@
-﻿using DTasks.Infrastructure.Marshaling;
+﻿using DTasks.Infrastructure.Generics;
+using DTasks.Infrastructure.Marshaling;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DTasks.Extensions.DependencyInjection.Infrastructure.Marshaling;
@@ -20,8 +21,8 @@ public class ServiceProviderDAsyncSurrogatorTests
 
         _typeResolver.GetTypeId(typeof(ServiceSurrogate)).Returns(s_surrogateTypeId);
         _typeResolver.GetTypeId(typeof(Service)).Returns(s_serviceTypeId);
-        _typeResolver.GetType(s_surrogateTypeId).Returns(typeof(ServiceSurrogate));
-        _typeResolver.GetType(s_serviceTypeId).Returns(typeof(Service));
+        _typeResolver.GetTypeContext(s_surrogateTypeId).Returns(TypeContext.Of<ServiceSurrogate>());
+        _typeResolver.GetTypeContext(s_serviceTypeId).Returns(TypeContext.Of<Service>());
     }
 
     [Fact]
@@ -144,7 +145,7 @@ public class ServiceProviderDAsyncSurrogatorTests
         var unmarshaller = Substitute.For<IUnmarshaller>();
         Service expectedService = new();
 
-        _typeResolver.GetType(s_surrogateTypeId).Returns(typeof(ServiceSurrogate));
+        _typeResolver.GetTypeContext(s_surrogateTypeId).Returns(TypeContext.Of<ServiceSurrogate>());
 
         unmarshaller
             .ReadSurrogate<ServiceSurrogate>(typeof(ServiceSurrogate))
@@ -181,7 +182,7 @@ public class ServiceProviderDAsyncSurrogatorTests
         string key = "key";
         Service expectedService = new();
 
-        _typeResolver.GetType(s_surrogateTypeId).Returns(typeof(KeyedServiceSurrogate<string>));
+        _typeResolver.GetTypeContext(s_surrogateTypeId).Returns(TypeContext.Of<KeyedServiceSurrogate<string>>());
 
         unmarshaller
             .ReadSurrogate<ServiceSurrogate>(typeof(KeyedServiceSurrogate<string>))

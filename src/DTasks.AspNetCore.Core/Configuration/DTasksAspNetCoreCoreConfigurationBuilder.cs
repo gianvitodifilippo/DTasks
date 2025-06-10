@@ -4,6 +4,7 @@ using DTasks.AspNetCore.Infrastructure.Http;
 using DTasks.Configuration;
 using DTasks.Extensions.DependencyInjection.Configuration;
 using DTasks.Infrastructure.Generics;
+using DTasks.Infrastructure.Marshaling;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -59,8 +60,8 @@ internal sealed class DTasksAspNetCoreCoreConfigurationBuilder(IDependencyInject
                 }
                 
                 marshaling
-                    .RegisterTypeId(typeof(WebhookDAsyncContinuation.Surrogate))
-                    .RegisterTypeId(typeof(WebSocketsDAsyncContinuation.Surrogate));
+                    .RegisterTypeId(TypeContext.Of<WebhookDAsyncContinuation.Surrogate>(), TypeId.FromEncodedTypeName(typeof(WebhookDAsyncContinuation.Surrogate)))
+                    .RegisterTypeId(TypeContext.Of<WebSocketsDAsyncContinuation.Surrogate>(), TypeId.FromEncodedTypeName(typeof(WebSocketsDAsyncContinuation.Surrogate)));
             });
 
         return builder;
@@ -106,7 +107,7 @@ internal sealed class DTasksAspNetCoreCoreConfigurationBuilder(IDependencyInject
     {
         public void Invoke<T>()
         {
-            marshaling.RegisterTypeId(typeof(AsyncEndpointInfo<T>));
+            marshaling.RegisterTypeId(TypeContext.Of<AsyncEndpointInfo<T>>(), TypeId.FromEncodedTypeName(typeof(AsyncEndpointInfo<T>)));
         }
     }
 }

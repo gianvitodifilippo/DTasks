@@ -8,8 +8,7 @@ internal sealed partial class DAsyncFlow : IDAsyncFeatureCollection
 {
     private static readonly FrozenSet<Type> s_implementedFeatures = new[]
     {
-        typeof(ISuspensionFeature),
-        typeof(IMarshalingFeature)
+        typeof(ISuspensionFeature)
     }.ToFrozenSet();
     
     TFeature? IDAsyncFeatureCollection.GetFeature<TFeature>()

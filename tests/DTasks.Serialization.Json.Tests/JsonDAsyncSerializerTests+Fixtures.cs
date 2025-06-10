@@ -2,10 +2,10 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json.Serialization;
 using DTasks.Infrastructure;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 using DTasks.Utils;
 using Xunit.Sdk;
 
@@ -102,7 +102,7 @@ public partial class JsonStateMachineSerializerTests
 
     internal class StateMachine1Suspender : IStateMachineSuspender<StateMachine1>
     {
-        public void Suspend(ref StateMachine1 stateMachine, ISuspensionContext suspensionContext, ref readonly JsonStateMachineWriter writer)
+        public void Suspend(ref StateMachine1 stateMachine, IDehydrationContext dehydrationContext, ref readonly JsonStateMachineWriter writer)
         {
             writer.WriteField(nameof(StateMachine1.__this), stateMachine.__this);
             writer.WriteField(nameof(StateMachine1.local1), stateMachine.local1);
@@ -145,7 +145,7 @@ public partial class JsonStateMachineSerializerTests
 
     internal class StateMachine2Suspender : IStateMachineSuspender<StateMachine2>
     {
-        public void Suspend(ref StateMachine2 stateMachine, ISuspensionContext suspensionContext, ref readonly JsonStateMachineWriter writer)
+        public void Suspend(ref StateMachine2 stateMachine, IDehydrationContext dehydrationContext, ref readonly JsonStateMachineWriter writer)
         {
             writer.WriteField(nameof(StateMachine2.__this), stateMachine.__this);
             writer.WriteField(nameof(StateMachine2.local1), stateMachine.local1);

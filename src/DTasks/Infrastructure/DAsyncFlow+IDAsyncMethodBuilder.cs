@@ -41,10 +41,7 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
         
         if (((IDAsyncAwaiter)awaiter).IsCompleted)
         {
-            // To avoid possible stack dives, invoke the continuation asynchronously.
-            // Awaiting a completed Task gets the job done and saves us the bother of flowing the execution context, as the state machine box takes care of that.
-
-            Await(Task.CompletedTask);
+            Continue();
         }
         else
         {
@@ -68,7 +65,27 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
     {
         AssertState<IDAsyncMethodBuilder>(FlowState.Running);
 
+        if (_stateMachine is DTask task)
+        {
+            CompletedTasks.Add(_id, task);
+        }
+
         _stateMachine = null;
+        
+        if (TryPopNode(out _, out INodeResultHandler? resultHandler))
+        {
+            resultHandler.SetResult(this);
+            Continue();
+            return;
+        }
+
+        if (_parentId.IsDefault)
+        {
+            Assign(ref _dehydrateContinuation, static self => self.AwaitFlush());
+            AwaitDehydrateCompleted();
+            return;
+        }
+        
         _id = _parentId;
         _parentId = default;
         
@@ -85,7 +102,27 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
     {
         AssertState<IDAsyncMethodBuilder>(FlowState.Running);
 
+        if (_stateMachine is DTask task)
+        {
+            CompletedTasks.Add(_id, task);
+        }
+
         _stateMachine = null;
+        
+        if (TryPopNode(out _, out INodeResultHandler? resultHandler))
+        {
+            resultHandler.SetResult(this, result);
+            Continue();
+            return;
+        }
+
+        if (_parentId.IsDefault)
+        {
+            Assign(ref _dehydrateContinuation, static self => self.AwaitFlush());
+            AwaitDehydrateCompleted(result);
+            return;
+        }
+        
         _id = _parentId;
         _parentId = default;
         
@@ -102,7 +139,27 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
     {
         AssertState<IDAsyncMethodBuilder>(FlowState.Running);
 
+        if (_stateMachine is DTask task)
+        {
+            CompletedTasks.Add(_id, task);
+        }
+
         _stateMachine = null;
+        
+        if (TryPopNode(out _, out INodeResultHandler? resultHandler))
+        {
+            resultHandler.SetException(this, exception);
+            Continue();
+            return;
+        }
+
+        if (_parentId.IsDefault)
+        {
+            Assign(ref _dehydrateContinuation, static self => self.AwaitFlush());
+            AwaitDehydrateCompleted(exception);
+            return;
+        }
+        
         _id = _parentId;
         _parentId = default;
         
@@ -128,5 +185,13 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
         AssertState<IDAsyncMethodBuilder>(FlowState.Running);
 
         AwaitDehydrate(ref stateMachine);
+    }
+
+    private void Continue()
+    {
+        // Invokes the continuation asynchronously.
+        // This avoids stack dives and automatically flows the execution context.
+
+        Await(Task.CompletedTask);
     }
 }

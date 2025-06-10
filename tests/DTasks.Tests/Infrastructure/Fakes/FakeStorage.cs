@@ -10,18 +10,21 @@ internal class FakeStorage
     
     public IReadOnlyList<DAsyncId> Ids => _ids;
 
-    public void Write(DAsyncId id, DehydratedRunnable runnable)
+    public void WriteRunnable(DAsyncId id, DehydratedRunnable runnable)
     {
         _ids.Add(id);
         _runnables.Add(id, runnable);
     }
 
-    public DehydratedRunnable Read(DAsyncId id)
+    public DehydratedRunnable ReadRunnable(DAsyncId id)
     {
-        DehydratedRunnable runnable = _runnables[id];
+        return _runnables[id];
+    }
+
+    public void DeleteRunnable(DAsyncId id)
+    {
         _runnables.Remove(id);
         _ids.Remove(id);
-        return runnable;
     }
 
     public void Save<TValue>(object key, TValue value)

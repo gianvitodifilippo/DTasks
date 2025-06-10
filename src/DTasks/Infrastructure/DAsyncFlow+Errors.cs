@@ -11,7 +11,9 @@ internal sealed partial class DAsyncFlow
         public static readonly ErrorMessageProvider OnSuspend = static self => $"Component '{self._host}' failed while handling suspension of a d-async flow.";
         public static readonly ErrorMessageProvider OnComplete = static self => $"Component '{self._host}' failed while handling completion of a d-async flow.";
         public static readonly ErrorMessageProvider Dehydrate = static self => $"Component '{self._stack}' failed while dehydrating a runnable.";
+        public static readonly ErrorMessageProvider DehydrateCompleted = static self => $"Component '{self._stack}' failed while dehydrating a completed runnable.";
         public static readonly ErrorMessageProvider Hydrate = static self => $"Component '{self._stack}' failed while hydrating a runnable.";
+        public static readonly ErrorMessageProvider Link = static self => $"Component '{self._stack}' failed while linking a runnable.";
         public static readonly ErrorMessageProvider Flush = static self => $"Component '{self._stack}' failed while flushing.";
         public static readonly ErrorMessageProvider OnYield = static self => $"Component '{self._suspensionHandler}' failed while executing yield suspension.";
         public static readonly ErrorMessageProvider OnDelay = static self => $"Component '{self._suspensionHandler}' failed while executing delay suspension.";

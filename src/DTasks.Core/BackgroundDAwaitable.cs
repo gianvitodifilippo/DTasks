@@ -53,7 +53,7 @@ public readonly struct BackgroundDAwaitable<TResult>(IDAsyncRunnable runnable)
 
         bool IDAsyncAwaiter.IsCompleted => false;
 
-        public DTask GetResult() => _backgroundTask.GetAwaiter().GetResult();
+        public DTask<TResult> GetResult() => _backgroundTask.GetAwaiter().GetResult();
 
         public void UnsafeOnCompleted(Action continuation) => _backgroundTask.GetAwaiter().UnsafeOnCompleted(continuation);
 

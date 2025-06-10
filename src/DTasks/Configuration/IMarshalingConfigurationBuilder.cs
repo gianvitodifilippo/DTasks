@@ -1,11 +1,8 @@
-using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DTasks.Configuration.DependencyInjection;
-using DTasks.Infrastructure;
 using DTasks.Infrastructure.Generics;
 using DTasks.Infrastructure.Marshaling;
-using DTasks.Inspection;
 using DTasks.Metadata;
 using DTasks.Utils;
 
@@ -17,31 +14,22 @@ public interface IMarshalingConfigurationBuilder
 
     IMarshalingConfigurationBuilder RegisterSurrogatableType(ITypeContext typeContext);
 
-    IMarshalingConfigurationBuilder RegisterTypeId(Type type, TypeEncodingStrategy encodingStrategy = TypeEncodingStrategy.FullName);
-
-    IMarshalingConfigurationBuilder RegisterTypeId(Type type, string idValue);
+    IMarshalingConfigurationBuilder RegisterTypeId(ITypeContext typeContext, TypeId typeId);
 }
 
 public static class MarshalingConfigurationBuilderExtensions // TODO: Convert to generic methods returning TBuilder
 {
+    private static readonly MethodInfo s_typeContextStateMachineGenericMethod = typeof(TypeContext).GetRequiredMethod(
+        name: nameof(TypeContext.StateMachine),
+        genericParameterCount: 1,
+        bindingAttr: BindingFlags.Static | BindingFlags.NonPublic,
+        parameterTypes: []);
+    
     public static IMarshalingConfigurationBuilder RegisterSurrogatableType<TSurrogatable>(this IMarshalingConfigurationBuilder builder)
     {
         ThrowHelper.ThrowIfNull(builder);
         
         return builder.RegisterSurrogatableType(TypeContext.Of<TSurrogatable>());
-    }
-    
-    public static IMarshalingConfigurationBuilder RegisterTypeIds(this IMarshalingConfigurationBuilder builder, IEnumerable<Type> types)
-    {
-        ThrowHelper.ThrowIfNull(builder);
-        ThrowHelper.ThrowIfNull(types);
-
-        foreach (Type type in types)
-        {
-            builder.RegisterTypeId(type);
-        }
-
-        return builder;
     }
 
     public static IMarshalingConfigurationBuilder RegisterDAsyncMethod(this IMarshalingConfigurationBuilder builder, MethodInfo method)
@@ -63,8 +51,8 @@ public static class MarshalingConfigurationBuilderExtensions // TODO: Convert to
             Type[] genericTypeArguments = method.GetGenericArguments();
             stateMachineType = stateMachineType.MakeGenericType(genericTypeArguments);
         }
-
-        return builder.RegisterTypeId(stateMachineType);
+        
+        return builder.RegisterStateMachineTypeId(stateMachineType);
     }
 
     public static IMarshalingConfigurationBuilder RegisterDAsyncMethods(this IMarshalingConfigurationBuilder builder, Assembly assembly)
@@ -117,10 +105,18 @@ public static class MarshalingConfigurationBuilderExtensions // TODO: Convert to
             if (asyncStateMachineAttribute is null)
                 continue;
 
-            Type stateMachineType = asyncStateMachineAttribute.StateMachineType;
-            builder.RegisterTypeId(stateMachineType);
+            builder.RegisterStateMachineTypeId(asyncStateMachineAttribute.StateMachineType);
         }
 
         return builder;
+    }
+
+    private static IMarshalingConfigurationBuilder RegisterStateMachineTypeId(this IMarshalingConfigurationBuilder builder, Type stateMachineType)
+    {
+        MethodInfo typeContextStateMachineMethod = s_typeContextStateMachineGenericMethod.MakeGenericMethod(stateMachineType);
+        ITypeContext typeContext = (ITypeContext)typeContextStateMachineMethod.Invoke(null, null)!;
+
+        TypeId typeId = TypeId.FromEncodedTypeName(stateMachineType);
+        return builder.RegisterTypeId(typeContext, typeId);
     }
 }

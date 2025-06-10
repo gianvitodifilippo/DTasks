@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DTasks.Infrastructure.Generics;
 using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json.Converters;
@@ -12,7 +13,7 @@ public sealed class TypedInstanceConverter<TValue>(IDAsyncTypeResolver typeResol
 
     public override TypedInstance<TValue> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        Type? type = null;
+        ITypeContext? typeContext = null;
 
         reader.ExpectToken(JsonTokenType.StartObject);
         reader.MoveNext();
@@ -24,22 +25,23 @@ public sealed class TypedInstanceConverter<TValue>(IDAsyncTypeResolver typeResol
             TypeId typeId = JsonSerializer.Deserialize<TypeId>(ref reader, options);
             reader.MoveNext();
 
-            type = typeResolver.GetType(typeId);
+            typeContext = typeResolver.GetTypeContext(typeId);
         }
 
         reader.ExpectPropertyName(ValuePropertyName);
         reader.MoveNext();
 
-        TValue? value = type is null
+        // TODO: Do this with a type action
+        TValue? value = typeContext is null
             ? JsonSerializer.Deserialize<TValue>(ref reader, options)
-            : (TValue?)JsonSerializer.Deserialize(ref reader, type, options);
+            : (TValue?)JsonSerializer.Deserialize(ref reader, typeContext.Type, options);
 
         reader.ExpectToken(JsonTokenType.EndObject);
         reader.MoveNext();
 
         return value is null
             ? default
-            : new TypedInstance<TValue>(type, value);
+            : new TypedInstance<TValue>(typeContext?.Type, value);
     }
 
     public override void Write(Utf8JsonWriter writer, TypedInstance<TValue> value, JsonSerializerOptions options)

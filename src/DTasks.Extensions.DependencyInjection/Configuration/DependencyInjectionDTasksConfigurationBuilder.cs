@@ -3,8 +3,11 @@ using System.Collections.Immutable;
 using DTasks.Configuration;
 using DTasks.Configuration.DependencyInjection;
 using DTasks.Extensions.DependencyInjection.Infrastructure;
+using DTasks.Extensions.DependencyInjection.Infrastructure.Generics;
 using DTasks.Extensions.DependencyInjection.Infrastructure.Marshaling;
 using DTasks.Infrastructure;
+using DTasks.Infrastructure.Generics;
+using DTasks.Infrastructure.Marshaling;
 using DTasks.Utils;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -34,14 +37,19 @@ internal sealed class DependencyInjectionDTasksConfigurationBuilder(IServiceColl
                 {
                     _serviceConfigurationBuilder.ConfigureMarshaling(marshaling);
                     
+                    // TODO: Need a utility method to register type ids with less boilerplate, like making TypeId parameter computed from type context
                     marshaling
                         .AddSurrogator(InfrastructureServiceProvider.Descriptor.Map(provider => provider
                             .GetRequiredService<DAsyncSurrogatorProvider>()
                             .GetSurrogator(provider)))
-                        .RegisterTypeId(typeof(ServiceSurrogate))
-                        .RegisterTypeId(typeof(KeyedServiceSurrogate<string>))
-                        .RegisterTypeId(typeof(KeyedServiceSurrogate<int>))
-                        .RegisterTypeIds(dAsyncTypes);
+                        .RegisterTypeId(TypeContext.Of<ServiceSurrogate>(), TypeId.FromEncodedTypeName(typeof(ServiceSurrogate)))
+                        .RegisterTypeId(TypeContext.Of<KeyedServiceSurrogate<string>>(), TypeId.FromEncodedTypeName(typeof(KeyedServiceSurrogate<string>)))
+                        .RegisterTypeId(TypeContext.Of<KeyedServiceSurrogate<int>>(), TypeId.FromEncodedTypeName(typeof(KeyedServiceSurrogate<int>)));
+
+                    foreach (Type dAsyncType in dAsyncTypes)
+                    {
+                        marshaling.RegisterTypeId(new DAsyncServiceTypeContext(dAsyncType), TypeId.FromEncodedTypeName(dAsyncType));
+                    }
                 });
         });
 

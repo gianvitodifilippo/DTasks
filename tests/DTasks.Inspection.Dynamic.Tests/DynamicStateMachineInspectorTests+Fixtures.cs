@@ -1,7 +1,7 @@
 ﻿using System.Linq.Expressions;
 using System.Reflection;
 using DTasks.CompilerServices;
-using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 using static DTasks.Inspection.Dynamic.InspectionFixtures;
 
 namespace DTasks.Inspection.Dynamic;
@@ -32,11 +32,11 @@ public partial class DynamicStateMachineInspectorTests
     private static Expression<Predicate<MethodInfo>> IsSuspendedMethod(Type awaiterType)
     {
         return method =>
-            method.Name == nameof(ISuspensionContext.IsSuspended) &&
+            method.Name == nameof(IDehydrationContext.IsSuspended) &&
             method.IsConstructedGenericMethod &&
             method.GetGenericArguments().Length == 1 &&
             method.GetGenericArguments()[0] == awaiterType &&
-            method.DeclaringType == typeof(ISuspensionContext);
+            method.DeclaringType == typeof(IDehydrationContext);
     }
 
     private static Expression<Predicate<MethodInfo>> GetTypeIdMethod()

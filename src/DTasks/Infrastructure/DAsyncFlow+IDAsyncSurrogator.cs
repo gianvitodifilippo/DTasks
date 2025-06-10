@@ -98,10 +98,10 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
     {
         switch (task.Status)
         {
-            case DTaskStatus.Pending:
             case DTaskStatus.Running:
-                throw new MarshalingException("Pending and running DTask objects cannot be marshaled.");
+                throw new MarshalingException("Running DTask objects cannot be marshaled.");
             
+            case DTaskStatus.Pending:
             case DTaskStatus.Suspended:
                 if (!HandleIds.TryGetValue(task, out DAsyncId id))
                     throw new MarshalingException($"DTask '{task}' cannot be marshaled, as it was not awaited directly or through another awaitable.");
@@ -153,18 +153,20 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
         if (typeContext.Type == typeof(DTask))
         {
             value = (T)(object)RestoreDTask(ref unmarshaller);
+            return true;
         }
 
         if (typeContext.IsGeneric && typeContext.GenericType == typeof(DTask<>))
         {
             value = (T)(object)RestoreGenericDTask(ref unmarshaller);
+            return true;
         }
 
         value = default;
         return false;
     }
 
-    private static DTask RestoreDTask<TUnmarshaller>(ref TUnmarshaller unmarshaller)
+    private DTask RestoreDTask<TUnmarshaller>(ref TUnmarshaller unmarshaller)
         where TUnmarshaller : IUnmarshaller
 #if NET9_0_OR_GREATER
         , allows ref struct
@@ -181,20 +183,29 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
             
             case DTaskStatus.Suspended:
                 DAsyncId id = unmarshaller.ReadItem<DAsyncId>();
-                return new DTaskHandle(id);
+                unmarshaller.EndArray();
+                
+                if (CompletedTasks.TryGetValue(id, out DTask? task))
+                    return task;
+                
+                DTaskHandle handle = new(id);
+                HandleIds.Add(handle, id);
+                return handle;
             
             case DTaskStatus.Succeeded:
+                unmarshaller.EndArray();
                 return DTask.CompletedDTask;
             
             case DTaskStatus.Faulted:
                 Exception exception = unmarshaller.ReadItem<Exception>();
+                unmarshaller.EndArray();
                 return DTask.FromException(exception);
             
             case DTaskStatus.Canceled:
                 throw new NotImplementedException();
             
             default:
-                throw new InvalidOperationException($"Unsupported DTask status: {status}.");
+                throw new InvalidOperationException($"Unsupported DTask status: '{status}'.");
         }
     }
 

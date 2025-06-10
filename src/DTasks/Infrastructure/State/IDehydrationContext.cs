@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel;
 
-namespace DTasks.Infrastructure.Marshaling;
+namespace DTasks.Infrastructure.State;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface ISuspensionContext
+public interface IDehydrationContext
 {
     DAsyncId ParentId { get; }
     

@@ -1,12 +1,11 @@
-﻿using System.Buffers;
-using System.Buffers.Text;
-using System.Diagnostics;
+﻿using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Serialization.Json;
 
-internal static class JsonExtensions
+internal static class JsonExtensions // TODO: Standardize
 {
     private static ReadOnlySpan<byte> TypeIdPropertyName => "@dtasks.tid"u8;
     
@@ -17,15 +16,16 @@ internal static class JsonExtensions
 
     public static void WriteDAsyncId(this Utf8JsonWriter writer, string propertyName, DAsyncId id)
     {
-        Span<byte> bytes = stackalloc byte[3 * sizeof(uint)];
-        bool success = id.TryWriteBytes(bytes);
+        Span<char> chars = stackalloc char[DAsyncId.CharCount];
+        bool success = id.TryWriteChars(chars);
         Debug.Assert(success);
-
-        writer.WriteBase64String(propertyName, bytes);
+        
+        writer.WriteString(propertyName, chars);
     }
 
     public static TypeId ReadTypeId(this ref Utf8JsonReader reader)
     {
+        // TODO: Throw JsonException if value is malformed
         reader.ExpectToken(JsonTokenType.String, JsonTokenType.Null);
         string? typeIdValue = reader.GetString();
 
@@ -39,17 +39,11 @@ internal static class JsonExtensions
     {
         reader.ExpectToken(JsonTokenType.String);
 
-        Span<byte> bytes = stackalloc byte[3 * sizeof(uint)];
-        OperationStatus status = Base64.DecodeFromUtf8(reader.ValueSpan, bytes, out int bytesConsumed, out int bytesWritten);
-
-        if (status != OperationStatus.Done)
-            throw new JsonException("Expected a base-64 value.");
-
-        Debug.Assert(bytesConsumed == reader.ValueSpan.Length);
-
-        if (!DAsyncId.TryReadBytes(bytes, out DAsyncId id))
-            throw new JsonException("Invalid d-async id detected.");
-
+        Span<char> chars = stackalloc char[DAsyncId.CharCount];
+        int charsWritten = Encoding.UTF8.GetChars(reader.ValueSpan, chars); // TODO: TryGetChars for .NET8 and .NET9
+        if (charsWritten != DAsyncId.CharCount || !DAsyncId.TryParse(chars, out DAsyncId id))
+            throw new JsonException("Invalid DAsyncId format.");
+        
         return id;
     }
 }

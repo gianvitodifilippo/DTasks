@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 using DTasks.Inspection;
 using DTasks.Inspection.Dynamic;
 using DTasks.Serialization.Json.Converters;
@@ -63,7 +64,7 @@ public partial class JsonStateMachineSerializerTests
     public void SerializationOnFirstSuspension_ShouldCorrectlySerializeState()
     {
         // Arrange
-        ISuspensionContext context = Substitute.For<ISuspensionContext>();
+        IDehydrationContext context = Substitute.For<IDehydrationContext>();
         (StateMachine1 stateMachine1, StateMachine2 stateMachine2) = _fixture.StateMachines;
         StateMachine1Suspender suspender1 = new();
         StateMachine2Suspender suspender2 = new();
@@ -82,8 +83,8 @@ public partial class JsonStateMachineSerializerTests
         context.ParentId.Returns(parentId1, parentId2);
 
         // Act
-        _sut.SerializeStateMachine(buffer1, context, ref stateMachine1);
-        _sut.SerializeStateMachine(buffer2, context, ref stateMachine2);
+        _sut.Serialize(context, buffer1, ref stateMachine1);
+        _sut.Serialize(context, buffer2, ref stateMachine2);
 
         // Assert
         string stateMachine1Json = Encoding.UTF8.GetString(buffer1.WrittenSpan);
@@ -97,7 +98,7 @@ public partial class JsonStateMachineSerializerTests
     public void Deserialization_ShouldCorrectlyDeserializeState()
     {
         // Arrange
-        IResumptionContext context = Substitute.For<IResumptionContext>();
+        IHydrationContext context = Substitute.For<IHydrationContext>();
         byte[] stateMachine1Bytes = Encoding.UTF8.GetBytes(_fixture.Jsons.StateMachine1Json);
         byte[] stateMachine2Bytes = Encoding.UTF8.GetBytes(_fixture.Jsons.StateMachine2Json);
         StateMachine1Resumer resumer1 = new();
@@ -114,8 +115,8 @@ public partial class JsonStateMachineSerializerTests
             .Returns(resumer2);
 
         // Act
-        _ = _sut.DeserializeStateMachine(context, stateMachine1Bytes);
-        _ = _sut.DeserializeStateMachine(context, stateMachine2Bytes, new object());
+        _ = _sut.Deserialize(context, stateMachine1Bytes);
+        _ = _sut.Deserialize(context, stateMachine2Bytes, new object());
 
         // Assert
         stateMachine1.__this.Should().Be(_fixture.Services.Service1);

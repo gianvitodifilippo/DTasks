@@ -55,8 +55,13 @@ public readonly struct TypeId : IEquatable<TypeId>
         return false;
     }
 
-    internal static TypeId FromEncodedTypeName(Type type, TypeEncodingStrategy encodingStrategy)
+    public static TypeId FromEncodedTypeName(Type type, TypeEncodingStrategy encodingStrategy = TypeEncodingStrategy.FullName)
     {
+        ThrowHelper.ThrowIfNull(type);
+        
+        if (type.ContainsGenericParameters)
+            throw new ArgumentException("Open generic types are not supported.", nameof(type));
+
         string? assemblyQualifiedName = type.AssemblyQualifiedName;
         if (assemblyQualifiedName is null)
             throw new ArgumentException("The provided type did not have an assembly qualified name.", nameof(type));
@@ -66,7 +71,7 @@ public readonly struct TypeId : IEquatable<TypeId>
             TypeEncodingStrategy.AssemblyQualifiedName => 16,
             TypeEncodingStrategy.FullName => 8,
             TypeEncodingStrategy.Name => 2,
-            _ => throw new UnreachableException()
+            _ => throw new ArgumentOutOfRangeException(nameof(encodingStrategy), encodingStrategy, null)
         };
         
         BitBufferWriter bufferWriter = new(initialCapacity);
@@ -78,9 +83,11 @@ public readonly struct TypeId : IEquatable<TypeId>
         return Create(bufferWriter);
     }
     
-    internal static TypeId FromConstant(string idValue)
+    public static TypeId FromConstant(string value)
     {
-        byte[] encodedBytes = System.Text.Encoding.UTF8.GetBytes(idValue);
+        ThrowHelper.ThrowIfNull(value);
+        
+        byte[] encodedBytes = System.Text.Encoding.UTF8.GetBytes(value);
         
         BitBufferWriter bufferWriter = new(encodedBytes.Length + 1);
         bufferWriter.Write4Bits((int)TypeIdKind.Constant);

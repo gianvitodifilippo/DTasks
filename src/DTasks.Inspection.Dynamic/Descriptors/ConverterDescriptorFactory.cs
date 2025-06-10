@@ -2,7 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using DTasks.Infrastructure;
-using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 using DTasks.Utils;
 
 namespace DTasks.Inspection.Dynamic.Descriptors;
@@ -22,7 +22,7 @@ internal sealed class ConverterDescriptorFactory(
             name: InspectionConstants.SuspendMethodName,
             genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
-            parameterTypes: [stateMachineType.MakeByRefType(), typeof(ISuspensionContext), writerParameterType]);
+            parameterTypes: [stateMachineType.MakeByRefType(), typeof(IDehydrationContext), writerParameterType]);
 
         return new SuspenderDescriptor(suspenderType, suspendMethod, writer);
     }
@@ -127,7 +127,7 @@ internal sealed class ConverterDescriptorFactory(
             if (!stateMachineParam.ParameterType.IsByRef || stateMachineParam.ParameterType.GetElementType() != stateMachineType)
                 return false;
 
-            if (suspensionContextParam.ParameterType != typeof(ISuspensionContext))
+            if (suspensionContextParam.ParameterType != typeof(IDehydrationContext))
                 return false;
 
             if (method.ReturnType != typeof(void))

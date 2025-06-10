@@ -5,46 +5,31 @@ namespace DTasks.Infrastructure.Generics;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public static class TypeContext
 {
-    public static ITypeContext Of<T>() => TypeContext<T>.Instance;
+    public static readonly ITypeContext Void = new VoidTypeContext();
+    
+    public static ITypeContext Of<T>() => new TypeContext<T>(isStateMachine: false);
+    
+    public static ITypeContext StateMachine<T>() => new TypeContext<T>(isStateMachine: true);
+    
+    private sealed class VoidTypeContext : NonGenericTypeContext
+    {
+        public override Type Type => typeof(void);
+
+        public override bool IsStateMachine => false;
+
+        public override void Execute<TAction>(scoped ref TAction action) => action.Invoke<object>();
+
+        public override TReturn Execute<TAction, TReturn>(scoped ref TAction action) => action.Invoke<object>();
+    }
 }
 
-internal sealed class TypeContext<T> : ITypeContext
+internal sealed class TypeContext<T>(bool isStateMachine) : NonGenericTypeContext
 {
-    public static readonly TypeContext<T> Instance = new();
-    
-    private TypeContext()
-    {
-    }
-    
-    public Type Type => typeof(T);
-    
-    public Type GenericType => throw NotGeneric();
+    public override Type Type => typeof(T);
 
-    public bool IsGeneric => false;
+    public override bool IsStateMachine => isStateMachine;
 
-    public void Execute<TAction>(ref TAction action)
-        where TAction : ITypeAction
-    {
-        action.Invoke<T>();
-    }
+    public override void Execute<TAction>(scoped ref TAction action) => action.Invoke<T>();
 
-    public TReturn Execute<TAction, TReturn>(ref TAction action)
-        where TAction : ITypeAction<TReturn>
-    {
-        return action.Invoke<T>();
-    }
-
-    public void ExecuteGeneric<TAction>(ref TAction action)
-        where TAction : IGenericTypeAction
-    {
-        throw NotGeneric();
-    }
-
-    public TReturn ExecuteGeneric<TAction, TReturn>(ref TAction action)
-        where TAction : IGenericTypeAction<TReturn>
-    {
-        throw NotGeneric();
-    }
-    
-    private static InvalidOperationException NotGeneric() => new InvalidOperationException("Type context is not generic.");
+    public override TReturn Execute<TAction, TReturn>(scoped ref TAction action) => action.Invoke<T>();
 }

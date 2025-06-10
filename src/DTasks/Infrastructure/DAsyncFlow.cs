@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading.Tasks.Sources;
 using DTasks.Execution;
 using DTasks.Infrastructure.DependencyInjection;
@@ -38,7 +37,9 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private TimeSpan? _delay;
     private ISuspensionCallback? _suspensionCallback;
     private DehydrateContinuation? _dehydrateContinuation;
-    private DAsyncId? _marshalingId;
+    private object? _resultBuilder;
+    private IHandleResultHandler? _handleResultHandler;
+    private DAsyncId _handleId;
     
     private TaskAwaiter _voidTa;
     private ValueTaskAwaiter _voidVta;
@@ -52,6 +53,8 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private IDAsyncSuspensionHandler? _suspensionHandler;
     
     private Dictionary<DTask, DAsyncId>? _handleIds;
+    private Dictionary<DAsyncId, DTask>? _completedTasks;
+    private Stack<DAsyncNodeProperties>? _nodeProperties;
 
 #if DEBUG
     private string? _stackTrace;
@@ -86,6 +89,10 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private IDAsyncSuspensionHandler SuspensionHandler => _suspensionHandler ??= _infrastructure.GetSuspensionHandler(_flowComponentProvider);
 
     private Dictionary<DTask, DAsyncId> HandleIds => _handleIds ??= [];
+
+    private Dictionary<DAsyncId, DTask> CompletedTasks => _completedTasks ??= [];
+
+    private Stack<DAsyncNodeProperties> NodeProperties => _nodeProperties ??= [];
     
 #if DEBUG
     public void Initialize(IDAsyncHost host, string? stackTrace)
@@ -258,4 +265,13 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     // }
     
     private delegate void DehydrateContinuation(DAsyncFlow flow);
+
+    private readonly record struct DAsyncNodeProperties(
+        DAsyncId ChildId,
+        DAsyncId Id,
+        DAsyncId ParentId,
+        IDAsyncStateMachine? StateMachine,
+        object? SuspendedAwaiterOrType,
+        object ResultBuilder,
+        INodeResultHandler ResultHandler);
 }

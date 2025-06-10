@@ -5,25 +5,9 @@ namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 {
-    IDAsyncCancellationManager IDAsyncRunner.Cancellation
-    {
-        get
-        {
-            EnsureNotMarshaling();
+    IDAsyncCancellationManager IDAsyncRunner.Cancellation => throw new NotImplementedException();
 
-            throw new NotImplementedException();
-        }
-    }
-
-    IDAsyncFeatureCollection IDAsyncRunner.Features
-    {
-        get
-        {
-            EnsureNotMarshaling();
-
-            return this;
-        }
-    }
+    IDAsyncFeatureCollection IDAsyncRunner.Features => this;
 
     private void Suspend(DehydrateContinuation continuation)
     {
@@ -38,7 +22,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     {
         IDAsyncStateMachine stateMachine = ConsumeNotNull(ref _childStateMachine);
         Assign(ref _stateMachine, stateMachine);
-        if (_state is not FlowState.Hydrating)
+        if (_state is not FlowState.Hydrating and not FlowState.Branching)
         {
             _parentId = _id;
             _id = _idFactory.NewId();
@@ -51,22 +35,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Start(IDAsyncStateMachine stateMachine)
     {
-        if (IsMarshaling)
-        {
-            Assign(ref _dehydrateContinuation, static self =>
-            {
-                Assert.NotNull(self._stateMachine);
-
-                self._state = FlowState.Running;
-                self._marshalingId = null;
-                Assign(ref self._dehydrateContinuation, static self => self.AwaitHydrate());
-                self._stateMachine.Suspend();
-            });
-            stateMachine.Start(this);
-            stateMachine.Suspend();
-            return;
-        }
-        
         Assign(ref _childStateMachine, stateMachine);
 
         if (_state is not FlowState.Running)
@@ -79,9 +47,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     }
 
     void IDAsyncRunner.Succeed()
-    {
-        EnsureNotMarshaling();
-        
+    {        
         if (_state is FlowState.Hydrating)
         {
             _id = _parentId;
@@ -109,8 +75,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Succeed<TResult>(TResult result)
     {
-        EnsureNotMarshaling();
-
         if (_state is FlowState.Hydrating)
         {
             _id = _parentId;
@@ -138,8 +102,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Fail(Exception exception)
     {
-        EnsureNotMarshaling();
-
         if (_state is FlowState.Hydrating)
         {
             _id = _parentId;
@@ -167,8 +129,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Cancel(OperationCanceledException exception)
     {
-        EnsureNotMarshaling();
-
         if (_state is FlowState.Hydrating)
         {
             _id = _parentId;
@@ -196,8 +156,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Yield()
     {
-        EnsureNotMarshaling();
-
         if (_state is not FlowState.Running)
         {
             RunYieldIndirection();
@@ -209,8 +167,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Delay(TimeSpan delay)
     {
-        EnsureNotMarshaling();
-
         Assign(ref _delay, delay);
         
         if (_state is not FlowState.Running)
@@ -224,64 +180,58 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.WhenAll(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder builder)
     {
-        EnsureNotMarshaling();
-
         throw new NotImplementedException();
     }
 
     void IDAsyncRunner.WhenAll<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<TResult[]> builder)
     {
-        EnsureNotMarshaling();
-
         throw new NotImplementedException();
     }
 
     void IDAsyncRunner.WhenAny(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask> builder)
     {
-        EnsureNotMarshaling();
-
         throw new NotImplementedException();
     }
 
     void IDAsyncRunner.WhenAny<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask<TResult>> builder)
     {
-        EnsureNotMarshaling();
-
         throw new NotImplementedException();
     }
 
     void IDAsyncRunner.Background(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask> builder)
     {
-        EnsureNotMarshaling();
+        PushNode(builder, RunBackgroundNodeResultHandler.Instance);
 
-        throw new NotImplementedException();
+        _state = FlowState.Branching;
+        runnable.Run(this);
     }
 
     void IDAsyncRunner.Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask<TResult>> builder)
     {
-        EnsureNotMarshaling();
+        PushNode(builder, RunBackgroundNodeResultHandler<TResult>.Instance);
 
-        throw new NotImplementedException();
+        _state = FlowState.Branching;
+        runnable.Run(this);
     }
 
     void IDAsyncRunner.Await(Task task, IDAsyncResultBuilder<Task> builder)
     {
-        EnsureNotMarshaling();
-
         throw new NotImplementedException();
     }
 
     void IDAsyncRunnerInternal.Handle(DAsyncId id, IDAsyncResultBuilder builder)
     {
-        EnsureNotMarshaling();
-
-        throw new NotImplementedException();
+        _handleId = id;
+        Assign(ref _resultBuilder, builder);
+        Assign(ref _handleResultHandler, HandleResultHandler.Instance);
+        AwaitLink();
     }
 
     void IDAsyncRunnerInternal.Handle<TResult>(DAsyncId id, IDAsyncResultBuilder<TResult> builder)
     {
-        EnsureNotMarshaling();
-
-        throw new NotImplementedException();
+        _handleId = id;
+        Assign(ref _resultBuilder, builder);
+        Assign(ref _handleResultHandler, HandleResultHandler<TResult>.Instance);
+        AwaitLink();
     }
 }

@@ -1,7 +1,7 @@
-﻿using System.Diagnostics;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Reflection.Emit;
 using DTasks.Infrastructure.Marshaling;
+using DTasks.Infrastructure.State;
 using DTasks.Inspection.Dynamic.Descriptors;
 using DTasks.Utils;
 
@@ -13,8 +13,8 @@ internal readonly ref struct InspectorILGenerator(
     bool loadCallbackByAddress,
     OpCode callMethodOpCode)
 {
-    private static readonly MethodInfo s_isSuspendedGenericMethod = typeof(ISuspensionContext).GetRequiredMethod(
-        name: nameof(ISuspensionContext.IsSuspended),
+    private static readonly MethodInfo s_isSuspendedGenericMethod = typeof(IDehydrationContext).GetRequiredMethod(
+        name: nameof(IDehydrationContext.IsSuspended),
         genericParameterCount: 1,
         bindingAttr: BindingFlags.Instance | BindingFlags.Public,
         parameterTypes: [Type.MakeGenericMethodParameter(0).MakeByRefType()]);

@@ -201,6 +201,63 @@ internal sealed partial class DAsyncFlow
         Await(task);
     }
 
+    private void AwaitDehydrateCompleted()
+    {
+        _state = FlowState.Dehydrating;
+        Assign(ref _errorMessageProvider, ErrorMessages.DehydrateCompleted);
+        
+        ValueTask task;
+        try
+        {
+            task = Stack.DehydrateCompletedAsync(_id, _cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            HandleException(ex);
+            return;
+        }
+        
+        Await(task);
+    }
+
+    private void AwaitDehydrateCompleted<TResult>(TResult result)
+    {
+        _state = FlowState.Dehydrating;
+        Assign(ref _errorMessageProvider, ErrorMessages.DehydrateCompleted);
+        
+        ValueTask task;
+        try
+        {
+            task = Stack.DehydrateCompletedAsync(_id, result, _cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            HandleException(ex);
+            return;
+        }
+        
+        Await(task);
+    }
+
+    private void AwaitDehydrateCompleted(Exception exception)
+    {
+        _state = FlowState.Dehydrating;
+        Assign(ref _errorMessageProvider, ErrorMessages.DehydrateCompleted);
+        
+        ValueTask task;
+        try
+        {
+            task = Stack.DehydrateCompletedAsync(_id, exception, _cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            HandleException(ex);
+            return;
+        }
+        
+        Await(task);
+    }
+
     private void AwaitHydrate()
     {
         _state = FlowState.Hydrating;
@@ -248,6 +305,25 @@ internal sealed partial class DAsyncFlow
         try
         {
             task = Stack.HydrateAsync(this, exception, _cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            HandleException(ex);
+            return;
+        }
+        
+        Await(task);
+    }
+
+    private void AwaitLink()
+    {
+        _state = FlowState.Linking;
+        Assign(ref _errorMessageProvider, ErrorMessages.Link);
+
+        ValueTask task;
+        try
+        {
+            task = Stack.LinkAsync(this, _cancellationToken);
         }
         catch (Exception ex)
         {

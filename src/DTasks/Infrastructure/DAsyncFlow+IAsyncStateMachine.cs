@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using DTasks.Infrastructure.State;
 using DTasks.Marshaling;
 using DTasks.Utils;
 
@@ -29,6 +28,10 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
 
                 case FlowState.Hydrating:
                     MoveNextOnHydrate();
+                    break;
+                
+                case FlowState.Linking:
+                    MoveNextOnLink();
                     break;
 
                 case FlowState.Suspending:
@@ -110,9 +113,38 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
         runnable.Run(this);
     }
 
+    private void MoveNextOnLink()
+    {
+        GetVoidValueTaskResult();
+
+        if (_handleResultHandler is null)
+        {
+            Assert.NotNull(_stateMachine);
+            
+            _state = FlowState.Running;
+            _suspendingAwaiterOrType = null;
+            _handleId = default;
+            _stateMachine.MoveNext();
+            return;
+        }
+
+        _handleResultHandler = null;
+        _resultBuilder = null;
+        _handleId = default;
+        _state = FlowState.Running;
+        Suspend(static self => self.AwaitOnSuspend());
+    }
+
     private void MoveNextOnSuspend()
     {
         GetVoidTaskResult();
+
+        if (TryPopNode(out DAsyncId childId, out INodeResultHandler? resultHandler))
+        {
+            resultHandler.Suspend(this, childId);
+            Continue();
+            return;
+        }
         
         AwaitOnSuspend();
     }
@@ -147,9 +179,11 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
         Running, // Executing the runnable
         Dehydrating, // Awaiting DehydrateAsync
         Hydrating, // Awaiting HydrateAsync
+        Linking, // Awaiting LinkAsync
         Suspending, // Awaiting suspension callback
         Terminating, // Awaiting a termination hook on the host
         Flushing, // Awaiting FlushAsync
+        Branching, // Running a branch of the flow TODO: Not using it after await
         // Aggregating, // Running multiple aggregated runnables
         // Awaiting // Awaiting a custom task
     }

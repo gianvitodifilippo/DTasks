@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using DTasks.Infrastructure;
+using DTasks.Infrastructure.Generics;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Infrastructure.State;
 using DTasks.Inspection;
@@ -13,7 +14,7 @@ internal ref struct JsonStateMachineReader(ReadOnlySpan<byte> bytes, JsonSeriali
 
     private Utf8JsonReader _reader = new(bytes);
 
-    public DAsyncLink DeserializeStateMachine<T>(IStateMachineInspector inspector, IDAsyncTypeResolver typeResolver, T arg, ResumeAction<T> resume)
+    public DAsyncLink DeserializeStateMachine<T>(DAsyncId id, IStateMachineInspector inspector, IDAsyncTypeResolver typeResolver, T arg, ResumeAction<T> resume)
     {
         _reader.MoveNext();
         _reader.ExpectToken(JsonTokenType.StartObject);
@@ -23,6 +24,10 @@ internal ref struct JsonStateMachineReader(ReadOnlySpan<byte> bytes, JsonSeriali
 
         _reader.MoveNext();
         TypeId typeId = _reader.ReadTypeId();
+        
+        ITypeContext typeContext = typeResolver.GetTypeContext(typeId);
+        if (!typeContext.IsStateMachine)
+            throw new InvalidOperationException($"Cannot resume '{id}' as it is in a terminal state.");
 
         _reader.MoveNext();
         _reader.ExpectPropertyName("@dtasks.pid");
@@ -30,8 +35,7 @@ internal ref struct JsonStateMachineReader(ReadOnlySpan<byte> bytes, JsonSeriali
         _reader.MoveNext();
         DAsyncId parentId = _reader.ReadDAsyncId();
 
-        Type stateMachineType = typeResolver.GetType(typeId);
-        IStateMachineResumer resumer = (IStateMachineResumer)inspector.GetResumer(stateMachineType);
+        IStateMachineResumer resumer = (IStateMachineResumer)inspector.GetResumer(typeContext.Type);
 
         _reader.MoveNext();
         IDAsyncRunnable runnable = resume(resumer, arg, ref this);
@@ -56,7 +60,7 @@ internal ref struct JsonStateMachineReader(ReadOnlySpan<byte> bytes, JsonSeriali
         if (!CheckPropertyNameAndAdvance(name))
             return false;
 
-        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetInt32());
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions _) => reader.GetInt32());
         return true;
     }
 
@@ -65,7 +69,7 @@ internal ref struct JsonStateMachineReader(ReadOnlySpan<byte> bytes, JsonSeriali
         if (!CheckPropertyNameAndAdvance(name))
             return false;
 
-        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetInt16());
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions _) => reader.GetInt16());
         return true;
     }
 
@@ -74,7 +78,7 @@ internal ref struct JsonStateMachineReader(ReadOnlySpan<byte> bytes, JsonSeriali
         if (!CheckPropertyNameAndAdvance(name))
             return false;
 
-        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetInt64());
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions _) => reader.GetInt64());
         return true;
     }
 
@@ -83,7 +87,7 @@ internal ref struct JsonStateMachineReader(ReadOnlySpan<byte> bytes, JsonSeriali
         if (!CheckPropertyNameAndAdvance(name))
             return false;
 
-        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetUInt32());
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions _) => reader.GetUInt32());
         return true;
     }
 
@@ -92,7 +96,7 @@ internal ref struct JsonStateMachineReader(ReadOnlySpan<byte> bytes, JsonSeriali
         if (!CheckPropertyNameAndAdvance(name))
             return false;
 
-        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetUInt16());
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions _) => reader.GetUInt16());
         return true;
     }
 
@@ -101,7 +105,7 @@ internal ref struct JsonStateMachineReader(ReadOnlySpan<byte> bytes, JsonSeriali
         if (!CheckPropertyNameAndAdvance(name))
             return false;
 
-        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetUInt64());
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions _) => reader.GetUInt64());
         return true;
     }
 
@@ -110,7 +114,7 @@ internal ref struct JsonStateMachineReader(ReadOnlySpan<byte> bytes, JsonSeriali
         if (!CheckPropertyNameAndAdvance(name))
             return false;
 
-        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions jsonOptions) => reader.GetString());
+        value = GetValueAndAdvance(static (ref Utf8JsonReader reader, JsonSerializerOptions _) => reader.GetString());
         return true;
     }
 

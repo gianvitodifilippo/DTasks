@@ -1,6 +1,6 @@
-﻿using System.Reflection;
-using DTasks.Configuration;
-using DTasks.Utils;
+﻿using DTasks.Configuration;
+using DTasks.Infrastructure.Generics;
+using DTasks.Infrastructure.Marshaling;
 
 namespace DTasks.Infrastructure;
 
@@ -22,7 +22,7 @@ internal sealed partial class DAsyncFlow
         .RegisterSurrogatableType<object>()
         .RegisterSurrogatableType<IDAsyncRunnable>()
         .RegisterSurrogatableType<DTask>()
-        .RegisterTypeId(typeof(IndirectionStateMachine), nameof(IndirectionStateMachine));
+        .RegisterTypeId(TypeContext.Of<IndirectionStateMachine>(), TypeId.FromConstant("dtasks.ism"));
         // .RegisterSurrogatableType<object>()
         // .RegisterSurrogatableType<DTask>()
         // .RegisterSurrogatableType<HandleRunnable>()

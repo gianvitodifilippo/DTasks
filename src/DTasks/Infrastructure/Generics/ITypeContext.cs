@@ -11,15 +11,37 @@ public interface ITypeContext
     
     bool IsGeneric { get; }
     
-    void Execute<TAction>(ref TAction action)
-        where TAction : ITypeAction;
+    bool IsStateMachine { get; }
     
-    TReturn Execute<TAction, TReturn>(ref TAction action)
-        where TAction : ITypeAction<TReturn>;
+    void Execute<TAction>(scoped ref TAction action)
+        where TAction : ITypeAction
+#if NET9_0_OR_GREATER
+        , allows ref struct;
+#else
+    ;
+#endif
     
-    void ExecuteGeneric<TAction>(ref TAction action)
-        where TAction : IGenericTypeAction;
+    TReturn Execute<TAction, TReturn>(scoped ref TAction action)
+        where TAction : ITypeAction<TReturn>
+#if NET9_0_OR_GREATER
+        , allows ref struct;
+#else
+    ;
+#endif
     
-    TReturn ExecuteGeneric<TAction, TReturn>(ref TAction action)
-        where TAction : IGenericTypeAction<TReturn>;
+    void ExecuteGeneric<TAction>(scoped ref TAction action)
+        where TAction : IGenericTypeAction
+#if NET9_0_OR_GREATER
+        , allows ref struct;
+#else
+    ;
+#endif
+    
+    TReturn ExecuteGeneric<TAction, TReturn>(scoped ref TAction action)
+        where TAction : IGenericTypeAction<TReturn>
+#if NET9_0_OR_GREATER
+        , allows ref struct;
+#else
+    ;
+#endif
 }

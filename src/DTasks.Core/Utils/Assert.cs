@@ -24,9 +24,10 @@ internal static class Assert
     }
 
     [Conditional("DEBUG")]
-    public static void Null(object? value, string message)
+    public static void Default<T>(T value)
+        where T : struct, IEquatable<T>
     {
-        Debug.Assert(value is null, message);
+        Debug.Assert(value.Equals(default));
     }
 
     [Conditional("DEBUG")]

@@ -24,18 +24,18 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
     private readonly Dictionary<object, object?> _properties = [];
     private readonly HashSet<ITypeContext> _surrogatableTypeContexts = [];
     private readonly Dictionary<Type, TypeId> _typesToIds = [];
-    private readonly Dictionary<TypeId, Type> _idsToTypes = [];
+    private readonly Dictionary<TypeId, ITypeContext> _idsToTypeContexts = [];
     
     public FrozenDictionary<object, object?> Properties => _properties.ToFrozenDictionary();
 
-    public IDAsyncTypeResolver TypeResolver => new DAsyncTypeResolver(
-        _typesToIds.ToFrozenDictionary(),
-        _idsToTypes.ToFrozenDictionary());
+    public IDAsyncTypeResolver TypeResolver => DAsyncTypeResolver.Create(_typesToIds, _idsToTypeContexts);
     
     public FrozenSet<ITypeContext> SurrogatableTypeContexts => _surrogatableTypeContexts.ToFrozenSet();
     
     public DTasksConfiguration Build()
     {
+        RegisterTypeId(TypeContext.Void, TypeId.FromConstant("void"));
+        
         DAsyncInfrastructureBuilder infrastructureBuilder = new();
         infrastructureBuilder.UseHeap(_heapDescriptor);
         infrastructureBuilder.UseStack(_stackDescriptor);
@@ -93,27 +93,12 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
         return this;
     }
 
-    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterTypeId(Type type, TypeEncodingStrategy encodingStrategy)
+    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterTypeId(ITypeContext typeContext, TypeId typeId)
     {
-        ThrowHelper.ThrowIfNull(type);
+        ThrowHelper.ThrowIfNull(typeContext);
 
-        if (type.ContainsGenericParameters)
-            throw new ArgumentException("Open generic types are not supported.", nameof(type));
-
-        TypeId typeId = TypeId.FromEncodedTypeName(type, encodingStrategy);
-        return RegisterTypeId(typeId, type.UnderlyingSystemType);
-    }
-
-    IMarshalingConfigurationBuilder IMarshalingConfigurationBuilder.RegisterTypeId(Type type, string idValue)
-    {
-        ThrowHelper.ThrowIfNull(type);
-        ThrowHelper.ThrowIfNullOrWhiteSpace(idValue);
-
-        if (type.ContainsGenericParameters)
-            throw new ArgumentException("Open generic types are not supported.", nameof(type));
-        
-        var typeId = TypeId.FromConstant(idValue);
-        return RegisterTypeId(typeId, type.UnderlyingSystemType);
+        RegisterTypeId(typeContext, typeId);
+        return this;
     }
 
     IExecutionConfigurationBuilder IExecutionConfigurationBuilder.UseCancellationProvider(IComponentDescriptor<IDAsyncCancellationProvider> descriptor)
@@ -148,13 +133,9 @@ internal sealed class DTasksConfigurationBuilder : IDTasksConfigurationBuilder,
         return this;
     }
 
-    private IMarshalingConfigurationBuilder RegisterTypeId(TypeId typeId, Type type)
+    private void RegisterTypeId(ITypeContext typeContext, TypeId typeId)
     {
-        _typesToIds[type] = typeId;
-        _idsToTypes[typeId] = type;
-        
-        Debug.Assert(_typesToIds.Count == _idsToTypes.Count);
-
-        return this;
+        _typesToIds[typeContext.Type] = typeId;
+        _idsToTypeContexts[typeId] = typeContext;
     }
 }

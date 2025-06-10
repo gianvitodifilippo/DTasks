@@ -16,10 +16,10 @@ internal sealed class FakeDAsyncStateManager(
 {
     private readonly DynamicStateMachineInspector _inspector = DynamicStateMachineInspector.Create(typeof(IFakeStateMachineSuspender<>), typeof(IFakeStateMachineResumer), typeResolver);
 
-    public ValueTask DehydrateAsync<TStateMachine>(ISuspensionContext context, ref TStateMachine stateMachine, CancellationToken cancellationToken = default)
+    public ValueTask DehydrateAsync<TStateMachine>(IDehydrationContext context, ref TStateMachine stateMachine, CancellationToken cancellationToken = default)
         where TStateMachine : notnull
     {
-        _ = stack.DehydrateAsync(new SuspensionContext(context), ref stateMachine, cancellationToken);
+        _ = stack.DehydrateAsync(new DehydrationContext(context), ref stateMachine, cancellationToken);
         
         DAsyncId id = context.Id;
         DAsyncId parentId = context.ParentId;
@@ -35,45 +35,115 @@ internal sealed class FakeDAsyncStateManager(
         DehydratedRunnable<TStateMachine> runnable = new(_inspector, surrogator, parentId);
         runnable.Suspend(context, ref stateMachine);
 
-        storage.Write(id, runnable);
+        storage.WriteRunnable(id, runnable);
         return default;
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync(IResumptionContext context, CancellationToken cancellationToken = default)
+    public ValueTask DehydrateCompletedAsync(DAsyncId id, CancellationToken cancellationToken = default)
     {
-        _ = stack.HydrateAsync(new ResumptionContext(context), cancellationToken);
+        _ = stack.DehydrateCompletedAsync(id, cancellationToken);
+        
+        if (id.IsDefault)
+            throw FailException.ForFailure("Id was defaulted.");
+
+        if (id.IsFlow)
+            throw FailException.ForFailure("Id was a flow id.");
+
+        Debug.WriteLine($"Dehydrating completed runnable {id}.");
+
+        DehydratedResult runnable = new();
+        storage.WriteRunnable(id, runnable);
+        return default;
+    }
+
+    public ValueTask DehydrateCompletedAsync<TResult>(DAsyncId id, TResult result, CancellationToken cancellationToken = default)
+    {
+        _ = stack.DehydrateCompletedAsync(id, result, cancellationToken);
+        
+        if (id.IsDefault)
+            throw FailException.ForFailure("Id was defaulted.");
+
+        if (id.IsFlow)
+            throw FailException.ForFailure("Id was a flow id.");
+
+        Debug.WriteLine($"Dehydrating completed runnable {id}.");
+
+        DehydratedResult<TResult> runnable = new(result);
+        storage.WriteRunnable(id, runnable);
+        return default;
+    }
+
+    public ValueTask DehydrateCompletedAsync(DAsyncId id, Exception exception, CancellationToken cancellationToken = default)
+    {
+        _ = stack.DehydrateCompletedAsync(id, exception, cancellationToken);
+        
+        if (id.IsDefault)
+            throw FailException.ForFailure("Id was defaulted.");
+
+        if (id.IsFlow)
+            throw FailException.ForFailure("Id was a flow id.");
+
+        Debug.WriteLine($"Dehydrating completed runnable {id}.");
+
+        DehydratedException runnable = new(exception);
+        storage.WriteRunnable(id, runnable);
+        return default;
+    }
+
+    public ValueTask<DAsyncLink> HydrateAsync(IHydrationContext context, CancellationToken cancellationToken = default)
+    {
+        _ = stack.HydrateAsync(new HydrationContext(context), cancellationToken);
         
         DAsyncId id = context.Id;
-        DehydratedRunnable runnable = storage.Read(id);
+        DehydratedRunnable runnable = storage.ReadRunnable(id);
+        storage.DeleteRunnable(id);
 
         DAsyncLink link = runnable.Resume(context);
         Debug.WriteLine($"Hydrated runnable {id} with parent {link.ParentId}.");
         return new(link);
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync<TResult>(IResumptionContext context, TResult result,
+    public ValueTask<DAsyncLink> HydrateAsync<TResult>(IHydrationContext context, TResult result,
         CancellationToken cancellationToken = default)
     {
-        _ = stack.HydrateAsync(new ResumptionContext(context), result, cancellationToken);
+        _ = stack.HydrateAsync(new HydrationContext(context), result, cancellationToken);
         
         DAsyncId id = context.Id;
-        DehydratedRunnable runnable = storage.Read(id);
+        DehydratedRunnable runnable = storage.ReadRunnable(id);
+        storage.DeleteRunnable(id);
 
         DAsyncLink link = runnable.Resume(context, result);
         Debug.WriteLine($"Hydrated runnable {id} with parent {link.ParentId}.");
         return new(link);
     }
 
-    public ValueTask<DAsyncLink> HydrateAsync(IResumptionContext context, Exception exception, CancellationToken cancellationToken = default)
+    public ValueTask<DAsyncLink> HydrateAsync(IHydrationContext context, Exception exception, CancellationToken cancellationToken = default)
     {
-        _ = stack.HydrateAsync(new ResumptionContext(context), exception, cancellationToken);
+        _ = stack.HydrateAsync(new HydrationContext(context), exception, cancellationToken);
         
         DAsyncId id = context.Id;
-        DehydratedRunnable runnable = storage.Read(id);
+        DehydratedRunnable runnable = storage.ReadRunnable(id);
+        storage.DeleteRunnable(id);
 
         DAsyncLink link = runnable.Resume(context, exception);
         Debug.WriteLine($"Hydrated runnable {id} with parent {link.ParentId}.");
         return new(link);
+    }
+
+    public ValueTask LinkAsync(ILinkContext context, CancellationToken cancellationToken = default)
+    {
+        _ = stack.LinkAsync(new LinkContext(context), cancellationToken);
+        
+        DAsyncId id = context.Id;
+        DehydratedRunnable runnable = storage.ReadRunnable(id);
+
+        bool hasLinked = runnable.Link(context);
+        if (!hasLinked)
+        {
+            storage.DeleteRunnable(id);
+        }
+        
+        return default;
     }
 
     public ValueTask FlushAsync(CancellationToken cancellationToken = default)
@@ -108,7 +178,7 @@ internal sealed class FakeDAsyncStateManager(
         return Task.CompletedTask;
     }
 
-    private class SuspensionContext(ISuspensionContext context) : ISuspensionContext
+    private class DehydrationContext(IDehydrationContext context) : IDehydrationContext
     {
         public DAsyncId ParentId { get; } = context.ParentId;
 
@@ -117,16 +187,29 @@ internal sealed class FakeDAsyncStateManager(
         public bool IsSuspended<TAwaiter>(ref TAwaiter awaiter) => throw new NotImplementedException();
     }
 
-    private class ResumptionContext(IResumptionContext context) : IResumptionContext
+    private class HydrationContext(IHydrationContext context) : IHydrationContext
     {
         public DAsyncId Id { get; } = context.Id;
+    }
+
+    private class LinkContext(ILinkContext context) : ILinkContext
+    {
+        public DAsyncId Id { get; } = context.Id;
+
+        public DAsyncId ParentId { get; } = context.ParentId;
+
+        public void SetResult() => throw new NotImplementedException();
+
+        public void SetResult<TResult>(TResult result) => throw new NotImplementedException();
+
+        public void SetException(Exception exception) => throw new NotImplementedException();
     }
 }
 
 internal interface IFakeStateMachineSuspender<TStateMachine>
     where TStateMachine : notnull
 {
-    void Suspend(ref TStateMachine stateMachine, ISuspensionContext suspensionContext, FakeStateMachineWriter writer);
+    void Suspend(ref TStateMachine stateMachine, IDehydrationContext dehydrationContext, FakeStateMachineWriter writer);
 }
 
 internal interface IFakeStateMachineResumer
