@@ -15,6 +15,8 @@ internal sealed class DTaskTypeContext<TResult> : ITypeContext
     public Type GenericType => typeof(DTask<>);
 
     public bool IsGeneric => true;
+    
+    public int Arity => 1;
 
     public bool IsStateMachine => false;
 

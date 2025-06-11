@@ -13,6 +13,8 @@ public abstract class NonGenericTypeContext : ITypeContext
 
     public bool IsGeneric => false;
     
+    public int Arity => throw NotGeneric();
+    
     public abstract void Execute<TAction>(scoped ref TAction action)
         where TAction : ITypeAction
 #if NET9_0_OR_GREATER

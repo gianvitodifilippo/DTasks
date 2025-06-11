@@ -2,11 +2,14 @@
 using DTasks.Infrastructure.Generics;
 using DTasks.Infrastructure.Marshaling;
 using DTasks.Marshaling;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow : IDAsyncSurrogator
 {
+    private static readonly GetSucceededDTaskSurrogatorAction s_getSuccededDTaskSurrogatorAction = new();
+
     // private static readonly HandleRunnableSurrogateConverter s_handleRunnableConverter = new();
 
     bool IDAsyncSurrogator.TrySurrogate<T, TMarshaller>(in T value, scoped ref TMarshaller marshaller)
@@ -32,19 +35,6 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
         
         if (TryRestoreDTask(type, ref unmarshaller, out value))
             return true;
-        
-        // if (objectType == typeof(DTask))
-        // {
-        //     unmarshaller.RestoreAs(typeof(DTaskSurrogate), _taskSurrogateConverter);
-        //     return true;
-        // }
-        //
-        // if (objectType.IsGenericType && objectType.GetGenericTypeDefinition() == typeof(DTask<>))
-        // {
-        //     Type surrogateType = typeof(DTaskSurrogate<>).MakeGenericType(objectType.GetGenericArguments());
-        //     action.RestoreAs(surrogateType, _taskSurrogateConverter);
-        //     return true;
-        // }
 
         // if (objectType == typeof(HandleRunnable))
         // {
@@ -67,30 +57,37 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
         if (value is not DTask task)
             return false;
         
-        Type taskType = task.GetType();
-        ITypeContext typeContext = FindBestDTaskTypeContext(taskType);
+        Type type = typeof(T);
+        Type runtimeType = task.GetType();
+        
+        ITypeContext typeContext = FindBestDTaskTypeContext(runtimeType);
+        Type typeContextType = typeContext.Type;
+        
+        if (!type.IsAssignableFrom(typeContextType))
+            throw new MarshalingException($"Type '{type.FullName}' was not registered as a surrogatable type.");
+
+        bool isDTaskAtCompileTime = type == typeContextType;
+        TypeId typeId = isDTaskAtCompileTime
+            ? default
+            : TypeResolver.GetTypeId(typeContextType);
 
         if (typeContext.Type == typeof(DTask))
         {
-            bool isDTaskAtCompileTime = typeof(T) == typeof(DTask);
-            TypeId typeId = isDTaskAtCompileTime
-                ? default
-                : TypeResolver.GetTypeId(typeof(DTask));
-            
-            SurrogateDTask(typeId, task, ref marshaller);
+            SurrogateDTask(ref marshaller, SucceededDTaskSurrogator.Instance, typeId, task);
             return true;
         }
         
         if (typeContext.IsGeneric && typeContext.GenericType == typeof(DTask<>))
         {
-            SurrogateGenericDTask(task, ref marshaller);
+            IDTaskSurrogator succeededDTaskSurrogator = typeContext.ExecuteGeneric(s_getSuccededDTaskSurrogatorAction);
+            SurrogateDTask(ref marshaller, succeededDTaskSurrogator, typeId, task);
             return true;
         }
 
         return false;
     }
 
-    private void SurrogateDTask<TMarshaller>(TypeId typeId, DTask task, scoped ref TMarshaller marshaller)
+    private void SurrogateDTask<TMarshaller>(scoped ref TMarshaller marshaller, IDTaskSurrogator surrogator, TypeId typeId, DTask task)
         where TMarshaller : IMarshaller
 #if NET9_0_OR_GREATER
         , allows ref struct
@@ -113,9 +110,7 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
                 break;
             
             case DTaskStatus.Succeeded:
-                marshaller.BeginArray(typeId, 1);
-                marshaller.WriteItem(DTaskStatus.Succeeded);
-                marshaller.EndArray();
+                surrogator.SurrogateSucceeded(ref marshaller, typeId, task);
                 break;
             
             case DTaskStatus.Faulted:
@@ -133,15 +128,6 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
         }
     }
 
-    private void SurrogateGenericDTask<TMarshaller>(DTask task, scoped ref TMarshaller marshaller)
-        where TMarshaller : IMarshaller
-#if NET9_0_OR_GREATER
-        , allows ref struct
-#endif
-    {
-        throw new NotImplementedException();
-    }
-
     private bool TryRestoreDTask<T, TUnmarshaller>(Type type, scoped ref TUnmarshaller unmarshaller, [MaybeNullWhen(false)] out T value)
         where TUnmarshaller : IUnmarshaller
 #if NET9_0_OR_GREATER
@@ -152,13 +138,14 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
         
         if (typeContext.Type == typeof(DTask))
         {
-            value = (T)(object)RestoreDTask(ref unmarshaller);
+            value = (T)(object)RestoreDTask(ref unmarshaller, SucceededDTaskSurrogator.Instance);
             return true;
         }
 
         if (typeContext.IsGeneric && typeContext.GenericType == typeof(DTask<>))
         {
-            value = (T)(object)RestoreGenericDTask(ref unmarshaller);
+            IDTaskSurrogator succeededDTaskSurrogator = typeContext.ExecuteGeneric(s_getSuccededDTaskSurrogatorAction);
+            value = (T)(object)RestoreDTask(ref unmarshaller, succeededDTaskSurrogator);
             return true;
         }
 
@@ -166,7 +153,7 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
         return false;
     }
 
-    private DTask RestoreDTask<TUnmarshaller>(ref TUnmarshaller unmarshaller)
+    private DTask RestoreDTask<TUnmarshaller>(ref TUnmarshaller unmarshaller, IDTaskSurrogator surrogator)
         where TUnmarshaller : IUnmarshaller
 #if NET9_0_OR_GREATER
         , allows ref struct
@@ -177,24 +164,23 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
 
         switch (status)
         {
-            case DTaskStatus.Pending:
             case DTaskStatus.Running:
-                throw new MarshalingException("Pending and running DTask objects cannot be unmarshaled.");
+                throw new MarshalingException("Running DTask objects cannot be unmarshaled.");
             
+            case DTaskStatus.Pending:
             case DTaskStatus.Suspended:
                 DAsyncId id = unmarshaller.ReadItem<DAsyncId>();
                 unmarshaller.EndArray();
                 
                 if (CompletedTasks.TryGetValue(id, out DTask? task))
                     return task;
-                
-                DTaskHandle handle = new(id);
+
+                DTask handle = surrogator.CreateHandle(id);
                 HandleIds.Add(handle, id);
                 return handle;
             
             case DTaskStatus.Succeeded:
-                unmarshaller.EndArray();
-                return DTask.CompletedDTask;
+                return surrogator.RestoreSucceeded(ref unmarshaller);
             
             case DTaskStatus.Faulted:
                 Exception exception = unmarshaller.ReadItem<Exception>();
@@ -207,15 +193,6 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
             default:
                 throw new InvalidOperationException($"Unsupported DTask status: '{status}'.");
         }
-    }
-
-    private static DTask RestoreGenericDTask<TUnmarshaller>(ref TUnmarshaller unmarshaller)
-        where TUnmarshaller : IUnmarshaller
-#if NET9_0_OR_GREATER
-        , allows ref struct
-#endif
-    {
-        throw new NotImplementedException();
     }
 
     // private sealed class DTaskSurrogateConverter(DAsyncFlow flow) : ISurrogateConverter
@@ -256,5 +233,105 @@ internal sealed partial class DAsyncFlow : IDAsyncSurrogator
         }
 
         throw new InvalidOperationException($"Expected '{nameof(DTask)}' to have been registered as a surrogatable type.");
+    }
+
+    private interface IDTaskSurrogator
+    {
+        void SurrogateSucceeded<TMarshaller>(scoped ref TMarshaller marshaller, TypeId typeId, DTask task)
+            where TMarshaller : IMarshaller
+#if NET9_0_OR_GREATER
+            , allows ref struct;
+#else
+            ;
+#endif
+
+        DTask RestoreSucceeded<TUnmarshaller>(ref TUnmarshaller unmarshaller)
+            where TUnmarshaller : IUnmarshaller
+#if NET9_0_OR_GREATER
+            , allows ref struct;
+#else
+            ;
+#endif
+
+        DTask CreateHandle(DAsyncId id);
+    }
+
+    private sealed class SucceededDTaskSurrogator : IDTaskSurrogator
+    {
+        public static readonly SucceededDTaskSurrogator Instance = new();
+        
+        private SucceededDTaskSurrogator()
+        {
+        }
+
+        public void SurrogateSucceeded<TMarshaller>(scoped ref TMarshaller marshaller, TypeId typeId, DTask task)
+            where TMarshaller : IMarshaller
+#if NET9_0_OR_GREATER
+            , allows ref struct
+#endif
+        {
+            marshaller.BeginArray(typeId, 1);
+            marshaller.WriteItem(DTaskStatus.Succeeded);
+            marshaller.EndArray();
+        }
+
+        public DTask RestoreSucceeded<TUnmarshaller>(ref TUnmarshaller unmarshaller)
+            where TUnmarshaller : IUnmarshaller
+#if NET9_0_OR_GREATER
+            , allows ref struct
+#endif
+        {
+            unmarshaller.EndArray();
+            return DTask.CompletedDTask;
+        }
+
+        public DTask CreateHandle(DAsyncId id)
+        {
+            return new DTaskHandle(id);
+        }
+    }
+
+    private sealed class SucceededDTaskSurrogator<TResult> : IDTaskSurrogator
+    {
+        public static readonly SucceededDTaskSurrogator<TResult> Instance = new();
+        
+        private SucceededDTaskSurrogator()
+        {
+        }
+
+        public void SurrogateSucceeded<TMarshaller>(scoped ref TMarshaller marshaller, TypeId typeId, DTask task)
+            where TMarshaller : IMarshaller
+#if NET9_0_OR_GREATER
+            , allows ref struct
+#endif
+        {
+            DTask<TResult> taskOfResult = Reinterpret.Cast<DTask<TResult>>(task);
+            
+            marshaller.BeginArray(typeId, 2);
+            marshaller.WriteItem(DTaskStatus.Succeeded);
+            marshaller.WriteItem(taskOfResult.Result);
+            marshaller.EndArray();
+        }
+
+        public DTask RestoreSucceeded<TUnmarshaller>(ref TUnmarshaller unmarshaller)
+            where TUnmarshaller : IUnmarshaller
+#if NET9_0_OR_GREATER
+            , allows ref struct
+#endif
+        {
+            TResult result = unmarshaller.ReadItem<TResult>();
+            unmarshaller.EndArray();
+            return DTask.FromResult(result);
+        }
+
+        public DTask CreateHandle(DAsyncId id)
+        {
+            return new DTaskHandle<TResult>(id);
+        }
+    }
+
+    private sealed class GetSucceededDTaskSurrogatorAction : IGenericTypeAction<IDTaskSurrogator>
+    {
+        public IDTaskSurrogator Invoke<TResult>() => SucceededDTaskSurrogator<TResult>.Instance;
     }
 }

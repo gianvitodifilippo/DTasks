@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure.Generics;
 
@@ -10,6 +11,8 @@ public interface ITypeContext
     Type GenericType { get; }
     
     bool IsGeneric { get; }
+    
+    int Arity { get; }
     
     bool IsStateMachine { get; }
     
@@ -44,4 +47,40 @@ public interface ITypeContext
 #else
     ;
 #endif
+}
+
+[EditorBrowsable(EditorBrowsableState.Never)]
+public static class TypeContextExtensions
+{
+    public static void Execute(this ITypeContext typeContext, ITypeAction action)
+    {
+        ThrowHelper.ThrowIfNull(typeContext);
+        ThrowHelper.ThrowIfNull(action);
+        
+        typeContext.Execute(ref action);
+    }
+    
+    public static TReturn Execute<TReturn>(this ITypeContext typeContext, ITypeAction<TReturn> action)
+    {
+        ThrowHelper.ThrowIfNull(typeContext);
+        ThrowHelper.ThrowIfNull(action);
+        
+        return typeContext.Execute<ITypeAction<TReturn>, TReturn>(ref action);
+    }
+    
+    public static void ExecuteGeneric(this ITypeContext typeContext, IGenericTypeAction action)
+    {
+        ThrowHelper.ThrowIfNull(typeContext);
+        ThrowHelper.ThrowIfNull(action);
+        
+        typeContext.ExecuteGeneric(ref action);
+    }
+    
+    public static TReturn ExecuteGeneric<TReturn>(this ITypeContext typeContext, IGenericTypeAction<TReturn> action)
+    {
+        ThrowHelper.ThrowIfNull(typeContext);
+        ThrowHelper.ThrowIfNull(action);
+        
+        return typeContext.ExecuteGeneric<IGenericTypeAction<TReturn>, TReturn>(ref action);
+    }
 }
