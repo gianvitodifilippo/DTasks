@@ -19,6 +19,7 @@ internal sealed class DTaskHandle(DAsyncId id) : DTask, IDAsyncResultBuilder
             return _exception;
         }
     }
+    
     protected override void Run(IDAsyncRunner runner)
     {
         if (runner is not IDAsyncRunnerInternal runnerInternal)

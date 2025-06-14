@@ -5,7 +5,7 @@ namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow : ISuspensionFeature
 {
-    private void RunSuspendIndirection()
+    private void RunCallbackIndirection()
     {
         RunIndirection(static self => self.AwaitCallbackInvoke());
     }
@@ -17,11 +17,11 @@ internal sealed partial class DAsyncFlow : ISuspensionFeature
         
         if (stateMachine is null)
         {
-            RunSuspendIndirection();
+            RunCallbackIndirection();
             return;
         }
         
-        Assign(ref _dehydrateContinuation, static self => self.RunSuspendIndirection());
+        Assign(ref _dehydrateContinuation, static self => self.RunCallbackIndirection());
         stateMachine.Suspend();
     }
 }
