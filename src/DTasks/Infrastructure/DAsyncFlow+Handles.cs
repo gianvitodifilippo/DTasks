@@ -1,12 +1,10 @@
-using System.Runtime.CompilerServices;
-using DTasks.Inspection;
 using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow
 {
-    private interface IHandleResultHandler
+    private interface IHandleBuilder
     {
         void SetResult(DAsyncFlow flow);
         
@@ -15,11 +13,11 @@ internal sealed partial class DAsyncFlow
         void SetException(DAsyncFlow flow, Exception exception);
     }
 
-    private sealed class HandleResultHandler : IHandleResultHandler
+    private sealed class HandleBuilder : IHandleBuilder
     {
-        public static readonly HandleResultHandler Instance = new();
+        public static readonly HandleBuilder Instance = new();
         
-        private HandleResultHandler()
+        private HandleBuilder()
         {
         }
         
@@ -43,16 +41,16 @@ internal sealed partial class DAsyncFlow
 
         private static IDAsyncResultBuilder ConsumeResultBuilder(DAsyncFlow flow)
         {
-            object resultBuilder = ConsumeNotNull(ref flow._resultBuilder);
+            object resultBuilder = ConsumeNotNull(ref flow._handleResultBuilder);
             return Reinterpret.Cast<IDAsyncResultBuilder>(resultBuilder);
         }
     }
 
-    private sealed class HandleResultHandler<THandleResult> : IHandleResultHandler
+    private sealed class HandleBuilder<THandleResult> : IHandleBuilder
     {
-        public static readonly HandleResultHandler<THandleResult> Instance = new();
+        public static readonly HandleBuilder<THandleResult> Instance = new();
 
-        private HandleResultHandler()
+        private HandleBuilder()
         {
         }
         
@@ -81,56 +79,8 @@ internal sealed partial class DAsyncFlow
 
         private static IDAsyncResultBuilder<THandleResult> ConsumeResultBuilder(DAsyncFlow flow)
         {
-            object resultBuilder = ConsumeNotNull(ref flow._resultBuilder);
+            object resultBuilder = ConsumeNotNull(ref flow._handleResultBuilder);
             return Reinterpret.Cast<IDAsyncResultBuilder<THandleResult>>(resultBuilder);
         }
     }
-    
-    
-    private struct CompletedRunnableBuilder
-    {
-        public IDAsyncRunnable Task { get; private set; }
-
-        public void Start<TStateMachine>(ref TStateMachine stateMachine)
-        {
-            // TODO: Inspector should support non-generic start method
-            Assert.Is<CompletedStateMachine>(stateMachine);
-
-            Task = DTask.CompletedDTask;
-        }
-
-        public static CompletedRunnableBuilder Create() => default;
-    }
-    
-    private struct CompletedRunnableBuilder<TResult>
-    {
-        public IDAsyncRunnable Task { get; private set; }
-
-        public void Start<TStateMachine>(ref TStateMachine stateMachine)
-        {
-            // TODO: Inspector should support non-generic start method
-            Assert.Is<CompletedStateMachine<TResult>>(stateMachine);
-
-            TResult result = Unsafe.As<TStateMachine, CompletedStateMachine<TResult>>(ref stateMachine).Result;
-            Task = DTask.FromResult(result);
-        }
-
-        public static CompletedRunnableBuilder<TResult> Create() => default;
-    }
-    
-#pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
-    private struct CompletedStateMachine
-    {
-        [DAsyncRunnableBuilderField]
-        public CompletedRunnableBuilder Builder;
-    }
-    
-    private struct CompletedStateMachine<TResult>
-    {
-        [DAsyncRunnableBuilderField]
-        public CompletedRunnableBuilder<TResult> Builder;
-        
-        public TResult Result;
-    }
-#pragma warning restore CS0649 // Field is never assigned to, and will always have its default value
 }

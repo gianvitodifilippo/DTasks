@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
@@ -22,11 +21,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     {
         IDAsyncStateMachine stateMachine = ConsumeNotNull(ref _childStateMachine);
         Assign(ref _stateMachine, stateMachine);
-        if (_state is not FlowState.Hydrating and not FlowState.Branching)
-        {
-            _parentId = _id;
-            _id = _idFactory.NewId();
-        }
+        StartFrame();
             
         _state = FlowState.Running;
         stateMachine.Start(this);
@@ -37,7 +32,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     {
         Assign(ref _childStateMachine, stateMachine);
 
-        if (_state is not FlowState.Running)
+        if (_stateMachine is null)
         {
             Start();
             return;
@@ -48,19 +43,26 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Succeed()
     {        
-        if (_state is FlowState.Hydrating)
+        if (_frameHasIds)
         {
+            _frameHasIds = false;
             _id = _parentId;
             _parentId = default;
         }
         
+        if (_nodeBuilder is not null && IsBranchRoot)
+        {
+            _nodeBuilder.SetResult(this);
+            return;
+        }
+
         if (_id.IsFlow)
         {
             AwaitOnSucceed();
             return;
         }
-
-        if (_state is not FlowState.Running)
+        
+        if (_stateMachine is null)
         {
             AwaitHydrate();
             return;
@@ -75,10 +77,17 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Succeed<TResult>(TResult result)
     {
-        if (_state is FlowState.Hydrating)
+        if (_frameHasIds)
         {
+            _frameHasIds = false;
             _id = _parentId;
             _parentId = default;
+        }
+
+        if (_nodeBuilder is not null && IsBranchRoot)
+        {
+            _nodeBuilder.SetResult(this, result);
+            return;
         }
 
         if (_id.IsFlow)
@@ -86,8 +95,8 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
             AwaitOnSucceed(result);
             return;
         }
-
-        if (_state is not FlowState.Running)
+        
+        if (_stateMachine is null)
         {
             AwaitHydrate(result);
             return;
@@ -102,10 +111,17 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Fail(Exception exception)
     {
-        if (_state is FlowState.Hydrating)
+        if (_frameHasIds)
         {
+            _frameHasIds = false;
             _id = _parentId;
             _parentId = default;
+        }
+        
+        if (_nodeBuilder is not null && IsBranchRoot)
+        {
+            _nodeBuilder.SetException(this, exception);
+            return;
         }
 
         if (_id.IsFlow)
@@ -114,7 +130,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
             return;
         }
 
-        if (_state is not FlowState.Running)
+        if (_stateMachine is null)
         {
             AwaitHydrate(exception);
             return;
@@ -129,10 +145,17 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Cancel(OperationCanceledException exception)
     {
-        if (_state is FlowState.Hydrating)
+        if (_frameHasIds)
         {
+            _frameHasIds = false;
             _id = _parentId;
             _parentId = default;
+        }
+        
+        if (_nodeBuilder is not null && IsBranchRoot)
+        {
+            _nodeBuilder.SetException(this, exception);
+            return;
         }
 
         if (_id.IsFlow)
@@ -141,7 +164,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
             return;
         }
 
-        if (_state is not FlowState.Running)
+        if (_stateMachine is null)
         {
             AwaitHydrate(exception as Exception);
             return;
@@ -156,7 +179,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Yield()
     {
-        if (_state is not FlowState.Running)
+        if (_stateMachine is null)
         {
             RunYieldIndirection();
             return;
@@ -169,7 +192,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     {
         Assign(ref _delay, delay);
         
-        if (_state is not FlowState.Running)
+        if (_stateMachine is null)
         {
             RunDelayIndirection();
             return;
@@ -200,17 +223,17 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Background(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask> builder)
     {
-        PushNode(builder, RunBackgroundNodeResultHandler.Instance);
+        PushNode(builder, BackgroundNodeBuilder.Instance);
 
-        _state = FlowState.Branching;
+        _frameHasIds = true;
         runnable.Run(this);
     }
 
     void IDAsyncRunner.Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask<TResult>> builder)
     {
-        PushNode(builder, RunBackgroundNodeResultHandler<TResult>.Instance);
+        PushNode(builder, BackgroundNodeBuilder<TResult>.Instance);
 
-        _state = FlowState.Branching;
+        _frameHasIds = true;
         runnable.Run(this);
     }
 
@@ -222,16 +245,16 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     void IDAsyncRunnerInternal.Handle(DAsyncId id, IDAsyncResultBuilder builder)
     {
         _handleId = id;
-        Assign(ref _resultBuilder, builder);
-        Assign(ref _handleResultHandler, HandleResultHandler.Instance);
+        Assign(ref _handleResultBuilder, builder);
+        Assign(ref _handleBuilder, HandleBuilder.Instance);
         AwaitLink();
     }
 
     void IDAsyncRunnerInternal.Handle<TResult>(DAsyncId id, IDAsyncResultBuilder<TResult> builder)
     {
         _handleId = id;
-        Assign(ref _resultBuilder, builder);
-        Assign(ref _handleResultHandler, HandleResultHandler<TResult>.Instance);
+        Assign(ref _handleResultBuilder, builder);
+        Assign(ref _handleBuilder, HandleBuilder<TResult>.Instance);
         AwaitLink();
     }
 }

@@ -1,49 +1,61 @@
-using System.Diagnostics.CodeAnalysis;
 using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow
 {
-    private void PushNode(object resultBuilder, INodeResultHandler resultHandler)
+    private void PushNode<TResultBuilder>(TResultBuilder resultBuilder, NodeBuilder<TResultBuilder> nodeBuilder)
+        where TResultBuilder : class
     {
-        DAsyncId childId = _idFactory.NewId();
+        Assert.Equal(FlowState.Running, _state);
+
+        DAsyncId id = Consume(ref _id);
         
-        NodeProperties.Push(new DAsyncNodeProperties(
-            childId,
-            Consume(ref _id),
+        NodeProperties.Push(new FlowNode(
+            id,
             Consume(ref _parentId),
             Consume(ref _stateMachine),
             Consume(ref _suspendingAwaiterOrType),
-            resultBuilder,
-            resultHandler));
+            Consume(ref _nodeId),
+            Consume(ref _nodeResultBuilder),
+            Consume(ref _nodeBuilder)));
 
-        _id = childId;
-    }
-
-    private bool TryPopNode(out DAsyncId childId, [NotNullWhen(true)] out INodeResultHandler? resultHandler)
-    {
-        if (_nodeProperties is null || _nodeProperties.Count == 0)
+        if (nodeBuilder.HasParent)
         {
-            childId = default;
-            resultHandler = null;
-            return false;
+            _parentId = id;
         }
         
-        DAsyncNodeProperties nodeProperties = _nodeProperties.Pop();
-        _id = nodeProperties.Id;
-        _parentId = nodeProperties.ParentId;
-        _state = FlowState.Running;
-        Assign(ref _stateMachine, nodeProperties.StateMachine);
-        Assign(ref _suspendingAwaiterOrType, nodeProperties.SuspendedAwaiterOrType);
-        Assign(ref _resultBuilder, nodeProperties.ResultBuilder);
-
-        childId = nodeProperties.ChildId;
-        resultHandler = nodeProperties.ResultHandler;
-        return true;
+        _id = _idFactory.NewId();
+        _nodeId = _id;
+        _nodeResultBuilder = resultBuilder;
+        _nodeBuilder = nodeBuilder;
     }
+
+    private void PopNode()
+    {
+        Assert.NotNull(_nodes);
+        
+        FlowNode flowNode = _nodes.Pop();
+        _state = FlowState.Running;
+        _id = flowNode.Id;
+        _parentId = flowNode.ParentId;
+        Assign(ref _stateMachine, flowNode.StateMachine);
+        Assign(ref _suspendingAwaiterOrType, flowNode.SuspendedAwaiterOrType);
+        AssignStruct(ref _nodeId, flowNode.NodeId);
+        Assign(ref _nodeResultBuilder, flowNode.NodeResultBuilder);
+        Assign(ref _nodeBuilder, flowNode.NodeResultHandler);
+    }
+
+    private readonly record struct FlowNode(
+        DAsyncId Id,
+        DAsyncId ParentId,
+        IDAsyncStateMachine? StateMachine,
+        object? SuspendedAwaiterOrType,
+        DAsyncId NodeId,
+        object? NodeResultBuilder,
+        INodeBuilder? NodeResultHandler);
     
-    private interface INodeResultHandler
+    private interface INodeBuilder
     {
         void SetResult(DAsyncFlow flow);
         
@@ -51,101 +63,66 @@ internal sealed partial class DAsyncFlow
         
         void SetException(DAsyncFlow flow, Exception exception);
         
-        void Suspend(DAsyncFlow flow, DAsyncId childId);
+        void Suspend(DAsyncFlow flow);
     }
-
-    private sealed class RunBackgroundNodeResultHandler : INodeResultHandler
+    
+    private abstract class NodeBuilder<TResultBuilder> : INodeBuilder
+        where TResultBuilder : class
     {
-        public static readonly RunBackgroundNodeResultHandler Instance = new();
+        public abstract bool HasParent { get; }
+        
+        protected abstract void SetResult(DAsyncFlow flow, TResultBuilder resultBuilder);
 
-        private RunBackgroundNodeResultHandler()
+        protected abstract void SetResult<TResult>(DAsyncFlow flow, TResultBuilder resultBuilder, TResult result);
+
+        protected abstract void SetException(DAsyncFlow flow, TResultBuilder resultBuilder, Exception exception);
+
+        protected abstract void Suspend(DAsyncFlow flow, TResultBuilder resultBuilder, DAsyncId nodeId);
+
+        public void SetResult(DAsyncFlow flow)
         {
+            TResultBuilder resultBuilder = ConsumeResultBuilder(flow);
+            flow._nodeBuilder = null;
+            flow._nodeId = default;
+            flow.PopNode();
+            
+            SetResult(flow, resultBuilder);
         }
         
-        public void SetResult(DAsyncFlow flow)
-        {
-            IDAsyncResultBuilder<DTask> resultBuilder = ConsumeResultBuilder(flow);
-            flow._suspendingAwaiterOrType = null;
-            resultBuilder.SetResult(DTask.CompletedDTask);
-        }
-
         public void SetResult<TResult>(DAsyncFlow flow, TResult result)
         {
-            IDAsyncResultBuilder<DTask> resultBuilder = ConsumeResultBuilder(flow);
-            flow._suspendingAwaiterOrType = null;
-            resultBuilder.SetResult(DTask.FromResult(result));
+            TResultBuilder resultBuilder = ConsumeResultBuilder(flow);
+            flow._nodeBuilder = null;
+            flow._nodeId = default;
+            flow.PopNode();
+            
+            SetResult(flow, resultBuilder, result);
         }
-
+        
         public void SetException(DAsyncFlow flow, Exception exception)
         {
-            IDAsyncResultBuilder<DTask> resultBuilder = ConsumeResultBuilder(flow);
-            flow._suspendingAwaiterOrType = null;
-            resultBuilder.SetResult(DTask.FromException(exception));
+            TResultBuilder resultBuilder = ConsumeResultBuilder(flow);
+            flow._nodeBuilder = null;
+            flow._nodeId = default;
+            flow.PopNode();
+
+            SetException(flow, resultBuilder, exception);
         }
 
-        public void Suspend(DAsyncFlow flow, DAsyncId childId)
+        public void Suspend(DAsyncFlow flow)
         {
-            IDAsyncResultBuilder<DTask> resultBuilder = ConsumeResultBuilder(flow);
-            DTaskHandle handle = new(childId);
-            flow._suspendingAwaiterOrType = null;
-            flow.HandleIds.Add(handle, childId);
-            resultBuilder.SetResult(handle);
-        }
-
-        private static IDAsyncResultBuilder<DTask> ConsumeResultBuilder(DAsyncFlow flow)
-        {
-            object resultBuilder = ConsumeNotNull(ref flow._resultBuilder);
-            return Reinterpret.Cast<IDAsyncResultBuilder<DTask>>(resultBuilder);
-        }
-    }
-
-    private sealed class RunBackgroundNodeResultHandler<TNodeResult> : INodeResultHandler
-    {
-        public static readonly RunBackgroundNodeResultHandler<TNodeResult> Instance = new();
-
-        private RunBackgroundNodeResultHandler()
-        {
-        }
-
-        public void SetResult(DAsyncFlow flow)
-        {
-            _ = ConsumeResultBuilder(flow);
-            flow._suspendingAwaiterOrType = null;
-
-            throw new InvalidOperationException($"Node should have been resumed with result of type '{typeof(TNodeResult).FullName}'.");
-        }
-
-        public void SetResult<TResult>(DAsyncFlow flow, TResult result)
-        {
-            IDAsyncResultBuilder<DTask<TNodeResult>> resultBuilder = ConsumeResultBuilder(flow);
-            flow._suspendingAwaiterOrType = null;
+            TResultBuilder resultBuilder = ConsumeResultBuilder(flow);
+            DAsyncId nodeId = Consume(ref flow._nodeId);
+            flow._nodeBuilder = null;
+            flow.PopNode();
             
-            if (result is not TNodeResult nodeResult)
-                throw new InvalidOperationException($"Node should have been resumed with result of type '{typeof(TNodeResult).FullName}'.");
-            
-            resultBuilder.SetResult(DTask.FromResult(nodeResult));
+            Suspend(flow, resultBuilder, nodeId);
         }
 
-        public void SetException(DAsyncFlow flow, Exception exception)
+        private static TResultBuilder ConsumeResultBuilder(DAsyncFlow flow)
         {
-            IDAsyncResultBuilder<DTask<TNodeResult>> resultBuilder = ConsumeResultBuilder(flow);
-            flow._suspendingAwaiterOrType = null;
-            resultBuilder.SetResult(DTask<TNodeResult>.FromException(exception));
-        }
-
-        public void Suspend(DAsyncFlow flow, DAsyncId childId)
-        {
-            IDAsyncResultBuilder<DTask<TNodeResult>> resultBuilder = ConsumeResultBuilder(flow);
-            DTaskHandle<TNodeResult> handle = new(childId);
-            flow._suspendingAwaiterOrType = null;
-            flow.HandleIds.Add(handle, childId);
-            resultBuilder.SetResult(handle);
-        }
-
-        private static IDAsyncResultBuilder<DTask<TNodeResult>> ConsumeResultBuilder(DAsyncFlow flow)
-        {
-            object resultBuilder = ConsumeNotNull(ref flow._resultBuilder);
-            return Reinterpret.Cast<IDAsyncResultBuilder<DTask<TNodeResult>>>(resultBuilder);
+            object resultBuilder = ConsumeNotNull(ref flow._nodeResultBuilder);
+            return Reinterpret.Cast<TResultBuilder>(resultBuilder);
         }
     }
 }

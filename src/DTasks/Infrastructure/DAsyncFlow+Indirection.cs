@@ -27,8 +27,7 @@ internal sealed partial class DAsyncFlow
         Assign(ref _dehydrateContinuation, continuation);
         Assign(ref _suspendingAwaiterOrType, typeof(IndirectionAwaiter));
         IndirectionStateMachine stateMachine = default;
-        _parentId = _id;
-        _id = _idFactory.NewId();
+        StartFrame();
         
         AwaitDehydrate(ref stateMachine);
     }

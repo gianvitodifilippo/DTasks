@@ -50,32 +50,40 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
             _errorMessageProvider = null;
             _resultOrException = null;
             _runnable = null;
+            _frameHasIds = false;
             _stateMachine = null;
             _suspendingAwaiterOrType = null;
             _childStateMachine = null;
             _delay = null;
             _suspensionCallback = null;
             _dehydrateContinuation = null;
-            _resultBuilder = null;
-            _handleResultHandler = null;
+            _handleResultBuilder = null;
+            _handleBuilder = null;
             _handleId = default;
-            _nodeProperties?.Clear();
+            _nodeId = default;
+            _nodeResultBuilder = null;
+            _nodeBuilder = null;
+            _nodes?.Clear();
         }
         else
         {
             Assert.Null(_errorMessageProvider);
             Assert.Null(_resultOrException);
             Assert.Null(_runnable);
+            Debug.Assert(!_frameHasIds);
             Assert.Null(_stateMachine);
             Assert.Null(_suspendingAwaiterOrType);
             Assert.Null(_childStateMachine);
             Assert.Null(_delay);
             Assert.Null(_suspensionCallback);
             Assert.Null(_dehydrateContinuation);
-            Assert.Null(_resultBuilder);
-            Assert.Null(_handleResultHandler);
+            Assert.Null(_handleResultBuilder);
+            Assert.Null(_handleBuilder);
             Assert.Default(_handleId);
-            Debug.Assert(_nodeProperties is null or { Count: 0 });
+            Assert.Default(_nodeId);
+            Assert.Null(_nodeResultBuilder);
+            Assert.Null(_nodeBuilder);
+            Debug.Assert(_nodes is null or { Count: 0 });
         }
 
         _heap = null;

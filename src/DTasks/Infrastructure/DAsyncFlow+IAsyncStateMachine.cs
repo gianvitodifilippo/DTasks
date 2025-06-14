@@ -8,6 +8,14 @@ namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow : IAsyncStateMachine
 {
+    private void Continue()
+    {
+        // Invokes any continuation asynchronously.
+        // This avoids stack dives and automatically flows the execution context.
+
+        Await(Task.CompletedTask);
+    }
+    
     void IAsyncStateMachine.MoveNext()
     {
         try
@@ -39,7 +47,7 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
                     break;
 
                 case FlowState.Terminating:
-                    MoveNextOnReturn();
+                    MoveNextOnTerminate();
                     break;
 
                 case FlowState.Flushing:
@@ -109,7 +117,8 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
     private void MoveNextOnHydrate()
     {
         (_parentId, IDAsyncRunnable runnable) = GetLinkValueTaskResult();
-        
+
+        _frameHasIds = true;
         runnable.Run(this);
     }
 
@@ -117,9 +126,11 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
     {
         GetVoidValueTaskResult();
 
-        if (_handleResultHandler is null)
+        if (_handleBuilder is null)
         {
+            // ILinkContext.SetResult/SetException was called
             Assert.NotNull(_stateMachine);
+            Assert.Null(_handleResultBuilder);
             
             _state = FlowState.Running;
             _suspendingAwaiterOrType = null;
@@ -128,8 +139,8 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
             return;
         }
 
-        _handleResultHandler = null;
-        _resultBuilder = null;
+        _handleBuilder = null;
+        _handleResultBuilder = null;
         _handleId = default;
         _state = FlowState.Running;
         Suspend(static self => self.AwaitOnSuspend());
@@ -138,18 +149,17 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
     private void MoveNextOnSuspend()
     {
         GetVoidTaskResult();
-
-        if (TryPopNode(out DAsyncId childId, out INodeResultHandler? resultHandler))
+        
+        if (_nodeBuilder is not null)
         {
-            resultHandler.Suspend(this, childId);
-            Continue();
+            _nodeBuilder.Suspend(this);
             return;
         }
         
         AwaitOnSuspend();
     }
 
-    private void MoveNextOnReturn()
+    private void MoveNextOnTerminate()
     {
         GetVoidTaskResult();
 
@@ -183,7 +193,6 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
         Suspending, // Awaiting suspension callback
         Terminating, // Awaiting a termination hook on the host
         Flushing, // Awaiting FlushAsync
-        Branching, // Running a branch of the flow TODO: Not using it after await
         // Aggregating, // Running multiple aggregated runnables
         // Awaiting // Awaiting a custom task
     }

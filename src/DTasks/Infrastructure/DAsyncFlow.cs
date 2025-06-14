@@ -31,15 +31,20 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private object? _resultOrException;
     private DAsyncId _id;
     private DAsyncId _parentId;
+    private bool _frameHasIds;
     private IDAsyncStateMachine? _stateMachine;
     private object? _suspendingAwaiterOrType;
     private IDAsyncStateMachine? _childStateMachine;
     private TimeSpan? _delay;
     private ISuspensionCallback? _suspensionCallback;
     private DehydrateContinuation? _dehydrateContinuation;
-    private object? _resultBuilder;
-    private IHandleResultHandler? _handleResultHandler;
+    private object? _handleResultBuilder;
+    private IHandleBuilder? _handleBuilder;
     private DAsyncId _handleId;
+
+    private DAsyncId _nodeId;
+    private object? _nodeResultBuilder;
+    private INodeBuilder? _nodeBuilder;
     
     private TaskAwaiter _voidTa;
     private ValueTaskAwaiter _voidVta;
@@ -54,7 +59,7 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     
     private Dictionary<DTask, DAsyncId>? _handleIds;
     private Dictionary<DAsyncId, DTask>? _completedTasks;
-    private Stack<DAsyncNodeProperties>? _nodeProperties;
+    private Stack<FlowNode>? _nodes;
 
 #if DEBUG
     private string? _stackTrace;
@@ -92,8 +97,10 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
 
     private Dictionary<DAsyncId, DTask> CompletedTasks => _completedTasks ??= [];
 
-    private Stack<DAsyncNodeProperties> NodeProperties => _nodeProperties ??= [];
-    
+    private Stack<FlowNode> NodeProperties => _nodes ??= [];
+
+    private bool IsBranchRoot => _id == _nodeId;
+
 #if DEBUG
     public void Initialize(IDAsyncHost host, string? stackTrace)
     {
@@ -198,6 +205,18 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
             throw new ArgumentException("The provided id cannot be used to resume a d-async flow, as it represents its root.");
     }
 
+    private void StartFrame()
+    {
+        if (_frameHasIds)
+        {
+            _frameHasIds = false;
+            return;
+        }
+        
+        _parentId = _id;
+        _id = _idFactory.NewId();
+    }
+
     [DebuggerStepThrough]
     private static T? Consume<T>(ref T? field)
     {
@@ -238,6 +257,15 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     }
 
     [DebuggerStepThrough]
+    private static void AssignStruct<T>(ref T field, T value)
+        where T : struct, IEquatable<T>
+    {
+        Assert.Default(field);
+
+        field = value;
+    }
+
+    [DebuggerStepThrough]
     private static void Assign<T>([NotNull] ref T? field, T value)
         where T : struct
     {
@@ -251,27 +279,6 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     {
         Debug.Assert(_state == state, $"{typeof(TInterface).Name} should be exposed only when the state is '{state}'. It was '{_state}'.");
     }
-
-    // [Conditional("DEBUG")]
-    // private void AssertState<TInterface>(params IEnumerable<FlowState> states)
-    // {
-    //     Debug.Assert(states.Contains(_state), GetErrorMessage(_state, states));
-    //
-    //     static string GetErrorMessage(FlowState state, IEnumerable<FlowState> states)
-    //     {
-    //         string allowedStates = string.Join(" or ", states.Select(state => $"'{state}'"));
-    //         return $"{typeof(TInterface).Name} should be exposed only when the state is {allowedStates}. It was '{state}'.";
-    //     }
-    // }
     
     private delegate void DehydrateContinuation(DAsyncFlow flow);
-
-    private readonly record struct DAsyncNodeProperties(
-        DAsyncId ChildId,
-        DAsyncId Id,
-        DAsyncId ParentId,
-        IDAsyncStateMachine? StateMachine,
-        object? SuspendedAwaiterOrType,
-        object ResultBuilder,
-        INodeResultHandler ResultHandler);
 }

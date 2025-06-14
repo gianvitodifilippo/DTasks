@@ -72,10 +72,9 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 
         _stateMachine = null;
         
-        if (TryPopNode(out _, out INodeResultHandler? resultHandler))
+        if (_nodeBuilder is not null && IsBranchRoot)
         {
-            resultHandler.SetResult(this);
-            Continue();
+            _nodeBuilder.SetResult(this);
             return;
         }
 
@@ -109,10 +108,9 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 
         _stateMachine = null;
         
-        if (TryPopNode(out _, out INodeResultHandler? resultHandler))
+        if (_nodeBuilder is not null && IsBranchRoot)
         {
-            resultHandler.SetResult(this, result);
-            Continue();
+            _nodeBuilder.SetResult(this, result);
             return;
         }
 
@@ -146,10 +144,9 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 
         _stateMachine = null;
         
-        if (TryPopNode(out _, out INodeResultHandler? resultHandler))
+        if (_nodeBuilder is not null && IsBranchRoot)
         {
-            resultHandler.SetException(this, exception);
-            Continue();
+            _nodeBuilder.SetException(this, exception);
             return;
         }
 
@@ -185,13 +182,5 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
         AssertState<IDAsyncMethodBuilder>(FlowState.Running);
 
         AwaitDehydrate(ref stateMachine);
-    }
-
-    private void Continue()
-    {
-        // Invokes the continuation asynchronously.
-        // This avoids stack dives and automatically flows the execution context.
-
-        Await(Task.CompletedTask);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace DTasks.Utils;
 
@@ -40,5 +41,15 @@ internal static class Assert
     public static void Is<T>([NotNull] object? value, string message)
     {
         Debug.Assert(value is T, message);
+    }
+    
+    [Conditional("DEBUG")]
+    public static void Equal<T>(
+        T expected,
+        T actual,
+        [CallerArgumentExpression(nameof(expected))] string? expectedExpr = null,
+        [CallerArgumentExpression(nameof(actual))] string? actualExpr = null)
+    {
+        Debug.Assert(EqualityComparer<T>.Default.Equals(expected, actual), $"Expected '{actualExpr}' to be equal to '{expectedExpr}'.");
     }
 }

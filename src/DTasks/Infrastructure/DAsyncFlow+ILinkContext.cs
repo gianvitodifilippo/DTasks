@@ -28,32 +28,32 @@ internal sealed partial class DAsyncFlow : ILinkContext
     {
         AssertState<IHydrationContext>(FlowState.Linking);
 
-        if (_handleResultHandler is null)
+        if (_handleBuilder is null)
             throw new InvalidOperationException("SetResult/SetException was already called.");
         
-        IHandleResultHandler resultHandler = ConsumeNotNull(ref _handleResultHandler);
-        resultHandler.SetResult(this);
+        IHandleBuilder handleBuilder = ConsumeNotNull(ref _handleBuilder);
+        handleBuilder.SetResult(this);
     }
 
     void ILinkContext.SetResult<TResult>(TResult result)
     {
         AssertState<IHydrationContext>(FlowState.Linking);
         
-        if (_handleResultHandler is null)
+        if (_handleBuilder is null)
             throw new InvalidOperationException("SetResult/SetException was already called.");
 
-        IHandleResultHandler resultHandler = ConsumeNotNull(ref _handleResultHandler);
-        resultHandler.SetResult(this, result);
+        IHandleBuilder handleBuilder = ConsumeNotNull(ref _handleBuilder);
+        handleBuilder.SetResult(this, result);
     }
 
     void ILinkContext.SetException(Exception exception)
     {
         AssertState<IHydrationContext>(FlowState.Linking);
         
-        if (_handleResultHandler is null)
+        if (_handleBuilder is null)
             throw new InvalidOperationException("SetResult/SetException was already called.");
 
-        IHandleResultHandler resultHandler = ConsumeNotNull(ref _handleResultHandler);
-        resultHandler.SetException(this, exception);
+        IHandleBuilder handleBuilder = ConsumeNotNull(ref _handleBuilder);
+        handleBuilder.SetException(this, exception);
     }
 }
