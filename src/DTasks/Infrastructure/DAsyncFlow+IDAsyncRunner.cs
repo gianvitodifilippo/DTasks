@@ -42,18 +42,26 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     }
 
     void IDAsyncRunner.Succeed()
-    {        
-        if (_frameHasIds)
-        {
-            _frameHasIds = false;
-            _id = _parentId;
-            _parentId = default;
-        }
-        
+    {
         if (_nodeBuilder is not null && IsBranchRoot)
         {
             _nodeBuilder.SetResult(this);
             return;
+        }
+
+        if (_frameHasIds)
+        {
+            _frameHasIds = false;
+
+            if (_parentId.IsDefault)
+            {
+                Assign(ref _dehydrateContinuation, static self => self.AwaitFlush());
+                AwaitDehydrateCompleted();
+                return;
+            }
+            
+            _id = _parentId;
+            _parentId = default;
         }
 
         if (_id.IsFlow)
@@ -77,17 +85,25 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Succeed<TResult>(TResult result)
     {
-        if (_frameHasIds)
-        {
-            _frameHasIds = false;
-            _id = _parentId;
-            _parentId = default;
-        }
-
         if (_nodeBuilder is not null && IsBranchRoot)
         {
             _nodeBuilder.SetResult(this, result);
             return;
+        }
+
+        if (_frameHasIds)
+        {
+            _frameHasIds = false;
+            
+            if (_parentId.IsDefault)
+            {
+                Assign(ref _dehydrateContinuation, static self => self.AwaitFlush());
+                AwaitDehydrateCompleted(result);
+                return;
+            }
+
+            _id = _parentId;
+            _parentId = default;
         }
 
         if (_id.IsFlow)
@@ -111,17 +127,25 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Fail(Exception exception)
     {
-        if (_frameHasIds)
-        {
-            _frameHasIds = false;
-            _id = _parentId;
-            _parentId = default;
-        }
-        
         if (_nodeBuilder is not null && IsBranchRoot)
         {
             _nodeBuilder.SetException(this, exception);
             return;
+        }
+
+        if (_frameHasIds)
+        {
+            _frameHasIds = false;
+
+            if (_parentId.IsDefault)
+            {
+                Assign(ref _dehydrateContinuation, static self => self.AwaitFlush());
+                AwaitDehydrateCompleted(exception);
+                return;
+            }
+            
+            _id = _parentId;
+            _parentId = default;
         }
 
         if (_id.IsFlow)
@@ -145,17 +169,25 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Cancel(OperationCanceledException exception)
     {
-        if (_frameHasIds)
-        {
-            _frameHasIds = false;
-            _id = _parentId;
-            _parentId = default;
-        }
-        
         if (_nodeBuilder is not null && IsBranchRoot)
         {
             _nodeBuilder.SetException(this, exception);
             return;
+        }
+
+        if (_frameHasIds)
+        {
+            _frameHasIds = false;
+
+            if (_parentId.IsDefault)
+            {
+                Assign(ref _dehydrateContinuation, static self => self.AwaitFlush());
+                AwaitDehydrateCompleted(exception as Exception);
+                return;
+            }
+            
+            _id = _parentId;
+            _parentId = default;
         }
 
         if (_id.IsFlow)

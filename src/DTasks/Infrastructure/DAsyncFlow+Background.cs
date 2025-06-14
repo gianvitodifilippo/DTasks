@@ -16,6 +16,7 @@ internal sealed partial class DAsyncFlow
 
         protected override void SetResult(DAsyncFlow flow, IDAsyncResultBuilder<DTask> resultBuilder)
         {
+            flow._frameHasIds = false;
             flow._suspendingAwaiterOrType = null;
             
             resultBuilder.SetResult(DTask.CompletedDTask);
@@ -24,6 +25,7 @@ internal sealed partial class DAsyncFlow
 
         protected override void SetResult<TResult>(DAsyncFlow flow, IDAsyncResultBuilder<DTask> resultBuilder, TResult result)
         {
+            flow._frameHasIds = false;
             flow._suspendingAwaiterOrType = null;
             
             resultBuilder.SetResult(DTask.FromResult(result));
@@ -32,8 +34,10 @@ internal sealed partial class DAsyncFlow
 
         protected override void SetException(DAsyncFlow flow, IDAsyncResultBuilder<DTask> resultBuilder, Exception exception)
         {
-            resultBuilder.SetResult(DTask.FromException(exception));
+            flow._frameHasIds = false;
             flow._suspendingAwaiterOrType = null;
+            
+            resultBuilder.SetResult(DTask.FromException(exception));
             flow.Continue();
         }
 
@@ -61,6 +65,7 @@ internal sealed partial class DAsyncFlow
 
         protected override void SetResult(DAsyncFlow flow, IDAsyncResultBuilder<DTask<TNodeResult>> resultBuilder)
         {
+            flow._frameHasIds = false;
             flow._suspendingAwaiterOrType = null;
             
             ThrowWrongResultType();
@@ -68,6 +73,7 @@ internal sealed partial class DAsyncFlow
 
         protected override void SetResult<TResult>(DAsyncFlow flow, IDAsyncResultBuilder<DTask<TNodeResult>> resultBuilder, TResult result)
         {
+            flow._frameHasIds = false;
             flow._suspendingAwaiterOrType = null;
             
             if (result is not TNodeResult nodeResult)
@@ -82,6 +88,7 @@ internal sealed partial class DAsyncFlow
 
         protected override void SetException(DAsyncFlow flow, IDAsyncResultBuilder<DTask<TNodeResult>> resultBuilder, Exception exception)
         {
+            flow._frameHasIds = false;
             flow._suspendingAwaiterOrType = null;
             
             resultBuilder.SetResult(DTask<TNodeResult>.FromException(exception));
