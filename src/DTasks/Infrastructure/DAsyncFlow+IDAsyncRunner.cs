@@ -32,13 +32,13 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     {
         Assign(ref _childStateMachine, stateMachine);
 
-        if (_stateMachine is null)
+        if (_stateMachine is not null)
         {
-            Start();
+            Suspend(static self => self.Start());
             return;
         }
         
-        Suspend(static self => self.Start());
+        Start();
     }
 
     void IDAsyncRunner.Succeed()
@@ -211,26 +211,26 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Yield()
     {
-        if (_stateMachine is null)
+        if (_stateMachine is not null)
         {
-            RunYieldIndirection();
+            Suspend(self => self.RunYieldIndirection());
             return;
         }
         
-        Suspend(self => self.RunYieldIndirection());
+        RunYieldIndirection();
     }
 
     void IDAsyncRunner.Delay(TimeSpan delay)
     {
         Assign(ref _delay, delay);
         
-        if (_stateMachine is null)
+        if (_stateMachine is not null)
         {
-            RunDelayIndirection();
+            Suspend(self => self.RunDelayIndirection());
             return;
         }
         
-        Suspend(self => self.RunDelayIndirection());
+        RunDelayIndirection();
     }
 
     void IDAsyncRunner.WhenAll(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder builder)

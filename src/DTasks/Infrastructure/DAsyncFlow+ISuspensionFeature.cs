@@ -12,16 +12,14 @@ internal sealed partial class DAsyncFlow : ISuspensionFeature
     
     void ISuspensionFeature.Suspend(ISuspensionCallback callback)
     {
-        IDAsyncStateMachine? stateMachine = Consume(ref _stateMachine);
         Assign(ref _suspensionCallback, callback);
         
-        if (stateMachine is null)
+        if (_stateMachine is not null)
         {
-            RunCallbackIndirection();
+            Suspend(self => self.RunCallbackIndirection());
             return;
         }
         
-        Assign(ref _dehydrateContinuation, static self => self.RunCallbackIndirection());
-        stateMachine.Suspend();
+        RunCallbackIndirection();
     }
 }
