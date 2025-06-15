@@ -898,12 +898,15 @@ public sealed class DAsyncFlowTests
         {
         }
         
+        DAsyncId m1Id = _idFactory.GetTestId(1);
         var runnable = M1();
         
         // Act
         await _sut.StartAsync(runnable, _cancellationToken);
         
         // Assert
+        await _stack.Received(1).DehydrateAsync(Dehydrating(m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
         await _host.Received(1).OnSucceedAsync(CompletionContext, true, _cancellationToken);
     }
 
@@ -924,12 +927,15 @@ public sealed class DAsyncFlowTests
             return result;
         }
         
+        DAsyncId m1Id = _idFactory.GetTestId(1);
         var runnable = M1();
         
         // Act
         await _sut.StartAsync(runnable, _cancellationToken);
         
         // Assert
+        await _stack.Received(1).DehydrateAsync(Dehydrating(m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), result, _cancellationToken);
         await _host.Received(1).OnSucceedAsync(CompletionContext, result, _cancellationToken);
     }
 
@@ -948,12 +954,16 @@ public sealed class DAsyncFlowTests
             await Task.Yield();
         }
         
+        
+        DAsyncId m1Id = _idFactory.GetTestId(1);
         var runnable = M1();
         
         // Act
         await _sut.StartAsync(runnable, _cancellationToken);
         
         // Assert
+        await _stack.Received(1).DehydrateAsync(Dehydrating(m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
         await _host.Received(1).OnSucceedAsync(CompletionContext, true, _cancellationToken);
     }
 
@@ -975,12 +985,16 @@ public sealed class DAsyncFlowTests
             return result;
         }
         
+        
+        DAsyncId m1Id = _idFactory.GetTestId(1);
         var runnable = M1();
         
         // Act
         await _sut.StartAsync(runnable, _cancellationToken);
         
         // Assert
+        await _stack.Received(1).DehydrateAsync(Dehydrating(m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), result, _cancellationToken);
         await _host.Received(1).OnSucceedAsync(CompletionContext, result, _cancellationToken);
     }
 
