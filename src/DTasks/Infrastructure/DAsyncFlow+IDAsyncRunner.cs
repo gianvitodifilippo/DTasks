@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
@@ -30,6 +31,15 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Start(IDAsyncStateMachine stateMachine)
     {
+        if (_node is not null)
+        {
+            Assign(ref _dehydrateContinuation, static flow => flow.RunYieldIndirection());
+            StartFrame();
+            stateMachine.Start(this);
+            stateMachine.Suspend();
+            return;
+        }
+        
         Assign(ref _childStateMachine, stateMachine);
 
         if (_stateMachine is not null)

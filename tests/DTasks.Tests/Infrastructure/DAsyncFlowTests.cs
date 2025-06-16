@@ -1583,13 +1583,21 @@ public sealed class DAsyncFlowTests
         // Assert (2)
         await _stack.Received(1).HydrateAsync(Hydrating(m1YieldId), _cancellationToken);
         await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(whenAllId), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
         
         // Arrange (3)
+        _stack.ClearReceivedCalls();
+        _host.ClearReceivedCalls();
         
         // Act (3)
         await _sut.ResumeAsync(delayId, _cancellationToken);
         
         // Assert (3)
+        await _stack.Received(1).HydrateAsync(Hydrating(delayId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, _cancellationToken);
     }
     //
     // [Fact]

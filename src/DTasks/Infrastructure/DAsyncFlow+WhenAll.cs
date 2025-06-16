@@ -5,6 +5,17 @@ namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow
 {
+    private void DehydrateWhenAll(int remainingCount, List<Exception>? exceptions, DehydrateContinuation continuation)
+    {
+        Assign(ref _dehydrateContinuation, continuation);
+        Assign(ref _suspendingAwaiterOrType, typeof(WhenAllAwaiter));
+        WhenAllStateMachine stateMachine = default;
+        stateMachine.RemainingCount = remainingCount;
+        stateMachine.Exceptions = exceptions;
+            
+        AwaitDehydrate(ref stateMachine);
+    }
+    
     private sealed class WhenAllFlowNode(
         DAsyncFlow flow,
         IEnumerator<IDAsyncRunnable> branchEnumerator,
@@ -79,16 +90,9 @@ internal sealed partial class DAsyncFlow
                 return;
             }
 
-            Assign(ref flow._dehydrateContinuation, static flow => flow.PopNode());
-            Assign(ref flow._suspendingAwaiterOrType, typeof(WhenAllAwaiter));
             flow._id = NodeId;
             flow._parentId = Id;
-            
-            WhenAllStateMachine stateMachine = default;
-            stateMachine.RemainingCount = _remainingCount;
-            stateMachine.Exceptions = _exceptions;
-            
-            flow.AwaitDehydrate(ref stateMachine);
+            flow.DehydrateWhenAll(_remainingCount, _exceptions, static flow => flow.PopNode());
         }
     }
 
@@ -97,6 +101,8 @@ internal sealed partial class DAsyncFlow
         private int _remainingCount = -1;
         private List<Exception>? _exceptions;
         
+        protected abstract void Run(DAsyncFlow flow, int remainingCount, List<Exception>? exceptions);
+        
         public void Run(IDAsyncRunner runner)
         {
             Debug.Assert(_remainingCount != -1);
@@ -104,12 +110,7 @@ internal sealed partial class DAsyncFlow
             if (runner is not DAsyncFlow flow)
                 throw new ArgumentException("This runnable should be run by a runner of the same kind than the one that created it.");
 
-            throw new NotImplementedException();
-            // Assign(ref flow._whenAllRemainingCount, _remainingCount - 1);
-            // Assign(ref flow._whenAllExceptions, _exceptions);
-            // HandleResult(flow);
-            //
-            // flow.DehydrateWhenAll();
+            Run(flow, _remainingCount - 1, _exceptions);
         }
         
         public WhenAllBranchRunnable WithProperties(ref WhenAllStateMachine stateMachine)
@@ -122,10 +123,35 @@ internal sealed partial class DAsyncFlow
 
     private sealed class WhenAllSucceededBranchRunnable : WhenAllBranchRunnable
     {
+        protected override void Run(DAsyncFlow flow, int remainingCount, List<Exception>? exceptions)
+        {
+            if (remainingCount == 0)
+            {
+                ((IDAsyncRunner)flow).Succeed();
+                return;
+            }
+            
+            flow._frameHasIds = false;
+            flow.DehydrateWhenAll(remainingCount, exceptions, static flow => flow.AwaitOnSuspend());
+        }
     }
 
     private sealed class WhenAllFailedBranchRunnable(Exception exception) : WhenAllBranchRunnable
     {
+        protected override void Run(DAsyncFlow flow, int remainingCount, List<Exception>? exceptions)
+        {
+            exceptions ??= new(1);
+            exceptions.Add(exception);
+
+            if (remainingCount == 0)
+            {
+                ((IDAsyncRunner)flow).Fail(new AggregateException(exceptions));
+                return;
+            }
+            
+            flow._frameHasIds = false;
+            flow.DehydrateWhenAll(remainingCount, exceptions, static flow => flow.AwaitOnSuspend());
+        }
     }
     
     private struct WhenAllRunnableBuilder

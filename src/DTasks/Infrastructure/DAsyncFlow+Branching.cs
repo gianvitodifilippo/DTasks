@@ -22,6 +22,13 @@ internal sealed partial class DAsyncFlow
 
         if (!node.IsCompleted)
         {
+            if (_stateMachine is not null)
+            {
+                _state = FlowState.Running;
+                Suspend(static flow => flow.AwaitOnSuspend());
+                return;
+            }
+            
             _state = FlowState.Suspending;
             Continue();
             return;
@@ -30,6 +37,7 @@ internal sealed partial class DAsyncFlow
         if (_stateMachine is not null)
         {
             _state = FlowState.Running;
+            _suspendingAwaiterOrType = null;
             Continue();
             return;
         }

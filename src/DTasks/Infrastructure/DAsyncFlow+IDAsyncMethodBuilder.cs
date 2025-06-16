@@ -166,8 +166,11 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 
     void IDAsyncMethodBuilder.SetState<TStateMachine>(ref TStateMachine stateMachine)
     {
-        AssertState<IDAsyncMethodBuilder>(FlowState.Running);
-        Assert.Null(_node);
+        if (_state is not FlowState.Aggregating)
+        {
+            AssertState<IDAsyncMethodBuilder>(FlowState.Running);
+            Assert.Null(_node);
+        }
 
         AwaitDehydrate(ref stateMachine);
     }
