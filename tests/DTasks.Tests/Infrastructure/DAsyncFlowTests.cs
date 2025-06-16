@@ -1239,6 +1239,24 @@ public sealed class DAsyncFlowTests
     }
 
     [Fact]
+    public async Task AwaitsWhenAll_WhenThereAreNoTasks()
+    {
+        // Arrange
+        static async DTask M1()
+        {
+            await DTask.WhenAll();
+        }
+        
+        var runnable = M1();
+        
+        // Act
+        await _sut.StartAsync(runnable, _cancellationToken);
+
+        // Assert
+        await _host.Received(1).OnSucceedAsync(CompletionContext, _cancellationToken);
+    }
+
+    [Fact]
     public async Task AwaitsWhenAll_WhenDTasksAreCompleted()
     {
         // Arrange
@@ -1414,6 +1432,19 @@ public sealed class DAsyncFlowTests
         await _sut.ResumeAsync(m1DelayId, _cancellationToken);
         
         // Assert (3)
+    }
+
+    [Fact]
+    public async Task RunsWhenAll_WhenThereAreNoTasks()
+    {
+        // Arrange
+        var runnable = DTask.WhenAll();
+        
+        // Act
+        await _sut.StartAsync(runnable, _cancellationToken);
+
+        // Assert
+        await _host.Received(1).OnSucceedAsync(CompletionContext, _cancellationToken);
     }
 
     [Fact]

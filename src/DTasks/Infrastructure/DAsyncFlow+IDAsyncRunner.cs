@@ -43,6 +43,12 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Succeed()
     {
+        if (_node is not null)
+        {
+            _node.SucceedBranch();
+            return;
+        }
+        
         if (_frameHasIds)
         {
             _frameHasIds = false;
@@ -79,6 +85,12 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Succeed<TResult>(TResult result)
     {
+        if (_node is not null)
+        {
+            _node.SucceedBranch(result);
+            return;
+        }
+
         if (_frameHasIds)
         {
             _frameHasIds = false;
@@ -115,6 +127,12 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Fail(Exception exception)
     {
+        if (_node is not null)
+        {
+            _node.FailBranch(exception);
+            return;
+        }
+
         if (_frameHasIds)
         {
             _frameHasIds = false;
@@ -151,6 +169,12 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Cancel(OperationCanceledException exception)
     {
+        if (_node is not null)
+        {
+            _node.FailBranch(exception);
+            return;
+        }
+
         if (_frameHasIds)
         {
             _frameHasIds = false;
@@ -211,7 +235,17 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.WhenAll(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder builder)
     {
-        throw new NotImplementedException();
+        IEnumerator<IDAsyncRunnable> branchEnumerator = runnables.GetEnumerator();
+        if (!branchEnumerator.MoveNext())
+        {
+            branchEnumerator.Dispose();
+            builder.SetResult();
+            ((IDAsyncRunner)this).Succeed();
+            return;
+        }
+
+        PushNode(new WhenAllFlowNode(this, branchEnumerator, builder));
+        RunBranch();
     }
 
     void IDAsyncRunner.WhenAll<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<TResult[]> builder)

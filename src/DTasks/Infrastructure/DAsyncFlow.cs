@@ -41,6 +41,8 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private object? _handleResultBuilder;
     private IHandleBuilder? _handleBuilder;
     private DAsyncId _handleId;
+
+    private IFlowNode? _node;
     
     private TaskAwaiter _voidTa;
     private ValueTaskAwaiter _voidVta;

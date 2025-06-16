@@ -14,6 +14,10 @@ internal sealed class StateMachineDescriptor(
     MethodInfo builderStartMethod,
     MethodInfo builderTaskGetter)
 {
+    private const string CreateMethodName = "Create";
+    private const string StartMethodName = "Start";
+    private const string TaskGetterName = "get_Task";
+    
     public Type Type { get; } = type;
 
     [MemberNotNullWhen(false, nameof(Constructor))]
@@ -47,7 +51,7 @@ internal sealed class StateMachineDescriptor(
         FieldInfo? builderField = null;
         int awaiterIndex = 1;
 
-        foreach (FieldInfo @field in stateMachineType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        foreach (FieldInfo field in stateMachineType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
         {
             StateMachineFieldKind fieldKind = StateMachineFacts.GetFieldKind(field);
             switch (fieldKind)
@@ -88,7 +92,7 @@ internal sealed class StateMachineDescriptor(
 
         // TODO: Create a BuilderDescriptor and check return types
         MethodInfo? createMethod = builderField.FieldType.GetMethod(
-            name: "Create",
+            name: CreateMethodName,
             genericParameterCount: 0,
             bindingAttr: BindingFlags.Static | BindingFlags.Public,
             binder: null,
@@ -99,7 +103,15 @@ internal sealed class StateMachineDescriptor(
             throw new ArgumentException("The builder of a state machine should have a public static 'Create' method.", nameof(stateMachineType));
 
         MethodInfo? startMethod = builderField.FieldType.GetMethod(
-            name: "Start",
+            name: StartMethodName,
+            genericParameterCount: 0,
+            bindingAttr: BindingFlags.Instance | BindingFlags.Public,
+            binder: null,
+            types: [stateMachineType.MakeByRefType()],
+            modifiers: []);
+        
+        startMethod ??= builderField.FieldType.GetMethod(
+            name: StartMethodName,
             genericParameterCount: 1,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             binder: null,
@@ -109,8 +121,13 @@ internal sealed class StateMachineDescriptor(
         if (startMethod is null)
             throw new ArgumentException("The builder of a state machine should have a public 'Start' method.", nameof(stateMachineType));
 
+        if (startMethod.IsGenericMethod)
+        {
+            startMethod = startMethod.MakeGenericMethod(stateMachineType);
+        }
+
         MethodInfo? taskGetter = builderField.FieldType.GetMethod(
-            name: $"get_Task",
+            name: TaskGetterName,
             genericParameterCount: 0,
             bindingAttr: BindingFlags.Instance | BindingFlags.Public,
             binder: null,

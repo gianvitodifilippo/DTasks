@@ -278,7 +278,7 @@ internal readonly ref struct InspectorILGenerator(
             ? OpCodes.Call
             : OpCodes.Callvirt;
 
-        il.Emit(opCode, stateMachineDescriptor.BuilderStartMethod.MakeGenericMethod(stateMachineDescriptor.Type));
+        il.Emit(opCode, stateMachineDescriptor.BuilderStartMethod);
     }
 
     public void CallBuilderTaskGetter()

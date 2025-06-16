@@ -54,6 +54,10 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
                     MoveNextOnFlush();
                     break;
 
+                case FlowState.Aggregating:
+                    MoveNextOnAggregate();
+                    break;
+
                 default:
                     Debug.Fail($"Unexpected state on MoveNext: {_state}.");
                     break;
@@ -149,6 +153,12 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
     private void MoveNextOnSuspend()
     {
         GetVoidTaskResult();
+
+        if (_node is not null)
+        {
+            _node.SuspendBranch();
+            return;
+        }
         
         AwaitOnSuspend();
     }
@@ -165,6 +175,16 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
         GetVoidValueTaskResult();
         
         _valueTaskSource.SetResult(default);
+    }
+
+    private void MoveNextOnAggregate()
+    {
+        GetVoidTaskResult();
+        
+        Assert.NotNull(_node);
+        _id = _node.NodeId;
+        _parentId = default;
+        _node.RunBranch();
     }
 
     [ExcludeFromCodeCoverage]
@@ -187,7 +207,7 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
         Suspending, // Awaiting suspension callback
         Terminating, // Awaiting a termination hook on the host
         Flushing, // Awaiting FlushAsync
-        // Aggregating, // Running multiple aggregated runnables
+        Aggregating, // Running multiple aggregated runnables
         // Awaiting // Awaiting a custom task
     }
 }

@@ -60,6 +60,7 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
             _handleResultBuilder = null;
             _handleBuilder = null;
             _handleId = default;
+            _node = null;
         }
         else
         {
@@ -76,6 +77,7 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
             Assert.Null(_handleResultBuilder);
             Assert.Null(_handleBuilder);
             Assert.Default(_handleId);
+            Assert.Null(_node);
         }
 
         _heap = null;
