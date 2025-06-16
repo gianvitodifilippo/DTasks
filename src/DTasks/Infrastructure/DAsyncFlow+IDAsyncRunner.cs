@@ -43,12 +43,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Succeed()
     {
-        if (_nodeBuilder is not null && IsBranchRoot)
-        {
-            _nodeBuilder.SetResult(this);
-            return;
-        }
-
         if (_frameHasIds)
         {
             _frameHasIds = false;
@@ -85,12 +79,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Succeed<TResult>(TResult result)
     {
-        if (_nodeBuilder is not null && IsBranchRoot)
-        {
-            _nodeBuilder.SetResult(this, result);
-            return;
-        }
-
         if (_frameHasIds)
         {
             _frameHasIds = false;
@@ -127,12 +115,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Fail(Exception exception)
     {
-        if (_nodeBuilder is not null && IsBranchRoot)
-        {
-            _nodeBuilder.SetException(this, exception);
-            return;
-        }
-
         if (_frameHasIds)
         {
             _frameHasIds = false;
@@ -169,12 +151,6 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
     
     void IDAsyncRunner.Cancel(OperationCanceledException exception)
     {
-        if (_nodeBuilder is not null && IsBranchRoot)
-        {
-            _nodeBuilder.SetException(this, exception);
-            return;
-        }
-
         if (_frameHasIds)
         {
             _frameHasIds = false;
@@ -255,18 +231,12 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.Background(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask> builder)
     {
-        PushNode(builder, BackgroundNodeBuilder.Instance);
-
-        _frameHasIds = true;
-        runnable.Run(this);
+        throw new NotImplementedException();
     }
 
     void IDAsyncRunner.Background<TResult>(IDAsyncRunnable runnable, IDAsyncResultBuilder<DTask<TResult>> builder)
     {
-        PushNode(builder, BackgroundNodeBuilder<TResult>.Instance);
-
-        _frameHasIds = true;
-        runnable.Run(this);
+        throw new NotImplementedException();
     }
 
     void IDAsyncRunner.Await(Task task, IDAsyncResultBuilder<Task> builder)

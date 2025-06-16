@@ -72,12 +72,6 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 
         _stateMachine = null;
         
-        if (_nodeBuilder is not null && IsBranchRoot)
-        {
-            _nodeBuilder.SetResult(this);
-            return;
-        }
-
         if (_parentId.IsDefault)
         {
             Assign(ref _dehydrateContinuation, static self => self.AwaitFlush());
@@ -108,12 +102,6 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 
         _stateMachine = null;
         
-        if (_nodeBuilder is not null && IsBranchRoot)
-        {
-            _nodeBuilder.SetResult(this, result);
-            return;
-        }
-
         if (_parentId.IsDefault)
         {
             Assign(ref _dehydrateContinuation, static self => self.AwaitFlush());
@@ -144,12 +132,6 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
 
         _stateMachine = null;
         
-        if (_nodeBuilder is not null && IsBranchRoot)
-        {
-            _nodeBuilder.SetException(this, exception);
-            return;
-        }
-
         if (_parentId.IsDefault)
         {
             Assign(ref _dehydrateContinuation, static self => self.AwaitFlush());

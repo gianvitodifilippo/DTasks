@@ -60,10 +60,6 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
             _handleResultBuilder = null;
             _handleBuilder = null;
             _handleId = default;
-            _nodeId = default;
-            _nodeResultBuilder = null;
-            _nodeBuilder = null;
-            _nodes?.Clear();
         }
         else
         {
@@ -80,10 +76,6 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
             Assert.Null(_handleResultBuilder);
             Assert.Null(_handleBuilder);
             Assert.Default(_handleId);
-            Assert.Default(_nodeId);
-            Assert.Null(_nodeResultBuilder);
-            Assert.Null(_nodeBuilder);
-            Debug.Assert(_nodes is null or { Count: 0 });
         }
 
         _heap = null;

@@ -150,12 +150,6 @@ internal sealed partial class DAsyncFlow : IAsyncStateMachine
     {
         GetVoidTaskResult();
         
-        if (_nodeBuilder is not null)
-        {
-            _nodeBuilder.Suspend(this);
-            return;
-        }
-        
         AwaitOnSuspend();
     }
 

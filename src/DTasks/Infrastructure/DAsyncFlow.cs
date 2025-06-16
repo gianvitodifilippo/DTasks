@@ -41,10 +41,6 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private object? _handleResultBuilder;
     private IHandleBuilder? _handleBuilder;
     private DAsyncId _handleId;
-
-    private DAsyncId _nodeId;
-    private object? _nodeResultBuilder;
-    private INodeBuilder? _nodeBuilder;
     
     private TaskAwaiter _voidTa;
     private ValueTaskAwaiter _voidVta;
@@ -59,7 +55,6 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     
     private Dictionary<DTask, DAsyncId>? _handleIds;
     private Dictionary<DAsyncId, DTask>? _completedTasks;
-    private Stack<FlowNode>? _nodes;
 
 #if DEBUG
     private string? _stackTrace;
@@ -96,10 +91,6 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private Dictionary<DTask, DAsyncId> HandleIds => _handleIds ??= [];
 
     private Dictionary<DAsyncId, DTask> CompletedTasks => _completedTasks ??= [];
-
-    private Stack<FlowNode> NodeProperties => _nodes ??= [];
-
-    private bool IsBranchRoot => _id == _nodeId;
 
 #if DEBUG
     public void Initialize(IDAsyncHost host, string? stackTrace)
