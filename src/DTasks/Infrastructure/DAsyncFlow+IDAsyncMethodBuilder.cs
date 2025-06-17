@@ -81,7 +81,8 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
             AwaitDehydrateCompleted();
             return;
         }
-        
+
+        _childId = _id;
         _id = _parentId;
         _parentId = default;
         
@@ -112,7 +113,8 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
             AwaitDehydrateCompleted(result);
             return;
         }
-        
+
+        _childId = _id;
         _id = _parentId;
         _parentId = default;
         
@@ -143,7 +145,8 @@ internal sealed partial class DAsyncFlow : IDAsyncMethodBuilder
             AwaitDehydrateCompleted(exception);
             return;
         }
-        
+
+        _childId = _id;
         _id = _parentId;
         _parentId = default;
         

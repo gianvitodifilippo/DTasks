@@ -69,7 +69,8 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
                 AwaitDehydrateCompleted();
                 return;
             }
-            
+
+            _childId = _id;
             _id = _parentId;
             _parentId = default;
         }
@@ -112,6 +113,7 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
                 return;
             }
 
+            _childId = _id;
             _id = _parentId;
             _parentId = default;
         }
@@ -153,7 +155,8 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
                 AwaitDehydrateCompleted(exception);
                 return;
             }
-            
+
+            _childId = _id;
             _id = _parentId;
             _parentId = default;
         }
@@ -195,7 +198,8 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
                 AwaitDehydrateCompleted(exception as Exception);
                 return;
             }
-            
+
+            _childId = _id;
             _id = _parentId;
             _parentId = default;
         }
@@ -250,7 +254,15 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         {
             branchEnumerator.Dispose();
             builder.SetResult();
-            ((IDAsyncRunner)this).Succeed();
+            if (_stateMachine is null)
+            {
+                ((IDAsyncRunner)this).Succeed();
+            }
+            else
+            {
+                _suspendingAwaiterOrType = null;
+                Continue();
+            }
             return;
         }
 
@@ -265,7 +277,15 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
         {
             branchEnumerator.Dispose();
             builder.SetResult([]);
-            ((IDAsyncRunner)this).Succeed();
+            if (_stateMachine is null)
+            {
+                ((IDAsyncRunner)this).Succeed(Array.Empty<TResult>());
+            }
+            else
+            {
+                _suspendingAwaiterOrType = null;
+                Continue();
+            }
             return;
         }
 

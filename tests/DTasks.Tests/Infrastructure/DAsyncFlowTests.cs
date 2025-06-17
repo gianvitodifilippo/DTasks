@@ -1657,9 +1657,9 @@ public sealed class DAsyncFlowTests
         await _sut.ResumeAsync(callbackId, 69, _cancellationToken);
         
         // Assert (2)
-        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), 69, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), 69, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), Array(42, 69), _cancellationToken);
         await _host.Received(1).OnSucceedAsync(CompletionContext, Array(42, 69), _cancellationToken);
     }
 
@@ -1717,10 +1717,10 @@ public sealed class DAsyncFlowTests
         await _sut.ResumeAsync(callbackId, 69, _cancellationToken);
         
         // Assert (2)
-        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(whenAll2Id), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(whenAll1Id), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), 69, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAll2Id), 69, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAll1Id), Array(69), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), ArrayOfArray([42], [69]), _cancellationToken);
         await _host.Received(1).OnSucceedAsync(CompletionContext, ArrayOfArray([42], [69]), _cancellationToken);
     }
     
@@ -1774,7 +1774,7 @@ public sealed class DAsyncFlowTests
         // Assert (2)
         await _stack.Received(1).HydrateAsync(Hydrating(m2YieldId), _cancellationToken);
         await _stack.Received(1).HydrateAsync(Hydrating(m2Id), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), 42, _cancellationToken);
         await _stack.Received(1).DehydrateAsync(Dehydrating(whenAllId, m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
         await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
         
@@ -1786,9 +1786,9 @@ public sealed class DAsyncFlowTests
         await _sut.ResumeAsync(m1CallbackId, 420, _cancellationToken);
         
         // Assert (3)
-        await _stack.Received(1).HydrateAsync(Hydrating(m1CallbackId), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1CallbackId), 420, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), 420, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), Array(42, 69, 420), _cancellationToken);
         await _host.Received(1).OnSucceedAsync(CompletionContext, Array(42, 69, 420), _cancellationToken);
     }
 
@@ -1845,8 +1845,8 @@ public sealed class DAsyncFlowTests
         await _sut.ResumeAsync(callbackId, 69, _cancellationToken);
         
         // Assert (2)
-        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), 69, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), 69, _cancellationToken);
         await _host.Received(1).OnSucceedAsync(CompletionContext, Array(42, 69), _cancellationToken);
     }
 
@@ -1892,9 +1892,9 @@ public sealed class DAsyncFlowTests
         await _sut.ResumeAsync(callbackId, 69, _cancellationToken);
         
         // Assert (2)
-        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(whenAll2Id), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(whenAll1Id), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), 69, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAll2Id), 69, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAll1Id), Array(69), _cancellationToken);
         await _host.Received(1).OnSucceedAsync(CompletionContext, ArrayOfArray([42], [69]), _cancellationToken);
     }
     
@@ -1941,7 +1941,7 @@ public sealed class DAsyncFlowTests
         // Assert (2)
         await _stack.Received(1).HydrateAsync(Hydrating(m2YieldId), _cancellationToken);
         await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), 42, _cancellationToken);
         await _stack.Received(1).DehydrateAsync(Dehydrating(whenAllId), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
         await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
         
@@ -1953,8 +1953,8 @@ public sealed class DAsyncFlowTests
         await _sut.ResumeAsync(m1CallbackId, 420, _cancellationToken);
         
         // Assert (3)
-        await _stack.Received(1).HydrateAsync(Hydrating(m1CallbackId), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1CallbackId), 420, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), 420, _cancellationToken);
         await _host.Received(1).OnSucceedAsync(CompletionContext, Array(42, 69, 420), _cancellationToken);
     }
     

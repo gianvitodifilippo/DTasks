@@ -31,6 +31,7 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
     private object? _resultOrException;
     private DAsyncId _id;
     private DAsyncId _parentId;
+    private DAsyncId _childId;
     private bool _frameHasIds;
     private IDAsyncStateMachine? _stateMachine;
     private object? _suspendingAwaiterOrType;

@@ -90,8 +90,9 @@ internal sealed partial class DAsyncFlow : IValueTaskSource
         _cancellationToken = CancellationToken.None;
         _flowComponentProvider.EndScope();
         _valueTaskSource.Reset();
-        _parentId = default;
         _id = default;
+        _parentId = default;
+        _childId = default;
         
         _handleIds?.Clear();
         _completedTasks?.Clear();

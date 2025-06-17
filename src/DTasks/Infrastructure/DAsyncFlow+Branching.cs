@@ -19,6 +19,7 @@ internal sealed partial class DAsyncFlow
         _stateMachine = node.StateMachine;
         _suspendingAwaiterOrType = node.SuspendingAwaiterOrType;
         _node = node.ParentNode;
+        _node?.SetChildId(node.NodeId);
 
         if (!node.IsCompleted)
         {
@@ -42,7 +43,7 @@ internal sealed partial class DAsyncFlow
             return;
         }
         
-        ((IDAsyncRunner)this).Succeed();
+        node.Succeed();
     }
     
     private void RunBranch()
@@ -78,5 +79,7 @@ internal sealed partial class DAsyncFlow
         void SuspendBranch();
         
         void SetChildId(DAsyncId id);
+
+        void Succeed();
     }
 }
