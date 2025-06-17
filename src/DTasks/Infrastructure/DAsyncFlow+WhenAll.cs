@@ -1,17 +1,23 @@
 using System.Diagnostics;
 using DTasks.Inspection;
+using DTasks.Utils;
 
 namespace DTasks.Infrastructure;
 
 internal sealed partial class DAsyncFlow
 {
-    private void DehydrateWhenAll(int remainingCount, List<Exception>? exceptions, DehydrateContinuation continuation)
+    private void DehydrateWhenAll(ref WhenAllStateMachine stateMachine, DehydrateContinuation continuation)
     {
         Assign(ref _dehydrateContinuation, continuation);
         Assign(ref _suspendingAwaiterOrType, typeof(WhenAllAwaiter));
-        WhenAllStateMachine stateMachine = default;
-        stateMachine.RemainingCount = remainingCount;
-        stateMachine.Exceptions = exceptions;
+            
+        AwaitDehydrate(ref stateMachine);
+    }
+    
+    private void DehydrateWhenAll<TResult>(ref WhenAllStateMachine<TResult> stateMachine, DehydrateContinuation continuation)
+    {
+        Assign(ref _dehydrateContinuation, continuation);
+        Assign(ref _suspendingAwaiterOrType, typeof(WhenAllAwaiter));
             
         AwaitDehydrate(ref stateMachine);
     }
@@ -73,6 +79,11 @@ internal sealed partial class DAsyncFlow
             MoveNext();
         }
 
+        public void SetChildId(DAsyncId id)
+        {
+            // Don't need it
+        }
+
         private void MoveNext()
         {
             if (branchEnumerator.MoveNext())
@@ -85,14 +96,151 @@ internal sealed partial class DAsyncFlow
                 
             if (_remainingCount == 0)
             {
-                resultBuilder.SetResult();
+                if (_exceptions is not null)
+                {
+                    resultBuilder.SetException(new AggregateException(_exceptions));
+                }
+                else
+                {
+                    resultBuilder.SetResult();
+                }
+                
                 flow.PopNode();
                 return;
             }
 
             flow._id = NodeId;
             flow._parentId = Id;
-            flow.DehydrateWhenAll(_remainingCount, _exceptions, static flow => flow.PopNode());
+
+            WhenAllStateMachine stateMachine = default;
+            stateMachine.RemainingCount = _remainingCount;
+            stateMachine.Exceptions = _exceptions;
+            flow.DehydrateWhenAll(ref stateMachine, static flow => flow.PopNode());
+        }
+    }
+    
+    private sealed class WhenAllFlowNode<TNodeResult>(
+        DAsyncFlow flow,
+        IEnumerator<IDAsyncRunnable> branchEnumerator,
+        IDAsyncResultBuilder<TNodeResult[]> resultBuilder) : IFlowNode
+    {
+        private int _remainingCount;
+        private int _index = -1;
+        private Dictionary<int, TNodeResult>? _results;
+        private Dictionary<DAsyncId, int>? _indexes;
+        private List<Exception>? _exceptions;
+        
+        public DAsyncId Id { get; } = flow._id;
+
+        public DAsyncId ParentId { get; } = flow._parentId;
+
+        public DAsyncId NodeId { get; } = flow._idFactory.NewId();
+
+        public IFlowNode? ParentNode { get; } = flow._node;
+
+        public IDAsyncStateMachine? StateMachine { get; } = flow._stateMachine;
+
+        public object? SuspendingAwaiterOrType { get; } = flow._suspendingAwaiterOrType;
+        
+        public bool IsCompleted => _remainingCount == 0;
+
+        public void RunBranch()
+        {
+            IDAsyncRunnable branch = branchEnumerator.Current;
+            _remainingCount++;
+            _index++;
+            branch.Run(flow);
+        }
+        
+        public void SucceedBranch()
+        {
+            _remainingCount--;
+            
+            ThrowInvalidResult();
+        }
+
+        public void SucceedBranch<TResult>(TResult result)
+        {
+            _remainingCount--;
+
+            if (result is not TNodeResult nodeResult)
+            {
+                ThrowInvalidResult();
+                return;
+            }
+
+            _results ??= new(1);
+            _results.Add(_index, nodeResult);
+            
+            MoveNext();
+        }
+
+        public void FailBranch(Exception exception)
+        {
+            _remainingCount--;
+            _exceptions ??= new(1);
+            _exceptions.Add(exception);
+
+            MoveNext();
+        }
+
+        public void SuspendBranch()
+        {
+            MoveNext();
+        }
+
+        public void SetChildId(DAsyncId id)
+        {
+            _indexes ??= new(1);
+            _indexes[id] = _index;
+        }
+
+        private void MoveNext()
+        {
+            if (branchEnumerator.MoveNext())
+            {
+                flow.RunBranch();
+                return;
+            }
+            
+            branchEnumerator.Dispose();
+                
+            if (_remainingCount == 0)
+            {
+                if (_exceptions is not null)
+                {
+                    resultBuilder.SetException(new AggregateException(_exceptions));
+                }
+                else
+                {
+                    Assert.NotNull(_results);
+                    TNodeResult[] results = _results
+                        .OrderBy(kvp => kvp.Key)
+                        .Select(kvp => kvp.Value)
+                        .ToArray();
+                
+                    resultBuilder.SetResult(results);
+                }
+                
+                flow.PopNode();
+                return;
+            }
+
+            flow._id = NodeId;
+            flow._parentId = Id;
+            
+            WhenAllStateMachine<TNodeResult> stateMachine = default;
+            stateMachine.RemainingCount = _remainingCount;
+            stateMachine.Indexes = _indexes;
+            stateMachine.Results = _results;
+            stateMachine.Exceptions = _exceptions;
+            flow.DehydrateWhenAll(ref stateMachine, static flow => flow.PopNode());
+        }
+
+        private static void ThrowInvalidResult()
+        {
+            // TODO: Standardize across project with a dedicated exception type
+            throw new InvalidOperationException($"Current DTask should have resumed with a result of type '{typeof(TNodeResult).FullName}'.");
         }
     }
 
@@ -101,7 +249,7 @@ internal sealed partial class DAsyncFlow
         private int _remainingCount = -1;
         private List<Exception>? _exceptions;
         
-        protected abstract void Run(DAsyncFlow flow, int remainingCount, List<Exception>? exceptions);
+        protected abstract void Run(DAsyncFlow flow, ref WhenAllStateMachine stateMachine);
         
         public void Run(IDAsyncRunner runner)
         {
@@ -110,7 +258,10 @@ internal sealed partial class DAsyncFlow
             if (runner is not DAsyncFlow flow)
                 throw new ArgumentException("This runnable should be run by a runner of the same kind than the one that created it.");
 
-            Run(flow, _remainingCount - 1, _exceptions);
+            WhenAllStateMachine stateMachine = default;
+            stateMachine.RemainingCount = _remainingCount - 1;
+            stateMachine.Exceptions = _exceptions;
+            Run(flow, ref stateMachine);
         }
         
         public WhenAllBranchRunnable WithProperties(ref WhenAllStateMachine stateMachine)
@@ -123,34 +274,34 @@ internal sealed partial class DAsyncFlow
 
     private sealed class WhenAllSucceededBranchRunnable : WhenAllBranchRunnable
     {
-        protected override void Run(DAsyncFlow flow, int remainingCount, List<Exception>? exceptions)
+        protected override void Run(DAsyncFlow flow, ref WhenAllStateMachine stateMachine)
         {
-            if (remainingCount == 0)
+            if (stateMachine.RemainingCount == 0)
             {
                 ((IDAsyncRunner)flow).Succeed();
                 return;
             }
             
             flow._frameHasIds = false;
-            flow.DehydrateWhenAll(remainingCount, exceptions, static flow => flow.AwaitOnSuspend());
+            flow.DehydrateWhenAll(ref stateMachine, static flow => flow.AwaitOnSuspend());
         }
     }
 
     private sealed class WhenAllFailedBranchRunnable(Exception exception) : WhenAllBranchRunnable
     {
-        protected override void Run(DAsyncFlow flow, int remainingCount, List<Exception>? exceptions)
+        protected override void Run(DAsyncFlow flow, ref WhenAllStateMachine stateMachine)
         {
-            exceptions ??= new(1);
-            exceptions.Add(exception);
+            stateMachine.Exceptions ??= new(1);
+            stateMachine.Exceptions.Add(exception);
 
-            if (remainingCount == 0)
+            if (stateMachine.RemainingCount == 0)
             {
-                ((IDAsyncRunner)flow).Fail(new AggregateException(exceptions));
+                ((IDAsyncRunner)flow).Fail(new AggregateException(stateMachine.Exceptions));
                 return;
             }
             
             flow._frameHasIds = false;
-            flow.DehydrateWhenAll(remainingCount, exceptions, static flow => flow.AwaitOnSuspend());
+            flow.DehydrateWhenAll(ref stateMachine, static flow => flow.AwaitOnSuspend());
         }
     }
     
@@ -161,6 +312,18 @@ internal sealed partial class DAsyncFlow
         public void Start(ref WhenAllStateMachine stateMachine)
         {
             Task = stateMachine.Awaiter.Runnable.WithProperties(ref stateMachine);
+        }
+
+        public static WhenAllRunnableBuilder Create() => default;
+    }
+    
+    private struct WhenAllRunnableBuilder<TResult>
+    {
+        public IDAsyncRunnable Task { get; private set; }
+
+        public void Start(ref WhenAllStateMachine<TResult> stateMachine)
+        {
+            // Task = stateMachine.Awaiter.Runnable.WithProperties(ref stateMachine);
         }
 
         public static WhenAllRunnableBuilder Create() => default;
@@ -187,6 +350,23 @@ internal sealed partial class DAsyncFlow
         public WhenAllAwaiter Awaiter;
 
         public int RemainingCount;
+        
+        public List<Exception>? Exceptions;
+    }
+    
+    private struct WhenAllStateMachine<TResult>
+    {
+        [DAsyncRunnableBuilderField]
+        public WhenAllRunnableBuilder Builder;
+
+        [DAsyncAwaiterField]
+        public WhenAllAwaiter Awaiter;
+
+        public int RemainingCount;
+
+        public Dictionary<DAsyncId, int>? Indexes;
+
+        public Dictionary<int, TResult>? Results;
         
         public List<Exception>? Exceptions;
     }

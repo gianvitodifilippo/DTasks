@@ -260,7 +260,17 @@ internal sealed partial class DAsyncFlow : IDAsyncRunnerInternal
 
     void IDAsyncRunner.WhenAll<TResult>(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<TResult[]> builder)
     {
-        throw new NotImplementedException();
+        IEnumerator<IDAsyncRunnable> branchEnumerator = runnables.GetEnumerator();
+        if (!branchEnumerator.MoveNext())
+        {
+            branchEnumerator.Dispose();
+            builder.SetResult([]);
+            ((IDAsyncRunner)this).Succeed();
+            return;
+        }
+
+        PushNode(new WhenAllFlowNode<TResult>(this, branchEnumerator, builder));
+        RunBranch();
     }
 
     void IDAsyncRunner.WhenAny(IEnumerable<IDAsyncRunnable> runnables, IDAsyncResultBuilder<DTask> builder)

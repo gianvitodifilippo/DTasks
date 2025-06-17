@@ -76,5 +76,7 @@ internal sealed partial class DAsyncFlow
         void FailBranch(Exception exception);
 
         void SuspendBranch();
+        
+        void SetChildId(DAsyncId id);
     }
 }

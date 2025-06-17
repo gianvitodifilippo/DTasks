@@ -232,27 +232,25 @@ public sealed class DAsyncFlowTests
     public async Task RunsSucceedRunnableOfResult()
     {
         // Arrange
-        const int result = 42;
-        var runnable = new SucceedDAsyncRunnable<int>(result);
+        var runnable = new SucceedDAsyncRunnable<int>(42);
     
         // Act
         await _sut.StartAsync(runnable, _cancellationToken);
     
         // Assert
-        await _host.Received(1).OnSucceedAsync(CompletionContext, result, _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, 42, _cancellationToken);
     }
 
     [Fact]
     public async Task ExceptionThrownSynchronouslyOnSucceedOfResult_MakesFlowThrowInfrastructureException()
     {
         // Arrange
-        const int result = 42;
-        var runnable = new SucceedDAsyncRunnable<int>(result);
+        var runnable = new SucceedDAsyncRunnable<int>(42);
         var expectedException = new Exception();
 
 #pragma warning disable NS5003
         _host
-            .OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>())
+            .OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), 42, Arg.Any<CancellationToken>())
             .Throws(expectedException);
 #pragma warning restore NS5003
     
@@ -267,12 +265,11 @@ public sealed class DAsyncFlowTests
     public async Task ExceptionThrownAsynchronouslyOnSucceedOfResult_MakesFlowThrowInfrastructureException()
     {
         // Arrange
-        const int result = 42;
-        var runnable = new SucceedDAsyncRunnable<int>(result);
+        var runnable = new SucceedDAsyncRunnable<int>(42);
         var expectedException = new Exception();
 
         _host
-            .OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), result, Arg.Any<CancellationToken>())
+            .OnSucceedAsync(Arg.Any<IDAsyncFlowCompletionContext>(), 42, Arg.Any<CancellationToken>())
             .ThrowsAsync(expectedException);
     
         // Act
@@ -477,11 +474,9 @@ public sealed class DAsyncFlowTests
     public async Task RunsDTaskThatCompletesLocallyAndSynchronously()
     {
         // Arrange
-        const int result = 42;
-    
         static async DTask<int> M1()
         {
-            return result;
+            return 42;
         }
     
         var runnable = M1();
@@ -490,19 +485,17 @@ public sealed class DAsyncFlowTests
         await _sut.StartAsync(runnable, _cancellationToken);
     
         // Assert
-        await _host.Received(1).OnSucceedAsync(CompletionContext, result, _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, 42, _cancellationToken);
     }
     
     [Fact]
     public async Task RunsDTaskThatCompletesLocallyAndAsynchronously()
     {
         // Arrange
-        const int result = 42;
-    
         static async DTask<int> M1()
         {
             await Task.Delay(100, CancellationToken.None);
-            return result;
+            return 42;
         }
     
         var runnable = M1();
@@ -511,19 +504,17 @@ public sealed class DAsyncFlowTests
         await _sut.StartAsync(runnable, _cancellationToken);
     
         // Assert
-        await _host.Received(1).OnSucceedAsync(CompletionContext, result, _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, 42, _cancellationToken);
     }
     
     [Fact]
     public async Task AwaitsCompletedDTask()
     {
         // Arrange
-        const int result = 42;
-    
         static async DTask<int> M1()
         {
             await DTask.CompletedDTask;
-            return result;
+            return 42;
         }
     
         var runnable = M1();
@@ -532,7 +523,7 @@ public sealed class DAsyncFlowTests
         await _sut.StartAsync(runnable, _cancellationToken);
     
         // Assert
-        await _host.Received(1).OnSucceedAsync(CompletionContext, result, _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, 42, _cancellationToken);
     }
     
     [Fact]
@@ -560,11 +551,9 @@ public sealed class DAsyncFlowTests
     public async Task AwaitsSucceedSuspendedDTaskOfResult()
     {
         // Arrange
-        const int result = 42;
-        
         static async DTask<int> M1()
         {
-            return await new SucceedSuspendedDTask<int>(result);
+            return await new SucceedSuspendedDTask<int>(42);
         }
     
         var runnable = M1();
@@ -575,8 +564,8 @@ public sealed class DAsyncFlowTests
     
         // Assert
         await _stack.Received(1).DehydrateAsync(Dehydrating(m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), result, _cancellationToken);
-        await _host.Received(1).OnSucceedAsync(CompletionContext, result, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), 42, _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, 42, _cancellationToken);
     }
     
     [Fact]
@@ -629,8 +618,6 @@ public sealed class DAsyncFlowTests
     public async Task AwaitsLocallyCompletingDTask()
     {
         // Arrange
-        const int result = 42;
-    
         static async DTask<int> M1()
         {
             int result = await M2();
@@ -639,7 +626,7 @@ public sealed class DAsyncFlowTests
     
         static async DTask<int> M2()
         {
-            return result;
+            return 42;
         }
     
         var runnable = M1();
@@ -650,20 +637,18 @@ public sealed class DAsyncFlowTests
     
         // Assert
         await _stack.Received(1).DehydrateAsync(Dehydrating(m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), result, _cancellationToken);
-        await _host.Received(1).OnSucceedAsync(CompletionContext, result + 1, Arg.Any<CancellationToken>());
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), 42, _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, 43, Arg.Any<CancellationToken>());
     }
     
     [Fact]
     public async Task AwaitsYield()
     {
         // Arrange (1)
-        const int result = 42;
-    
         static async DTask<int> M1()
         {
             await DTask.Yield();
-            return result;
+            return 42;
         }
     
         var runnable = M1();
@@ -689,20 +674,19 @@ public sealed class DAsyncFlowTests
         // Assert (2)
         await _stack.Received(1).HydrateAsync(Hydrating(yieldId), _cancellationToken);
         await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
-        await _host.Received(1).OnSucceedAsync(CompletionContext, result, _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, 42, _cancellationToken);
     }
     
     [Fact]
     public async Task AwaitsDelay()
     {
         // Arrange (1)
-        const int result = 42;
         TimeSpan delay = TimeSpan.FromDays(1);
     
         static async DTask<int> M1(TimeSpan delay)
         {
             await DTask.Delay(delay);
-            return result;
+            return 42;
         }
     
         var runnable = M1(delay);
@@ -728,20 +712,19 @@ public sealed class DAsyncFlowTests
         // Assert (2)
         await _stack.Received(1).HydrateAsync(Hydrating(delayId), _cancellationToken);
         await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
-        await _host.Received(1).OnSucceedAsync(CompletionContext, result, _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, 42, _cancellationToken);
     }
     
     [Fact]
     public async Task AwaitsCallback()
     {
         // Arrange (1)
-        const int result = 42;
         var callback = Substitute.For<ISuspensionCallback>();
     
         static async DTask<int> M1(ISuspensionCallback callback)
         {
             await DTask.Factory.Suspend(callback);
-            return result;
+            return 42;
         }
     
         var runnable = M1(callback);
@@ -767,14 +750,13 @@ public sealed class DAsyncFlowTests
         // Assert (2)
         await _stack.Received(1).HydrateAsync(Hydrating(callbackId), _cancellationToken);
         await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
-        await _host.Received(1).OnSucceedAsync(CompletionContext, result, _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, 42, _cancellationToken);
     }
     
     [Fact]
     public async Task AwaitsCallbackOfResult()
     {
         // Arrange (1)
-        const int result = 42;
         var callback = Substitute.For<ISuspensionCallback>();
     
         static async DTask<int> M1(ISuspensionCallback callback)
@@ -800,12 +782,12 @@ public sealed class DAsyncFlowTests
         _host.ClearReceivedCalls();
         
         // Act (2)
-        await _sut.ResumeAsync(callbackId, result, _cancellationToken);
+        await _sut.ResumeAsync(callbackId, 42, _cancellationToken);
     
         // Assert (2)
-        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), result, _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), result, _cancellationToken);
-        await _host.Received(1).OnSucceedAsync(CompletionContext, result, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), 42, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), 42, _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, 42, _cancellationToken);
     }
     
     [Fact]
@@ -1009,8 +991,6 @@ public sealed class DAsyncFlowTests
     public async Task AwaitsAsyncDTaskWithResultInBackground_WhenItCompletesFirst()
     {
         // Arrange (1)
-        const int result = 42;
-        
         static async DTask<int> M1()
         {
             DTask<int> task = await DTask.Run(M2());
@@ -1020,7 +1000,7 @@ public sealed class DAsyncFlowTests
     
         static async DTask<int> M2()
         {
-            return result;
+            return 42;
         }
         
         var runnable = M1();
@@ -1050,7 +1030,7 @@ public sealed class DAsyncFlowTests
         // Assert (2)
         await _stack.Received(1).HydrateAsync(Hydrating(m2YieldId), _cancellationToken);
         await _stack.Received(1).HydrateAsync(Hydrating(m2Id), _cancellationToken);
-        await _stack.Received(1).DehydrateCompletedAsync(m2Id, result, _cancellationToken);
+        await _stack.Received(1).DehydrateCompletedAsync(m2Id, 42, _cancellationToken);
         
         // Arrange (3)
         _stack.ClearReceivedCalls();
@@ -1063,15 +1043,13 @@ public sealed class DAsyncFlowTests
         await _stack.Received(1).HydrateAsync(Hydrating(m1YieldId), _cancellationToken);
         await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
         await _stack.Received(1).LinkAsync(Linking(m2Id, m1Id), _cancellationToken);
-        await _host.Received(1).OnSucceedAsync(CompletionContext, result, _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, 42, _cancellationToken);
     }
 
     [Fact]
     public async Task AwaitsAsyncDTaskWithResultInBackground_WhenItCompletesLast()
     {
         // Arrange (1)
-        const int result = 42;
-        
         static async DTask<int> M1()
         {
             DTask<int> task = await DTask.Run(M2());
@@ -1081,7 +1059,7 @@ public sealed class DAsyncFlowTests
     
         static async DTask<int> M2()
         {
-            return result;
+            return 42;
         }
         
         var runnable = M1();
@@ -1125,8 +1103,8 @@ public sealed class DAsyncFlowTests
         // Assert (3)
         await _stack.Received(1).HydrateAsync(Hydrating(m2YieldId), _cancellationToken);
         await _stack.Received(1).HydrateAsync(Hydrating(m2Id), _cancellationToken);
-        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), result, _cancellationToken);
-        await _host.Received(1).OnSucceedAsync(CompletionContext, result, _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), 42, _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, 42, _cancellationToken);
     }
 
     [Fact]
@@ -1425,13 +1403,22 @@ public sealed class DAsyncFlowTests
         // Assert (2)
         await _stack.Received(1).HydrateAsync(Hydrating(m2YieldId), _cancellationToken);
         await _stack.Received(1).HydrateAsync(Hydrating(m2Id), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(whenAllId, m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
         
         // Arrange (3)
+        _stack.ClearReceivedCalls();
+        _host.ClearReceivedCalls();
         
         // Act (3)
         await _sut.ResumeAsync(m1DelayId, _cancellationToken);
         
         // Assert (3)
+        await _stack.Received(1).HydrateAsync(Hydrating(m1DelayId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, _cancellationToken);
     }
 
     [Fact]
@@ -1599,86 +1586,378 @@ public sealed class DAsyncFlowTests
         await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
         await _host.Received(1).OnSucceedAsync(CompletionContext, _cancellationToken);
     }
-    //
-    // [Fact]
-    // public async Task AwaitsWhenAllOfResult()
-    // {
-    //     // Arrange
-    //     const int result1 = 1;
-    //     const int result2 = 2;
-    //     const int result3 = 3;
-    //
-    //     static async DTask<int[]> M1()
-    //     {
-    //         DTask<int>[] tasks =
-    //         [
-    //             M2(result1),
-    //             DTask.FromResult(result3),
-    //             M2(result2)
-    //         ];
-    //         int[] results = await DTask.WhenAll(tasks);
-    //         return results;
-    //     }
-    //
-    //     static async DTask<int> M2(int result)
-    //     {
-    //         await DTask.Yield();
-    //         return result;
-    //     }
-    //
-    //     DAsyncId id1 = default;
-    //     DAsyncId id2 = default;
-    //     DAsyncId id3 = default;
-    //     DAsyncId id4 = default;
-    //     _suspensionHandler
-    //         .When(handler => handler.OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>()))
-    //         .Do(call =>
-    //         {
-    //             if (id1 == default)
-    //             {
-    //                 id1 = call.Arg<DAsyncId>();
-    //                 return;
-    //             }
-    //
-    //             if (id2 == default)
-    //             {
-    //                 id2 = call.Arg<DAsyncId>();
-    //                 return;
-    //             }
-    //
-    //             if (id3 == default)
-    //             {
-    //                 id3 = call.Arg<DAsyncId>();
-    //                 return;
-    //             }
-    //
-    //             if (id4 == default)
-    //             {
-    //                 id4 = call.Arg<DAsyncId>();
-    //                 return;
-    //             }
-    //
-    //             throw FailException.ForFailure("YieldAsync called too many times");
-    //         });
-    //
-    //     DTask task = M1();
-    //
-    //     // Act
-    //     await _sut.StartAsync(task);
-    //     await _sut.ResumeAsync(id2);
-    //     await _sut.ResumeAsync(id1);
-    //     await _sut.ResumeAsync(id3);
-    //     await _sut.ResumeAsync(id4);
-    //
-    //     // Assert
-    //     task.Status.Should().Be(DTaskStatus.Suspended);
-    //     await _suspensionHandler.Received(4).OnYieldAsync(Arg.Any<DAsyncId>(), Arg.Any<CancellationToken>());
-    //     await _host.Received(1).OnSucceedAsync(
-    //         Arg.Any<IDAsyncFlowCompletionContext>(),
-    //         Arg.Is<int[]>(results => results.SequenceEqual(new[] { result1, result3, result2 })),
-    //         Arg.Any<CancellationToken>());
-    // }
-    //
+
+    [Fact]
+    public async Task AwaitsWhenAllOfResult_WhenThereAreNoTasks()
+    {
+        // Arrange
+        static async DTask<int[]> M1()
+        {
+            return await DTask.WhenAll<int>();
+        }
+        
+        var runnable = M1();
+        
+        // Act
+        await _sut.StartAsync(runnable, _cancellationToken);
+
+        // Assert
+        await _host.Received(1).OnSucceedAsync(CompletionContext, System.Array.Empty<int>(), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task AwaitsWhenAllOfResult_WhenDTasksAreCompleted()
+    {
+        // Arrange
+        static async DTask<int[]> M1()
+        {
+            return await DTask.WhenAll(DTask.FromResult(42), DTask.FromResult(69));
+        }
+        
+        var runnable = M1();
+        
+        // Act
+        await _sut.StartAsync(runnable, _cancellationToken);
+
+        // Assert
+        await _host.Received(1).OnSucceedAsync(CompletionContext, Array(42, 69), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task AwaitsWhenAllOfResult_WhenSomeDTasksAreSuspended()
+    {
+        // Arrange (1)
+        var callback = Substitute.For<ISuspensionCallback>();
+        
+        static async DTask<int[]> M1(ISuspensionCallback callback)
+        {
+            return await DTask.WhenAll(DTask.FromResult(42), DTask<int>.Factory.Suspend(callback));
+        }
+        
+        DAsyncId m1Id = _idFactory.GetTestId(1);
+        DAsyncId whenAllId = _idFactory.GetTestId(2);
+        DAsyncId callbackId = _idFactory.GetTestId(3);
+        var runnable = M1(callback);
+        
+        // Act (1)
+        await _sut.StartAsync(runnable, _cancellationToken);
+
+        // Assert (1)
+        await callback.Received(1).InvokeAsync(callbackId, _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(callbackId, whenAllId), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(whenAllId, m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
+        
+        // Arrange (2)
+        _stack.ClearReceivedCalls();
+        _host.ClearReceivedCalls();
+        
+        // Act (2)
+        await _sut.ResumeAsync(callbackId, 69, _cancellationToken);
+        
+        // Assert (2)
+        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, Array(42, 69), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task AwaitsWhenAllOfResult_WhenSomeDTasksAreWhenAllOfCompletedDTasks()
+    {
+        // Arrange
+        static async DTask<int[][]> M1()
+        {
+            return await DTask.WhenAll(DTask.FromResult<int[]>([42]), DTask.WhenAll(DTask.FromResult(69)));
+        }
+        
+        var runnable = M1();
+        
+        // Act
+        await _sut.StartAsync(runnable, _cancellationToken);
+
+        // Assert
+        await _host.Received(1).OnSucceedAsync(CompletionContext, ArrayOfArray([42], [69]), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task AwaitsWhenAllOfResult_WhenSomeDTasksAreWhenAllOfSuspendedDTasks()
+    {
+        // Arrange (1)
+        var callback = Substitute.For<ISuspensionCallback>();
+
+        static async DTask<int[][]> M1(ISuspensionCallback callback)
+        {
+            return await DTask.WhenAll(DTask.FromResult<int[]>([42]), DTask.WhenAll(DTask<int>.Factory.Suspend(callback)));
+        }
+        
+        DAsyncId m1Id = _idFactory.GetTestId(1);
+        DAsyncId whenAll1Id = _idFactory.GetTestId(2);
+        DAsyncId whenAll2Id = _idFactory.GetTestId(3);
+        DAsyncId callbackId = _idFactory.GetTestId(4);
+        var runnable = M1(callback);
+        
+        // Act (1)
+        await _sut.StartAsync(runnable, _cancellationToken);
+
+        // Assert (1)
+        await callback.Received(1).InvokeAsync(callbackId, _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(callbackId, whenAll2Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(whenAll2Id, whenAll1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(whenAll1Id, m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
+        
+        // Arrange (2)
+        _stack.ClearReceivedCalls();
+        _host.ClearReceivedCalls();
+        
+        // Act (2)
+        await _sut.ResumeAsync(callbackId, 69, _cancellationToken);
+        
+        // Assert (2)
+        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAll2Id), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAll1Id), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, ArrayOfArray([42], [69]), _cancellationToken);
+    }
+    
+    [Fact]
+    public async Task AwaitsWhenAllOfResult()
+    {
+        // Arrange (1)
+        var callback = Substitute.For<ISuspensionCallback>();
+
+        static async DTask<int[]> M1(ISuspensionCallback callback)
+        {
+            return await DTask.WhenAll(
+                M2(),
+                DTask.FromResult(69),
+                DTask<int>.Factory.Suspend(callback)
+            );
+        }
+    
+        static async DTask<int> M2()
+        {
+            return 42;
+        }
+    
+        DAsyncId m1Id = _idFactory.GetTestId(1);
+        DAsyncId whenAllId = _idFactory.GetTestId(2);
+        DAsyncId m2Id = _idFactory.GetTestId(3);
+        DAsyncId m2YieldId = _idFactory.GetTestId(4);
+        DAsyncId m1CallbackId = _idFactory.GetTestId(5);
+        DTask task = M1(callback);
+    
+        // Act (1)
+        await _sut.StartAsync(task, _cancellationToken);
+        
+        // Assert (1)
+        await _stack.Received(1).DehydrateAsync(Dehydrating(m2Id, whenAllId), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(m2YieldId, m2Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(m1CallbackId, whenAllId), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(whenAllId, m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
+        await callback.Received(1).InvokeAsync(m1CallbackId, _cancellationToken);
+        await _suspensionHandler.Received(1).OnYieldAsync(m2YieldId, _cancellationToken);
+        
+        // Arrange (2)
+        _stack.ClearReceivedCalls();
+        _host.ClearReceivedCalls();
+        
+        // Act (2)
+        await _sut.ResumeAsync(m2YieldId, _cancellationToken);
+        
+        // Assert (2)
+        await _stack.Received(1).HydrateAsync(Hydrating(m2YieldId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m2Id), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(whenAllId, m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
+        
+        // Arrange (3)
+        _stack.ClearReceivedCalls();
+        _host.ClearReceivedCalls();
+        
+        // Act (3)
+        await _sut.ResumeAsync(m1CallbackId, 420, _cancellationToken);
+        
+        // Assert (3)
+        await _stack.Received(1).HydrateAsync(Hydrating(m1CallbackId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, Array(42, 69, 420), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task RunsWhenAllOfResult_WhenThereAreNoTasks()
+    {
+        // Arrange
+        var runnable = DTask.WhenAll<int>();
+        
+        // Act
+        await _sut.StartAsync(runnable, _cancellationToken);
+
+        // Assert
+        await _host.Received(1).OnSucceedAsync(CompletionContext, System.Array.Empty<int>(), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task RunsWhenAllOfResult_WhenDTasksAreCompleted()
+    {
+        // Arrange
+        var runnable = DTask.WhenAll(DTask.FromResult(42), DTask.FromResult(69));
+        
+        // Act
+        await _sut.StartAsync(runnable, _cancellationToken);
+
+        // Assert
+        await _host.Received(1).OnSucceedAsync(CompletionContext, Array(42, 69), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task RunsWhenAllOfResult_WhenSomeDTasksAreSuspended()
+    {
+        // Arrange (1)
+        var callback = Substitute.For<ISuspensionCallback>();
+        
+        DAsyncId whenAllId = _idFactory.GetTestId(1);
+        DAsyncId callbackId = _idFactory.GetTestId(2);
+        var runnable = DTask.WhenAll(DTask.FromResult(42), DTask<int>.Factory.Suspend(callback));
+        
+        // Act (1)
+        await _sut.StartAsync(runnable, _cancellationToken);
+
+        // Assert (1)
+        await callback.Received(1).InvokeAsync(callbackId, _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(callbackId, whenAllId), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(whenAllId), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
+        
+        // Arrange (2)
+        _stack.ClearReceivedCalls();
+        _host.ClearReceivedCalls();
+        
+        // Act (2)
+        await _sut.ResumeAsync(callbackId, 69, _cancellationToken);
+        
+        // Assert (2)
+        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, Array(42, 69), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task RunsWhenAllOfResult_WhenSomeDTasksAreWhenAllOfCompletedDTasks()
+    {
+        // Arrange
+        var runnable = DTask.WhenAll(DTask.FromResult<int[]>([42]), DTask.WhenAll(DTask.FromResult(69)));
+        
+        // Act
+        await _sut.StartAsync(runnable, _cancellationToken);
+
+        // Assert
+        await _host.Received(1).OnSucceedAsync(CompletionContext, ArrayOfArray([42], [69]), _cancellationToken);
+    }
+
+    [Fact]
+    public async Task RunsWhenAllOfResult_WhenSomeDTasksAreWhenAllOfSuspendedDTasks()
+    {
+        // Arrange (1)
+        var callback = Substitute.For<ISuspensionCallback>();
+        
+        DAsyncId whenAll1Id = _idFactory.GetTestId(1);
+        DAsyncId whenAll2Id = _idFactory.GetTestId(2);
+        DAsyncId callbackId = _idFactory.GetTestId(3);
+        var runnable = DTask.WhenAll(DTask.FromResult<int[]>([42]), DTask.WhenAll(DTask<int>.Factory.Suspend(callback)));
+        
+        // Act (1)
+        await _sut.StartAsync(runnable, _cancellationToken);
+
+        // Assert (1)
+        await callback.Received(1).InvokeAsync(callbackId, _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(callbackId, whenAll2Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(whenAll2Id, whenAll1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(whenAll1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
+        
+        // Arrange (2)
+        _stack.ClearReceivedCalls();
+        _host.ClearReceivedCalls();
+        
+        // Act (2)
+        await _sut.ResumeAsync(callbackId, 69, _cancellationToken);
+        
+        // Assert (2)
+        await _stack.Received(1).HydrateAsync(Hydrating(callbackId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAll2Id), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAll1Id), _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, ArrayOfArray([42], [69]), _cancellationToken);
+    }
+    
+    [Fact]
+    public async Task RunsWhenAllOfResult()
+    {
+        // Arrange (1)
+        var callback = Substitute.For<ISuspensionCallback>();
+    
+        static async DTask<int> M1()
+        {
+            return 42;
+        }
+    
+        DAsyncId whenAllId = _idFactory.GetTestId(1);
+        DAsyncId m1Id = _idFactory.GetTestId(2);
+        DAsyncId m2YieldId = _idFactory.GetTestId(3);
+        DAsyncId m1CallbackId = _idFactory.GetTestId(4);
+        DTask task = DTask.WhenAll(
+            M1(),
+            DTask.FromResult(69),
+            DTask<int>.Factory.Suspend(callback)
+        );
+    
+        // Act (1)
+        await _sut.StartAsync(task, _cancellationToken);
+        
+        // Assert (1)
+        await _stack.Received(1).DehydrateAsync(Dehydrating(m1Id, whenAllId), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(m2YieldId, m1Id), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(m1CallbackId, whenAllId), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(whenAllId), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
+        await callback.Received(1).InvokeAsync(m1CallbackId, _cancellationToken);
+        await _suspensionHandler.Received(1).OnYieldAsync(m2YieldId, _cancellationToken);
+        
+        // Arrange (2)
+        _stack.ClearReceivedCalls();
+        _host.ClearReceivedCalls();
+        
+        // Act (2)
+        await _sut.ResumeAsync(m2YieldId, _cancellationToken);
+        
+        // Assert (2)
+        await _stack.Received(1).HydrateAsync(Hydrating(m2YieldId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(m1Id), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _stack.Received(1).DehydrateAsync(Dehydrating(whenAllId), ref Arg.Any<Arg.AnyType>(), _cancellationToken);
+        await _host.Received(1).OnSuspendAsync(Arg.Any<IDAsyncFlowSuspensionContext>(), _cancellationToken);
+        
+        // Arrange (3)
+        _stack.ClearReceivedCalls();
+        _host.ClearReceivedCalls();
+        
+        // Act (3)
+        await _sut.ResumeAsync(m1CallbackId, 420, _cancellationToken);
+        
+        // Assert (3)
+        await _stack.Received(1).HydrateAsync(Hydrating(m1CallbackId), _cancellationToken);
+        await _stack.Received(1).HydrateAsync(Hydrating(whenAllId), _cancellationToken);
+        await _host.Received(1).OnSucceedAsync(CompletionContext, Array(42, 69, 420), _cancellationToken);
+    }
+    
     // [Fact]
     // public async Task AwaitsWhenAny()
     // {
@@ -1969,7 +2248,11 @@ public sealed class DAsyncFlowTests
     private static ref IHydrationContext Hydrating(DAsyncId id) => ref Arg.Is<IHydrationContext>(ctx => ctx.Id == id);
     
     private static ref ILinkContext Linking(DAsyncId id, DAsyncId parentId) => ref Arg.Is<ILinkContext>(ctx => ctx.Id == id && ctx.ParentId == parentId);
-    
+
+    private static ref T[] Array<T>(params IEnumerable<T> array) => ref Arg.Is<T[]>(result => result.SequenceEqual(array));
+
+    private static ref T[][] ArrayOfArray<T>(params IEnumerable<T[]> array) => ref Arg.Is<T[][]>(result => result.SequenceEqual(array, new ArraySequenceEqualityComparer<T>()));
+
     private static async Task<Exception?> GetExceptionAsync(Func<ValueTask> act)
     {
         try
@@ -1981,5 +2264,21 @@ public sealed class DAsyncFlowTests
         {
             return ex;
         }
+    }
+    
+    private sealed class ArraySequenceEqualityComparer<T> : EqualityComparer<T[]>
+    {
+        public override bool Equals(T[]? x, T[]? y)
+        {
+            if (x is null)
+                return y is null;
+
+            if (y is null)
+                return false;
+
+            return x.SequenceEqual(y);
+        }
+
+        public override int GetHashCode(T[] obj) => 0;
     }
 }

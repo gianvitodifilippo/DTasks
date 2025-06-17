@@ -208,6 +208,11 @@ internal sealed partial class DAsyncFlow : DAsyncRunner
         
         _parentId = _id;
         _id = _idFactory.NewId();
+
+        if (_node is not null && _parentId == _node.NodeId)
+        {
+            _node.SetChildId(_id);
+        }
     }
 
     [DebuggerStepThrough]
