@@ -24,7 +24,7 @@ sequenceDiagram
     
     Users->>+Approvals: POST /approvals with callback headers
     Approvals->>+Approver: Send approval request email with Approve/Reject links
-    Approvals->>-Users: Respond with OK
+    Approvals->>-Users: Respond with 202 Accepted
 
     Approver->>+Approvals: Click Approve/Reject link
     Approvals->>-Approvals: Resume workflow with result
