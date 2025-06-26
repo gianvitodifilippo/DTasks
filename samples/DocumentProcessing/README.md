@@ -33,7 +33,7 @@ sequenceDiagram
 
     WebApp->>+Documents: POST /document-processing/{documentId} with callback header
     Documents->>BlobStorage: Verify document upload
-    Documents->>-WebApp: Respond with OK
+    Documents->>-WebApp: Respond with 202 Accepted
 
     Documents->>Documents: Process document in background
     Documents->>WebApp: Notify Web App of processing completion via WebSocket
